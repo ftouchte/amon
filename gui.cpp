@@ -167,7 +167,7 @@ void Window::on_button_next_clicked(){
 	}
 	if (hipo_nEvent == 0) {
 		hipo_reader.open(filename.c_str());
-		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf:136"});
+		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
 	}
 	this->dataEventAction();
 	hipo_nEvent++;
@@ -698,14 +698,16 @@ void Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
-		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
-			int sector = hipo_banklist[1].getInt("sector",col);	
-			int layer = hipo_banklist[1].getInt("layer",col);
-			int component = hipo_banklist[1].getInt("component",col);
+		for (int col = 0; col < (int) std::min(hipo_banklist[1].getRows(), 10); col++){
+			int rand = std::rand() % 10;
+			int sector = hipo_banklist[1].getInt("sector",col + rand);	
+			int layer = hipo_banklist[1].getInt("layer",col + rand);
+			int component = hipo_banklist[1].getInt("component",col + rand);
 			std::vector<short> samples;
-			for (int bin=0; bin < 136; bin++){
+			//for (int bin=0; bin < 136; bin++){
+			for (int bin=0; bin < 128; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(),col);
+				short value = hipo_banklist[1].getInt(binName.c_str(),col + rand);
 				samples.push_back(value);
 			}
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
@@ -720,7 +722,7 @@ void Window::dataEventAction() {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
 		}
-		nWF = hipo_banklist[1].getRows();
+		nWF = (int) std::min(hipo_banklist[1].getRows(),10);
 		std::cout << "nWF : " << nWF << std::endl;
 		// Fill Grid_waveforms
 		for (int row = 1; row <= (nWF/2); row++) {
