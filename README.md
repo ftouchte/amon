@@ -1,2 +1,0 @@
-# amon
-AHDC monitoring
