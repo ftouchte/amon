@@ -698,18 +698,25 @@ void Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
-		for (int col = 0; col < (int) std::min(hipo_banklist[1].getRows(), 10); col++){
-			int rand = std::rand() % 10;
-			int sector = hipo_banklist[1].getInt("sector",col + rand);	
-			int layer = hipo_banklist[1].getInt("layer",col + rand);
-			int component = hipo_banklist[1].getInt("component",col + rand);
+		int rand = std::rand() % 25;
+		for (int col = rand; col < hipo_banklist[1].getRows(); col++){
+			int sector = hipo_banklist[1].getInt("sector", col);	
+			int layer = hipo_banklist[1].getInt("layer", col);
+			int component = hipo_banklist[1].getInt("component", col);
 			std::vector<short> samples;
 			//for (int bin=0; bin < 136; bin++){
+			int adcMax = 0;
 			for (int bin=0; bin < 128; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(),col + rand);
+				short value = hipo_banklist[1].getInt(binName.c_str(), col);
 				samples.push_back(value);
+				// determine adcMax
+				adcMax = (adcMax < value) ? value : adcMax;
 			}
+			// add cut about adcMax
+			if (adcMax < 600) { continue;}
+			// --------------------
+			std::cout << "adcMax : " << adcMax << std::endl;
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
 			sprintf(buffer, "L%d W%d", layer, component);
@@ -722,7 +729,9 @@ void Window::dataEventAction() {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
 		}
-		nWF = (int) std::min(hipo_banklist[1].getRows(),10);
+		//nWF = (int) hipo_banklist[1].getRows();
+		std::cout << "ListOfSamples size : " << ListOfSamples.size() << std::endl;
+		nWF = (int) std::min((int) ListOfSamples.size(),10);
 		std::cout << "nWF : " << nWF << std::endl;
 		// Fill Grid_waveforms
 		for (int row = 1; row <= (nWF/2); row++) {
