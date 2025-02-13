@@ -5,6 +5,7 @@
  * drawing area
  *
  * @author Felix Touchte Codjo
+ * @date February 12, 2025
  * ********************************************/
 
 #ifndef F_HIST_1D
@@ -20,8 +21,6 @@ private :
 	std::string title; ///< main annotation of the graph
 	std::string xtitle; ///< name of the x axis
 	std::string ytitle; ///< name of the y axis
-	fAxis ax; ///< x axis
-	fAxis ay; ///< y axis
 	std::vector<double> binArray; ///< vector of centers of each bins
 	std::vector<double> binBuffer; ///< occupancy of each bins
 	int nbins; ///< number of bins	
@@ -38,13 +37,13 @@ private :
 
 
 public :
-	fHist1D(std::string _title = "", int _nbins, double _xmin, double _xmax);
+	fH1D(std::string _title, int _nbins, double _xmin, double _xmax);
 	void fill(double x);
 	void fill(double x, double w);
 	int getBinNumber(double x) const;
-	double getBinValue(int bin) const;
-	double getBinBuffer(int bin) const;
-	int getEntries() const;
+	double getBinArrayContent(int bin) const;
+	double getBinBufferContent(int bin) const;
+	unsigned long int getEntries() const;
 	double getMean() const;
 	double getStDev() const;
 	double getBinWidth() const;
@@ -55,6 +54,7 @@ public :
 	void set_ytitle(std::string name);
 	double getMax() const;
 	void draw();
+	void print();
 };
 
 
