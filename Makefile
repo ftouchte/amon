@@ -41,11 +41,11 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: gui test_fAxis
+all: gui test_fAxis test_Histograms
 
-#AhdcExtractor: AhdcExtractor.o 
-#	$(CXX) -o AhdcExtractor.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
+test_Histograms: test_Histograms.o fAxis.o fH1D.o
+	$(CXX) -o test_Histograms.exe $^
 
 test_fAxis: test_fAxis.o fAxis.o 
 	$(CXX) -o test_fAxis.exe $^
@@ -53,11 +53,6 @@ test_fAxis: test_fAxis.o fAxis.o
 gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
-#histo: histo.o futils.o
-#	$(CXX) -o histo.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) 
-
-#benchmark: benchmark.o futils.o
-#	$(CXX) -o benchmark.exe $^  $(RAPID_CHECK_LIBS) $(CATCH2_FLLAGS)
 
 
 # $< représente la première de la cible, i.e histo.o
