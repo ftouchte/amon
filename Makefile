@@ -41,16 +41,16 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: gui test_fAxis test_Histograms
+all: gui test_fAxis test_fH1D
 
 
-test_Histograms: test_Histograms.o fAxis.o fH1D.o
-	$(CXX) -o test_Histograms.exe $^
+test_fH1D: test_fH1D.o fAxis.o fH1D.o
+	$(CXX) -o test_fH1D.exe $^
 
 test_fAxis: test_fAxis.o fAxis.o 
 	$(CXX) -o test_fAxis.exe $^
 
-gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o
+gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
 
