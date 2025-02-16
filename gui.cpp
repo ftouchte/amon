@@ -7,6 +7,7 @@
 
 #include "gui.h"
 #include "fAxis.h"
+#include "fCanvas.h"
 #include "AhdcExtractor.h"
 #include <iostream>
 #include <string>
@@ -474,12 +475,22 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 	
 	std::vector<double> vx;
 	std::vector<double> vy = {287, 259, 322, 319, 268, 340, 320, 255, 323, 298, 296, 316, 343, 410, 459, 523, 585, 637, 774, 832, 904, 921, 987, 982, 968, 985, 927, 1017, 959, 939, 828, 853, 787, 840, 774, 735, 709, 678, 642, 655, 648, 577, 529, 559, 571, 599, 552, 506, 470, 475, 459, 496, 485, 448, 406, 400, 434, 374, 358, 385, 453, 397, 411, 392, 397, 417, 375, 437, 381, 360, 411, 340, 374, 390, 362, 366, 312, 388, 300, 347, 391, 346, 364, 336, 318, 323, 322, 363, 346, 347, 384, 339, 294, 323, 323, 344, 301, 288, 322, 268, 314, 289, 325, 274, 308, 301, 322, 312, 307, 333, 302, 246, 305, 270, 321, 286, 316, 347, 347, 335, 326, 350, 322, 343, 282, 273, 288, 273, 315, 291, 335, 295, 259, 362, 321, 284};
+	double xmin = 0.0;
+	double xmax = 0.0;
+	double ymin = 0.0;
+	double ymax = 0.0;
 	for (int i = 0; i < (int) vy.size(); i++) {
 		vx.push_back(i*44.0);
+		xmax = (xmax < vx[i]) ? vx[i] : xmax;
+		ymax = (ymax < vy[i]) ? vy[i] : ymax;
 	}
-
-	cairo_plot_graph(cr,width,height,vx,vy, "L11W32");
-
+	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
+	canvas.draw_frame(cr);
+		//canvas.set_title_size(0.6);
+	canvas.draw_title(cr, "Example");
+	canvas.draw_xtitle(cr, "time (ns)");
+	canvas.draw_ytitle(cr, "adc");
+	//cairo_plot_graph(cr,width,height,vx,vy, "L11W32");
 	cr->restore();
 }
 

@@ -30,7 +30,7 @@ private :
 	std::vector<std::string> Labels3; ///< Labels of the third division (formatted version of Div3)
 
 public :
-	fAxis(double _start, double _end, int _n1 = 10, int _n2 = 5, int _n3 = 0);
+	fAxis(double _start = 0.0, double _end = 1.0, int _n1 = 10, int _n2 = 5, int _n3 = 0);
 	~fAxis();
 	int get_n1();
 	int get_n2();
