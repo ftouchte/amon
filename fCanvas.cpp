@@ -19,8 +19,8 @@ fCanvas::fCanvas(int _width, int _height, double xmin, double xmax, double ymin,
 	int window_size = std::min(width, height);
 	top_margin = plot_ratio*window_size; 
 	bottom_margin = plot_ratio*window_size;
-	left_margin = plot_ratio*window_size;
-	right_margin = plot_ratio*window_size;
+	left_margin = 1.5*plot_ratio*window_size;
+	right_margin = 0.5*plot_ratio*window_size;
 	weff = width - left_margin - right_margin;
 	heff = height - top_margin - bottom_margin;
 	seff = std::min(weff, heff);
@@ -35,7 +35,7 @@ fCanvas::fCanvas(int _width, int _height, double xmin, double xmax, double ymin,
 
 	title_size = 0.4*top_margin;	
 	xlabel_size = 0.3*bottom_margin;
-        ylabel_size = 0.3*left_margin;
+        ylabel_size = 0.3*left_margin/1.5;
         stick_size = 0.025*seff;
         stick_width = 0.005*seff;
         frame_line_width = 0.01*seff;
@@ -94,7 +94,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
+			cr->move_to(-left_margin*0.75, y2h(value));
 			cr->show_text(s.c_str());
 		}
 	}
@@ -129,7 +129,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
+			cr->move_to(-left_margin*0.75, y2h(value));
 			cr->show_text(s.c_str());
 		}
 	}
@@ -157,11 +157,16 @@ void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 
 void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) {
 	// draw label
+	cr->save();
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 	cr->set_font_size(title_size);
-	cr->move_to(-left_margin*0.9, -heff);
+	cr->rotate_degrees(-90);
+	//cr->move_to(-left_margin*0.9, -heff);
+	//x -> up and y -> right
+	cr->move_to(heff - text.size()*(1.0*heff/weff)*title_size, -0.8*left_margin);
 	cr->show_text(text.c_str());
+	cr->restore();
 }
 
 void fCanvas::set_top_margin(int margin) { 

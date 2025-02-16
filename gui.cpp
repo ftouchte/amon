@@ -487,7 +487,7 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
 	canvas.draw_frame(cr);
 		//canvas.set_title_size(0.6);
-	canvas.draw_title(cr, "Example");
+	canvas.draw_title(cr, "Example (test fCanvas)");
 	canvas.draw_xtitle(cr, "time (ns)");
 	canvas.draw_ytitle(cr, "adc");
 	//cairo_plot_graph(cr,width,height,vx,vy, "L11W32");

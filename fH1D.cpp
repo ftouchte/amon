@@ -115,8 +115,8 @@ void fH1D::print() {
 	printf("\033[32m");
 	printf("           ");
 	for (std::string s : ay.get_labels1()) {
-		int pos = std::atof(s.c_str());
-		int size = s.size();
+		//int pos = std::atof(s.c_str());
+		//int size = s.size();
 		printf("%s ", s.c_str());
 	}
 	printf("  ====> this axis need to be fixed !!!!");
