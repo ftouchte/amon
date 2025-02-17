@@ -8,9 +8,11 @@
  * @date February 12, 2025
  * ********************************************/
 #include "fH1D.h"
+#include "fCanvas.h"
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 
 fH1D::fH1D(std::string _title, int _nbins, double _xmin, double _xmax) : title(_title), nbins(_nbins), xmin(_xmin), xmax(_xmax) {
 	if (xmax < xmin) {
@@ -137,8 +139,24 @@ void fH1D::print() {
 //inclure tout gtkmm
 //ou télécharger cairo
 //draw(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
-void fH1D::draw() {
-	// prévoire les offset
-	fAxis ax(xmin, xmax, 10, 5, 0);
-	fAxis ay(0, getMax(), 10, 5, 0);	
+void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+	// Define the main canvas
+	fCanvas canvas(width, height, xmin, xmax, 0, getMax());
+	canvas.draw_frame(cr);
+	canvas.draw_title(cr, "");
+	canvas.draw_xtitle(cr, "");
+	canvas.draw_ytitle(cr, "");
+	// Draw contour	
+	cr->set_source_rgb(0.0, 0.0, 1.0);
+	cr->set_line_width(0.008*canvas.get_seff());
+	cr->move_to(canvas.x2w(xmin), canvas.y2h(0.0));
+	for (int bin = 0; bin < nbins; bin++) {
+		double x = binArray[bin] - 0.5*binw;
+		double y = binBuffer[bin];
+		//cr->move_to();
+		cr->line_to(canvas.x2w(x), canvas.y2h(y));
+		cr->line_to(canvas.x2w(x + binw), canvas.y2h(y));
+	}
+	cr->line_to(canvas.x2w(xmax), canvas.y2h(0.0));
+	cr->stroke();
 }

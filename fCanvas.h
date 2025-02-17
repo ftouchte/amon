@@ -75,6 +75,7 @@ public :
 	int    get_right_margin();
 	int    get_weff();
 	int    get_heff();
+	int    get_seff();
 	double get_x_start();
 	double get_x_end();
 	double get_y_start();

@@ -225,6 +225,7 @@ int    fCanvas::get_left_margin() {return left_margin;}
 int    fCanvas::get_right_margin() {return right_margin;}
 int    fCanvas::get_weff() {return weff;}
 int    fCanvas::get_heff() {return heff;}
+int    fCanvas::get_seff() {return seff;}
 double fCanvas::get_x_start() {return x_start;}
 double fCanvas::get_x_end() {return x_end;}
 double fCanvas::get_y_start() {return y_start;}
