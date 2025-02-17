@@ -34,6 +34,10 @@ ROOTCFLAGS = $(shell root-config --cflags)
 GTKLIBS = $(shell pkg-config --libs gtkmm-4.0)
 GTKFLAGS = $(shell pkg-config --cflags gtkmm-4.0)
 
+CAIROLIBS = $(shell pkg-config --libs cairomm-1.16)
+CAIROFLAGS = $(shell pkg-config --cflags cairomm-1.16)
+
+
 CXX       := g++
 CXXFLAGS  += -Wall -fPIC -std=c++17
 LD        := g++
@@ -41,11 +45,14 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: gui test_fAxis test_fH1D
+all: gui test_fAxis test_fH1D histAhdcAdc
 
 
-test_fH1D: test_fH1D.o fAxis.o fH1D.o
-	$(CXX) -o test_fH1D.exe $^
+histAhdcAdc: histAhdcAdc.o AhdcExtractor.o 
+	$(CXX) -o histAhdcAdc.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) 
+
+test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o
+	$(CXX) -o test_fH1D.exe $^ $(CAIROLIBS)
 
 test_fAxis: test_fAxis.o fAxis.o 
 	$(CXX) -o test_fAxis.exe $^
@@ -63,7 +70,7 @@ clean:
 	@rm -rf *.o *~ *.exe example*hipo *.pdf
 
 %.o: %.cpp
-	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) 
+	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) 
 	
 #	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(RAPID_CHECK_FLAGS) $(FELIXFLAGS)
 

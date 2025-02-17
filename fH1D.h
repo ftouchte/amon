@@ -13,6 +13,8 @@
 
 #include <string>
 #include <vector>
+#include <gtkmm.h>
+
 #include "fAxis.h"
 
 
@@ -53,7 +55,7 @@ public :
 	void set_xtitle(std::string name);
 	void set_ytitle(std::string name);
 	double getMax() const;
-	void draw();
+	void draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void print();
 };
 
