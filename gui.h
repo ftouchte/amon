@@ -69,7 +69,10 @@ public :
 	Window();
 	~Window();
 
+	void eventAction();
 	void dataEventAction();
+	void endEventAction();
+	void drawWaveforms();
 	
 	// Signals
 	void on_button_prev_clicked();

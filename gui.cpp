@@ -168,10 +168,11 @@ void Window::on_button_next_clicked(){
 	}
 	if (hipo_nEvent == 0) {
 		hipo_reader.open(filename.c_str());
-		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf:136"});
+		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
 	}
-	this->dataEventAction();
+	this->eventAction();
 	hipo_nEvent++;
+	if (nWF == 0) { on_button_next_clicked();}
 }
 
 void Window::on_button_pause_clicked(){
@@ -333,8 +334,6 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	int stick_width = 0.002*seff;
 	fAxis ax(x_start, x_end, n1x, 0, 0);
 	fAxis ay(y_start, y_end, n1y, 0, 0);
-	ax.print();
-	ay.print();
 	// Draw main sticks x
 	for (std::string s : ax.get_labels1()) {
 		double value = std::atof(s.c_str());
@@ -572,8 +571,6 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	int stick_width = 0.01*seff;
 	fAxis ax(x_start, x_end, n1x, 0, 0);
 	fAxis ay(y_start, y_end, n1y, 0, 0);
-	ax.print();
-	ay.print();
 	// Draw main sticks x
 	for (std::string s : ax.get_labels1()) {
 		double value = std::atof(s.c_str());
@@ -702,6 +699,12 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 
 }
 
+void Window::eventAction() {
+	dataEventAction();
+	drawWaveforms();
+	endEventAction();
+}
+
 void Window::dataEventAction() {
 	// hipo4
 	if (hipo_reader.next(hipo_banklist)) {
@@ -709,16 +712,25 @@ void Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
-		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
-			int sector = hipo_banklist[1].getInt("sector",col);	
-			int layer = hipo_banklist[1].getInt("layer",col);
-			int component = hipo_banklist[1].getInt("component",col);
+		int rand = std::rand() % 25;
+		rand = 0; // no rand
+		for (int col = rand; col < hipo_banklist[1].getRows(); col++){
+			int sector = hipo_banklist[1].getInt("sector", col);	
+			int layer = hipo_banklist[1].getInt("layer", col);
+			int component = hipo_banklist[1].getInt("component", col);
 			std::vector<short> samples;
-			for (int bin=0; bin < 136; bin++){
+			//for (int bin=0; bin < 136; bin++){
+			int adcMax = 0;
+			for (int bin=0; bin < 50; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(),col);
+				short value = hipo_banklist[1].getInt(binName.c_str(), col);
 				samples.push_back(value);
+				// determine adcMax
+				adcMax = (adcMax < value) ? value : adcMax;
 			}
+			// add cut about adcMax
+			if (adcMax < 700) { continue;}
+			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
 			sprintf(buffer, "L%d W%d", layer, component);
@@ -731,49 +743,57 @@ void Window::dataEventAction() {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
 		}
-		nWF = hipo_banklist[1].getRows();
-		std::cout << "nWF : " << nWF << std::endl;
-		// Fill Grid_waveforms
-		for (int row = 1; row <= (nWF/2); row++) {
-			std::vector<double> vx, vy1, vy2;
-			for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
-				vx.push_back(i*decoder.samplingTime);
-				vy1.push_back(ListOfSamples[(2*row-1)-1][i]);
-				vy2.push_back(ListOfSamples[(2*row)-1][i]);
-			}
-			std::string title1 = ListOfWireNames[(2*row-1)-1];
-			std::string title2 = ListOfWireNames[(2*row)-1];
-			// column 1
-			auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-			area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-								cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					 	      } );
-			Grid_waveforms.attach(*area1,1,row);
-			// column 2
-			auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-			area2->set_draw_func([this, vx,  vy2, title2] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-								cairo_plot_graph(cr, width, height, vx, vy2, title2.c_str());
-					 	      } );
-			Grid_waveforms.attach(*area2,2,row);
-		}
-		if (nWF % 2 == 1) {
-			std::vector<double> vx, vy1;
-			for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
-				vx.push_back(i*decoder.samplingTime);
-				vy1.push_back(ListOfSamples[nWF-1][i]); // the last waveform in that case
-			}
-			std::string title1 = ListOfWireNames[nWF-1];
-			auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-			area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-								cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					 	      } );
-			Grid_waveforms.attach(*area1,1,nWF);
-		}
 	}
+}
+
+void Window::endEventAction() {
 	// Event info
 	DrawingArea_event.queue_draw();
 	Grid_waveforms.queue_draw();
 	Label_info.set_text(TString::Format("Event number : %lu  , Number of WF : %d ...",hipo_nEvent, nWF).Data() );
+}
+
+void Window::drawWaveforms() {
+	//nWF = (int) hipo_banklist[1].getRows();
+	std::cout << "ListOfSamples size : " << ListOfSamples.size() << std::endl;
+	nWF = (int) std::min((int) ListOfSamples.size(),10);
+	std::cout << "nWF : " << nWF << std::endl;
+	// Fill Grid_waveforms
+	for (int row = 1; row <= (nWF/2); row++) {
+		std::vector<double> vx, vy1, vy2;
+		for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
+			vx.push_back(i*decoder.samplingTime);
+			vy1.push_back(ListOfSamples[(2*row-1)-1][i]);
+			vy2.push_back(ListOfSamples[(2*row)-1][i]);
+		}
+		std::string title1 = ListOfWireNames[(2*row-1)-1];
+		std::string title2 = ListOfWireNames[(2*row)-1];
+		// column 1
+		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
+		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
+					      } );
+		Grid_waveforms.attach(*area1,1,row);
+		// column 2
+		auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
+		area2->set_draw_func([this, vx,  vy2, title2] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							cairo_plot_graph(cr, width, height, vx, vy2, title2.c_str());
+					      } );
+		Grid_waveforms.attach(*area2,2,row);
+	}
+	if (nWF % 2 == 1) {
+		std::vector<double> vx, vy1;
+		for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
+			vx.push_back(i*decoder.samplingTime);
+			vy1.push_back(ListOfSamples[nWF-1][i]); // the last waveform in that case
+		}
+		std::string title1 = ListOfWireNames[nWF-1];
+		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
+		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
+					      } );
+		Grid_waveforms.attach(*area1,1,nWF);
+	}
 }
 
 /** Main function */
