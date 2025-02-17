@@ -76,8 +76,9 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(xlabel_size);
-			int centering = 0.5*s.size()*(1.0*heff/weff)*xlabel_size;
-			cr->move_to(x2w(value) - centering, bottom_margin*0.6);
+			Cairo::TextExtents te;
+        		cr->get_text_extents(s, te);
+			cr->move_to(x2w(value) - 0.5*te.width, 0.1*bottom_margin + te.height);
 			cr->show_text(s.c_str());
 		}
 	}
@@ -94,7 +95,9 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.75, y2h(value));
+			Cairo::TextExtents te;
+			cr->get_text_extents(s, te);
+			cr->move_to(-left_margin*0.1 - te.width, y2h(value) + 0.5*te.height);
 			cr->show_text(s.c_str());
 		}
 	}
@@ -111,8 +114,10 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(xlabel_size);
-			int centering = 0.5*s.size()*(1.0*heff/weff)*xlabel_size;
-			cr->move_to(x2w(value) - centering, bottom_margin*0.6);
+			Cairo::TextExtents te;
+        		cr->get_text_extents(s, te);
+        		//cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*top_margin);	
+			cr->move_to(x2w(value) - 0.5*te.width, 0.1*bottom_margin + te.height);
 			cr->show_text(s.c_str());
 		}
 	}
@@ -129,7 +134,9 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.75, y2h(value));
+			Cairo::TextExtents te;
+			cr->get_text_extents(s, te);
+			cr->move_to(-left_margin*0.1 - te.width, y2h(value) + 0.5*te.height);
 			cr->show_text(s.c_str());
 		}
 	}
@@ -142,7 +149,9 @@ void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string te
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 	cr->set_font_size(title_size);
-	cr->move_to(0.5*weff - 0.5*text.size()*(1.0*heff/weff)*title_size, -heff-0.2*top_margin);
+	Cairo::TextExtents te;
+	cr->get_text_extents(text, te);
+	cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*top_margin);
 	cr->show_text(text.c_str());
 }
 
@@ -151,7 +160,9 @@ void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 	cr->set_font_size(title_size);
-	cr->move_to(weff - text.size()*(1.0*heff/weff)*title_size, 0.95*bottom_margin);
+	Cairo::TextExtents te;
+	cr->get_text_extents(text, te);
+	cr->move_to(weff - te.width, 0.95*bottom_margin);
 	cr->show_text(text.c_str());
 }
 
@@ -164,7 +175,9 @@ void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 	cr->rotate_degrees(-90);
 	//cr->move_to(-left_margin*0.9, -heff);
 	//x -> up and y -> right
-	cr->move_to(heff - text.size()*(1.0*heff/weff)*title_size, -0.8*left_margin);
+	Cairo::TextExtents te;
+	cr->get_text_extents(text, te);
+	cr->move_to(heff - te.width, -0.97*left_margin + te.height);
 	cr->show_text(text.c_str());
 	cr->restore();
 }
