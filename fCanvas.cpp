@@ -55,9 +55,15 @@ int fCanvas::x2w(double x) {
 int fCanvas::y2h(double y) {
 	return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
 }
-
+void fCanvas::define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr) {
+	if (coord_system_not_defined) {
+		cr->translate(left_margin, top_margin + heff);
+		coord_system_not_defined = false;
+	}
+}
 void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
-	cr->translate(left_margin, top_margin + heff);
+	//cr->translate(left_margin, top_margin + heff);
+	define_coord_system(cr);
 	// Draw the frame for axis
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.01*seff);

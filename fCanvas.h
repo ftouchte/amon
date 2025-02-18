@@ -40,13 +40,14 @@ private :
 	int stick_size;
 	int stick_width;
 	int frame_line_width;
-
+	
+	bool coord_system_not_defined = true;
 	double linear_transformation(double x1, double y1, double x2, double y2, double x); ///< match [x1, x2] to [y1, y2] or ([y2, y1] if y2 < y1) f(x1) = y1 and f(x2) = y2, return y = f(x)
 public :
 	fCanvas(int width, int height, double xmin, double xmax, double ymin, double ymax);
 	int x2w(double x); ///< convert x to width (pixel system)
 	int y2h(double y); ///< convert y to height (pixel system)
-	//void update_axis_limit(); ///< update x_start, x_end, y_start, y_end
+	void define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr); ///< must be used only one time !
 	void draw_frame(const Cairo::RefPtr<Cairo::Context>& cr);
 	void draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string text);
 	void draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text);

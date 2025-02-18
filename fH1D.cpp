@@ -142,7 +142,8 @@ void fH1D::print() {
 void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
 	// Define the main canvas
 	fCanvas canvas(width, height, xmin, xmax, 0, getMax());
-	canvas.draw_frame(cr);
+	canvas.define_coord_system(cr);
+	//canvas.draw_frame(cr);
 	canvas.draw_title(cr, title);
 	canvas.draw_xtitle(cr, xtitle);
 	canvas.draw_ytitle(cr, ytitle);
@@ -162,6 +163,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	cr->close_path();
 	cr->set_source_rgb(fill_color.r, fill_color.g, fill_color.b);
 	cr->fill();
+	canvas.draw_frame(cr); // draw frame and axis at the end
 
 }
 
