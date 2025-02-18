@@ -3,3 +3,4 @@
 *.hipo
 *.evio*
 *.pdf
+/output/*
