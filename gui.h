@@ -15,6 +15,7 @@
 
 #include "AhdcDetector.h"
 #include "AhdcExtractor.h"
+#include "fH1D.h"
 
 class Window : public Gtk::Window {
 protected :
@@ -34,12 +35,11 @@ protected :
 	// page 0
 	Gtk::Box HBox_eventViewer;
 	Gtk::Grid Grid_eventViewer, Grid_waveforms; // 2x1 and NxP 
-	Gtk::Picture Picture_event;
 	Gtk::DrawingArea DrawingArea_event;
 	Gtk::DrawingArea DrawingArea_test;
 	// page 1
 	Gtk::Box HBox_histograms;
-
+	Gtk::Grid Grid_histograms;
 	/******************
          * FOOTER
          * ***************/
@@ -63,7 +63,10 @@ protected :
 	AhdcExtractor decoder;
 
 	// Histograms
-	
+	fH1D hist1d_adcMax;
+	fH1D hist1d_leadingEdgeTime;
+	fH1D hist1d_timeOverThreshold;
+	fH1D hist1d_timeMax;	
 
 public :
 	Window();
@@ -73,6 +76,7 @@ public :
 	void dataEventAction();
 	void endEventAction();
 	void drawWaveforms();
+	void drawHistograms();
 	
 	// Signals
 	void on_button_prev_clicked();

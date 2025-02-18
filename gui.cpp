@@ -30,13 +30,17 @@ Window::Window() :
 	HBox_eventViewer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
-	HBox_info(Gtk::Orientation::HORIZONTAL,15)
+	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	/*HBox_prev(Gtk::Orientation::HORIZONTAL,10),
 	HBox_next(Gtk::Orientation::HORIZONTAL,10),
 	HBox_pause(Gtk::Orientation::HORIZONTAL,10),
 	HBox_run(Gtk::Orientation::HORIZONTAL,10),
 	HBox_hipo4(Gtk::Orientation::HORIZONTAL,10),
 	HBox_reset(Gtk::Orientation::HORIZONTAL,10)*/
+	hist1d_adcMax("adcMax", 200, 0.0, 1000.0),
+        hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
+        hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
+        hist1d_timeMax("timeMax", 100, 0.0, 50.0)
 {
 	// Data
 	ahdc = new AhdcDetector();
@@ -65,8 +69,6 @@ Window::Window() :
 	HBox_eventViewer.append(Grid_eventViewer);
 	Grid_eventViewer.set_column_homogeneous(true);
 	Grid_eventViewer.set_row_homogeneous(true);
-	//Picture_event.set_filename("./ressource/no_event.png");
-	//Grid_eventViewer.attach(Picture_event,1,1);
 	Grid_eventViewer.attach(DrawingArea_event,1,1);
 	DrawingArea_event.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_event) );
 	Grid_eventViewer.attach(Grid_waveforms,2,1);
@@ -75,7 +77,10 @@ Window::Window() :
 	Grid_waveforms.set_row_homogeneous(true);
 	// Page 1
 	Book.append_page(HBox_histograms, "Histograms");
-	HBox_histograms.append(*Gtk::make_managed<Gtk::Label>("Missing histograms ! Add a widget here !") );
+	HBox_histograms.append(Grid_histograms);
+	Grid_histograms.set_expand(true);
+        Grid_histograms.set_column_homogeneous(true);
+        Grid_histograms.set_row_homogeneous(true);
 	// Page 2 (test)
 	Book.append_page(DrawingArea_test, "Test");
 	DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
@@ -170,9 +175,15 @@ void Window::on_button_next_clicked(){
 		hipo_reader.open(filename.c_str());
 		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
 	}
-	this->eventAction();
-	hipo_nEvent++;
-	if (nWF == 0) { on_button_next_clicked();}
+	//this->eventAction();
+	//hipo_nEvent++;
+	//if (nWF == 0) { on_button_next_clicked();}
+	Glib::signal_timeout().connect([this] () -> bool {
+				this->eventAction();
+				hipo_nEvent++;
+				if (nWF == 0) {return true;} // continue the timeout
+				else {return false;} // stop the timeout
+			}, 100); // call every 100 ms
 }
 
 void Window::on_button_pause_clicked(){
@@ -181,6 +192,46 @@ void Window::on_button_pause_clicked(){
 
 void Window::on_button_run_clicked(){
 	std::cout << "Run ..." << std::endl;
+	if (filename.size() == 0) {
+                return;
+        }
+        if (hipo_nEvent == 0) {
+                hipo_reader.open(filename.c_str());
+                hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+        }
+	Glib::signal_timeout().connect([this] () -> bool {
+				if (this->hipo_reader.next(this->hipo_banklist)) {
+					// loop over hits
+					for (int col = 0; col < this->hipo_banklist[1].getRows(); col++){
+						int sector = this->hipo_banklist[1].getInt("sector", col);	
+						int layer = this->hipo_banklist[1].getInt("layer", col);
+						int component = this->hipo_banklist[1].getInt("component", col);
+						std::vector<short> samples;
+						//for (int bin=0; bin < 136; bin++){
+						int adcMax = 0;
+						for (int bin=0; bin < 50; bin++){
+							std::string binName = "s" + std::__cxx11::to_string(bin+1);
+							short value = this->hipo_banklist[1].getInt(binName.c_str(), col);
+							samples.push_back(value);
+							// determine adcMax
+							adcMax = (adcMax < value) ? value : adcMax;
+						}
+						this->hist1d_adcMax.fill(adcMax);
+					}
+					// Clean Grid_waveforms
+					if (hipo_nEvent != 0) {
+						this->Grid_histograms.remove_column(2);
+						this->Grid_histograms.remove_column(1);
+						this->drawHistograms();
+						this->Grid_histograms.queue_draw();
+					}
+					this->Label_info.set_text(TString::Format("Event number : %lu  , Number of WF : %d ...",hipo_nEvent, nWF).Data() );
+					this->Label_info.queue_draw();
+					this->hipo_nEvent++;
+					return true; // continue the timeout
+				}
+				else {return false;} // stop the timeout
+                        }, 5); // call every 1 ms
 }
 
 void Window::on_button_hipo4_clicked(){
@@ -251,11 +302,27 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 
 void Window::on_button_reset_clicked(){
 	std::cout << "Reset ..." << std::endl;
-	hipo_nEvent = 0;
 	filename = "";
 	img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
 	img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
 	img_hipo4.set("./img/icon_file_on.png"); img_hipo4.queue_draw();
+	hipo_nEvent = 0;
+	ListOfWires.clear();
+	ListOfWireNames.clear();
+	ListOfSamples.clear();
+	DrawingArea_event.queue_draw();
+	// reset histograms
+	hist1d_adcMax.reset();
+	hist1d_leadingEdgeTime.reset();
+	hist1d_timeOverThreshold.reset();
+	hist1d_timeMax.reset();
+	// Clear drawing areas
+	Grid_waveforms.remove_column(2);
+	Grid_waveforms.remove_column(1);
+	Grid_waveforms.queue_draw();
+	Grid_histograms.remove_column(2);
+	Grid_histograms.remove_column(1);
+	Grid_histograms.queue_draw();
 }
 
 void Window::on_book_switch_page(Gtk::Widget * _pages, guint page_num) { 
@@ -698,6 +765,7 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 void Window::eventAction() {
 	dataEventAction();
 	drawWaveforms();
+	drawHistograms();
 	endEventAction();
 }
 
@@ -724,6 +792,7 @@ void Window::dataEventAction() {
 				// determine adcMax
 				adcMax = (adcMax < value) ? value : adcMax;
 			}
+			hist1d_adcMax.fill(adcMax);
 			// add cut about adcMax
 			if (adcMax < 400) { continue;}
 			// --------------------
@@ -738,6 +807,8 @@ void Window::dataEventAction() {
 		if (hipo_nEvent != 0) {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
+			Grid_histograms.remove_column(2);
+			Grid_histograms.remove_column(1);
 		}
 	}
 }
@@ -746,14 +817,15 @@ void Window::endEventAction() {
 	// Event info
 	DrawingArea_event.queue_draw();
 	Grid_waveforms.queue_draw();
+	Grid_histograms.queue_draw();
 	Label_info.set_text(TString::Format("Event number : %lu  , Number of WF : %d ...",hipo_nEvent, nWF).Data() );
 }
 
 void Window::drawWaveforms() {
 	//nWF = (int) hipo_banklist[1].getRows();
-	std::cout << "ListOfSamples size : " << ListOfSamples.size() << std::endl;
+	//std::cout << "ListOfSamples size : " << ListOfSamples.size() << std::endl;
 	nWF = (int) std::min((int) ListOfSamples.size(),10);
-	std::cout << "nWF : " << nWF << std::endl;
+	//std::cout << "nWF : " << nWF << std::endl;
 	// Fill Grid_waveforms
 	for (int row = 1; row <= (nWF/2); row++) {
 		std::vector<double> vx, vy1, vy2;
@@ -790,6 +862,20 @@ void Window::drawWaveforms() {
 					      } );
 		Grid_waveforms.attach(*area1,1,nWF);
 	}
+}
+
+void Window::drawHistograms() {
+	// area 1 : hist1d_adcMax
+	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
+	area1->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788});
+							this->hist1d_adcMax.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area1,1,1);
+	// area 2 : hist1d_leadindEdgeTime
+	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
+		// set_draw_func ...
+	Grid_histograms.attach(*area2,1,2);
 }
 
 /** Main function */
