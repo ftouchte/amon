@@ -17,18 +17,24 @@
 
 #include "fAxis.h"
 
+struct fColor {
+        double r;
+        double g;
+        double b;
+};
 
 class fH1D {
 private :
 	std::string title; ///< main annotation of the graph
 	std::string xtitle; ///< name of the x axis
 	std::string ytitle; ///< name of the y axis
-	std::vector<double> binArray; ///< vector of centers of each bins
-	std::vector<double> binBuffer; ///< occupancy of each bins
+	fColor fill_color = {1.0, 1.0, 1.0};
 	int nbins; ///< number of bins	
 	double xmin; ///< lower x value
 	double xmax; ///< upper x value
 	double binw; ///< bin width
+	std::vector<double> binArray; ///< vector of centers of each bins
+        std::vector<double> binBuffer; ///< occupancy of each bins
 	// Statictics
 	unsigned long int nEntries; ///< Number of entries without overflow and underflow
 	int overflow; ///< number of overflow
@@ -56,6 +62,7 @@ public :
 	void set_ytitle(std::string name);
 	double getMax() const;
 	void draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
+	void set_fill_color(fColor color);
 	void print();
 };
 

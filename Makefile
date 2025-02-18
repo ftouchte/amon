@@ -51,7 +51,7 @@ all: gui test_fAxis test_fH1D histAhdcAdc
 histAhdcAdc: histAhdcAdc.o AhdcExtractor.o 
 	$(CXX) -o histAhdcAdc.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) 
 
-test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o
+test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o fH2D.o
 	$(CXX) -o test_fH1D.exe $^ $(CAIROLIBS)
 
 test_fAxis: test_fAxis.o fAxis.o 

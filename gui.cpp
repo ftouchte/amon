@@ -289,7 +289,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	int weff = width - left_margin - right_margin;
 	int heff = height - top_margin - bottom_margin;
 	int seff = std::min(weff, heff);
-	printf("weff : %d , heff : %d\n",weff, heff);
+	//printf("weff : %d , heff : %d\n",weff, heff);
 	// Change the origin to be 
 	cr->translate(left_margin, top_margin + heff);
 	// Determine the min and the max of the data	
@@ -505,7 +505,7 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	int weff = width - left_margin - right_margin;
 	int heff = height - top_margin - bottom_margin;
 	int seff = std::min(weff, heff);
-	printf("weff : %d , heff : %d\n",weff, heff);
+	//printf("weff : %d , heff : %d\n",weff, heff);
 	// Change the origin to be 
 	cr->translate(left_margin, top_margin + heff);
 	// Determine the min and the max of the data	
@@ -524,8 +524,6 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	double x_end = xmax + margin_ratio*(xmax - xmin);
 	double y_start = (ymin == 0) ? 0 : ymin - margin_ratio*(ymax - ymin);
 	double y_end = ymax + margin_ratio*(ymax - ymin);
-	printf("x_min   : %lf, x_max : %lf, y_min   : %lf, y_max : %lf\n", xmin, xmax, ymin, ymax);
-	printf("x_start : %lf, x_end : %lf, y_start : %lf, y_end : %lf\n", x_start, x_end, y_start, y_end);
 	// Define scale functions
 	// transform [x1,x2] to [y1,y2]
 	// return the y correspnding to a x
@@ -644,9 +642,7 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	std::vector<short> samples;
 	for (int i = 0; i < (int) vy.size(); i++) {
 		samples.push_back((short) vy[i]);
-		//printf("%d, ",samples[i]);
 	}
-	printf("\n");
 	decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
 	std::map<std::string,double> output = decoder.extract(samples);
 	//double timeMax = output["timeMax"];
@@ -729,7 +725,7 @@ void Window::dataEventAction() {
 				adcMax = (adcMax < value) ? value : adcMax;
 			}
 			// add cut about adcMax
-			if (adcMax < 700) { continue;}
+			if (adcMax < 400) { continue;}
 			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];

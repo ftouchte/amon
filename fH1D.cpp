@@ -143,9 +143,9 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	// Define the main canvas
 	fCanvas canvas(width, height, xmin, xmax, 0, getMax());
 	canvas.draw_frame(cr);
-	canvas.draw_title(cr, "");
-	canvas.draw_xtitle(cr, "");
-	canvas.draw_ytitle(cr, "");
+	canvas.draw_title(cr, title);
+	canvas.draw_xtitle(cr, xtitle);
+	canvas.draw_ytitle(cr, ytitle);
 	// Draw contour	
 	cr->set_source_rgb(0.0, 0.0, 1.0);
 	cr->set_line_width(0.008*canvas.get_seff());
@@ -158,5 +158,13 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->line_to(canvas.x2w(x + binw), canvas.y2h(y));
 	}
 	cr->line_to(canvas.x2w(xmax), canvas.y2h(0.0));
-	cr->stroke();
+	cr->stroke_preserve(); // preserve the path
+	cr->close_path();
+	cr->set_source_rgb(fill_color.r, fill_color.g, fill_color.b);
+	cr->fill();
+
+}
+
+void fH1D::set_fill_color(fColor color) {
+	fill_color = color;
 }
