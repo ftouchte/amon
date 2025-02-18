@@ -111,6 +111,18 @@ double fH1D::getMax() const {
 }
 
 
+void fH1D::reset() {
+	if (binArray.size() < 1) {return ;}
+	for (int i = 0; i < nbins; i++) {
+                binBuffer.at(i) = 0.0;
+        }
+        underflow = 0;
+        overflow = 0;
+        nEntries = 0;
+        sum = 0;
+        sum2 = 0;	
+}
+
 void fH1D::print() {
 	printf("Title : %s , nEntries : %ld , mean : %lf , stdev : %lf \n", title.c_str(), getEntries(), getMean(), getStDev());
 	fAxis ay(0, 100);
