@@ -30,13 +30,12 @@ fCanvas::fCanvas(int _width, int _height, double xmin, double xmax, double ymin,
 	x_end = xmax + margin_ratio*(xmax - xmin);
 	y_start = (ymin == 0) ? 0 : ymin - margin_ratio*(ymax - ymin);
 	y_end = ymax + margin_ratio*(ymax - ymin);
-	ax = fAxis(x_start, x_end, 10, 0);
-	ay = fAxis(y_start, y_end, 10, 0);
+	ax = fAxis(x_start, x_end, 10, 5, 0);
+	ay = fAxis(y_start, y_end, 10, 5, 0);
 
 	title_size = 0.4*top_margin;	
-	xlabel_size = 0.3*bottom_margin;
-        ylabel_size = 0.3*left_margin/1.5;
-        stick_size = 0.025*seff;
+	label_size = 0.3*std::min(bottom_margin, left_margin);
+        stick_size = 0.03*seff;
         stick_width = 0.005*seff;
         frame_line_width = 0.01*seff;
 }
@@ -55,12 +54,18 @@ int fCanvas::x2w(double x) {
 int fCanvas::y2h(double y) {
 	return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
 }
+
 void fCanvas::define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr) {
 	if (coord_system_not_defined) {
 		cr->translate(left_margin, top_margin + heff);
 		coord_system_not_defined = false;
 	}
 }
+
+void fCanvas::do_not_draw_secondary_stick(){
+	draw_secondary_stick = false;
+}
+
 void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 	//cr->translate(left_margin, top_margin + heff);
 	define_coord_system(cr);
@@ -73,6 +78,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 	for (std::string s : ax.get_labels1()) {
 		double value = std::atof(s.c_str());
 		if ((value >= x_start) && (value <= x_end)) {
+			// draw stick
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->set_line_width(stick_width);
 			cr->move_to(x2w(value), 0);
@@ -81,7 +87,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			// draw label
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
+			cr->set_font_size(label_size);
 			Cairo::TextExtents te;
         		cr->get_text_extents(s, te);
 			cr->move_to(x2w(value) - 0.5*te.width, 0.1*bottom_margin + te.height);
@@ -92,6 +98,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 	for (std::string s : ay.get_labels1()) {
 		double value = std::atof(s.c_str());
 		if ((value >= y_start) && (value <= y_end)) {
+			// draw stick
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->set_line_width(stick_width);
 			cr->move_to(0, y2h(value));
@@ -100,53 +107,56 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 			// draw label
 			cr->set_source_rgb(0.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
+			cr->set_font_size(label_size);
 			Cairo::TextExtents te;
 			cr->get_text_extents(s, te);
 			cr->move_to(-left_margin*0.1 - te.width, y2h(value) + 0.5*te.height);
 			cr->show_text(s.c_str());
 		}
 	}
-	// Draw secondary sticks x
-	for (std::string s : ax.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= x_start) && (value <= x_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(x2w(value), 0);
-			cr->line_to(x2w(value), -0.8*stick_size);
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
-			Cairo::TextExtents te;
-        		cr->get_text_extents(s, te);
-        		//cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*top_margin);	
-			cr->move_to(x2w(value) - 0.5*te.width, 0.1*bottom_margin + te.height);
-			cr->show_text(s.c_str());
+	if (draw_secondary_stick) {
+		// Draw secondary sticks x
+		for (std::string s : ax.get_labels2()) {
+			double value = std::atof(s.c_str());
+			if ((value >= x_start) && (value <= x_end)) {
+				//draw stick
+				cr->set_source_rgb(0.0, 0.0, 0.0);
+				cr->set_line_width(stick_width);
+				cr->move_to(x2w(value), 0);
+				cr->line_to(x2w(value), -0.7*stick_size);
+				cr->stroke();
+				// draw label
+				/*cr->set_source_rgb(0.0, 0.0, 0.0);
+				cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+				cr->set_font_size(label_size);
+				Cairo::TextExtents te;
+				cr->get_text_extents(s, te);
+				//cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*top_margin);	
+				cr->move_to(x2w(value) - 0.5*te.width, 0.1*bottom_margin + te.height);
+				cr->show_text(s.c_str());*/
+			}
+		}
+		// Draw seconday sticks y
+		for (std::string s : ay.get_labels2()) {
+			double value = std::atof(s.c_str());
+			if ((value >= y_start) && (value <= y_end)) {
+				// draw stick
+				cr->set_source_rgb(0.0, 0.0, 0.0);
+				cr->set_line_width(stick_width);
+				cr->move_to(0, y2h(value));
+				cr->line_to(0.7*stick_size, y2h(value));
+				cr->stroke();
+				// draw label
+				/*cr->set_source_rgb(0.0, 0.0, 0.0);
+				cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+				cr->set_font_size(label_size);
+				Cairo::TextExtents te;
+				cr->get_text_extents(s, te);
+				cr->move_to(-left_margin*0.1 - te.width, y2h(value) + 0.5*te.height);
+				cr->show_text(s.c_str());*/
+			}
 		}
 	}
-	// Draw seconday sticks y
-	for (std::string s : ay.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= y_start) && (value <= y_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(0.8*stick_width);
-			cr->move_to(0, y2h(value));
-			cr->line_to(stick_size, y2h(value));
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
-			Cairo::TextExtents te;
-			cr->get_text_extents(s, te);
-			cr->move_to(-left_margin*0.1 - te.width, y2h(value) + 0.5*te.height);
-			cr->show_text(s.c_str());
-		}
-	}
-
 	///////////
 }
 
@@ -191,36 +201,91 @@ void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 void fCanvas::set_top_margin(int margin) { 
 	if (height - margin - bottom_margin < 0) {return ;}
 	top_margin = margin;
+	// update
 	heff = height - top_margin - bottom_margin;
+	seff = std::min(weff, heff);
+	stick_size = 0.025*seff;
+        stick_width = 0.005*seff;
+        frame_line_width = 0.01*seff;
+	title_size = 0.4*top_margin;
+	label_size = 0.3*std::min(bottom_margin, left_margin);;
 }
 
 void fCanvas::set_bottom_margin(int margin) { 
 	if (height - top_margin - margin < 0) {return ;}
 	bottom_margin = margin;
+	// update
 	heff = height - top_margin - bottom_margin;
+	seff = std::min(weff, heff);
+	stick_size = 0.025*seff;
+        stick_width = 0.005*seff;
+        frame_line_width = 0.01*seff;
+	label_size = 0.3*std::min(bottom_margin, left_margin);;
 }
 
 void fCanvas::set_left_margin(int margin) { 
 	if (width - margin - right_margin < 0) {return ;}
 	left_margin = margin;
+	// update
 	weff = width - left_margin - right_margin;
+	seff = std::min(weff, heff);
+	stick_size = 0.025*seff;
+        stick_width = 0.005*seff;
+        frame_line_width = 0.01*seff;
+	label_size = 0.3*std::min(bottom_margin, left_margin);
 }
 
 void fCanvas::set_right_margin(int margin) { 
 	if (width - left_margin - margin < 0) {return ;}
 	right_margin = margin;
+	// update
 	weff = width - left_margin - right_margin;
+	seff = std::min(weff, heff);
+	stick_size = 0.025*seff;
+        stick_width = 0.005*seff;
+        frame_line_width = 0.01*seff;
 }
 
-void fCanvas::set_x_start(double value) { x_start = value;}
-void fCanvas::set_x_end(double value) {x_end = value;}
-void fCanvas::set_y_start(double value) { y_start = value;}
-void fCanvas::set_y_end(double value) { y_end = value;}
-void fCanvas::set_x_axis(fAxis _ax) {ax = _ax;}
-void fCanvas::set_y_axis(fAxis _ay) { ay = _ay;}
+void fCanvas::set_x_start(double value) { 
+	x_start = value;
+	// update
+	ax = fAxis(x_start, x_end, 10, 0);
+}
+
+void fCanvas::set_x_end(double value) {
+	x_end = value;
+	// update
+	ax = fAxis(x_start, x_end, 10, 0);
+}
+
+void fCanvas::set_y_start(double value) { 
+	y_start = value;
+	// update
+	ay = fAxis(y_start, y_end, 10, 0);
+}
+
+void fCanvas::set_y_end(double value) { 
+	y_end = value;
+	// update
+	ay = fAxis(y_start, y_end, 10, 0);
+}
+
+void fCanvas::set_x_axis(fAxis _ax) {
+	ax = _ax;
+	// update
+	x_start = ax.get_start();
+	y_end = ax.get_end();
+}
+
+void fCanvas::set_y_axis(fAxis _ay) { 
+	ay = _ay;
+	// update
+	y_start = ay.get_start();
+	y_end = ay.get_end();
+}
+
 void fCanvas::set_title_size(double s) { title_size = s*top_margin;}
-void fCanvas::set_xlabel_size(double s) { xlabel_size = s*bottom_margin;}
-void fCanvas::set_ylabel_size(double s) { ylabel_size = s*left_margin;}
+void fCanvas::set_label_size(double s) { label_size = s*std::min(bottom_margin, left_margin);}
 void fCanvas::set_stick_size(double s) { stick_size = s*seff;}
 void fCanvas::set_stick_width(double s) { stick_width = s*seff;}
 void fCanvas::set_frame_line_width(double s) { frame_line_width = seff*s;}
@@ -239,8 +304,7 @@ double fCanvas::get_y_end() {return y_end;}
 fAxis  fCanvas::get_x_axis() {return ax;}
 fAxis  fCanvas::get_y_axis() {return ay;}
 int    fCanvas::get_title_size() {return title_size;}
-int    fCanvas::get_xlabel_size() {return xlabel_size;}
-int    fCanvas::get_ylabel_size() {return ylabel_size;}
+int    fCanvas::get_label_size() {return label_size;}
 int    fCanvas::get_stick_size() {return stick_size;}
 int    fCanvas::get_stick_width() {return stick_size;}
 int    fCanvas::get_frame_line_width() {return frame_line_width;}
