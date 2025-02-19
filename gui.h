@@ -76,9 +76,7 @@ public :
 	Window();
 	~Window();
 
-	void eventAction();
-	void dataEventAction();
-	void endEventAction();
+	bool dataEventAction();
 	void drawWaveforms();
 	void drawHistograms();
 	

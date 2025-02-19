@@ -32,18 +32,18 @@ private :
 public :
 	fAxis(double _start = 0.0, double _end = 1.0, int _n1 = 10, int _n2 = 5, int _n3 = 0);
 	~fAxis();
-	double get_start();
-	double get_end();
-	int get_n1();
-	int get_n2();
-	int get_n3();
-	int get_eps1();
-	int get_eps2();
-	int get_eps3();
-	void print();
-	std::vector<std::string> get_labels1();
-	std::vector<std::string> get_labels2();
-	std::vector<std::string> get_labels3();
+	double get_start() const;
+	double get_end() const;
+	int get_n1() const;
+	int get_n2() const;
+	int get_n3() const;
+	int get_eps1() const;
+	int get_eps2() const;
+	int get_eps3() const;
+	void print() const;
+	std::vector<std::string> get_labels1() const;
+	std::vector<std::string> get_labels2() const;
+	std::vector<std::string> get_labels3() const;
 };
 
 #endif

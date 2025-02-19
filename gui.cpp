@@ -31,12 +31,6 @@ Window::Window() :
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
-	/*HBox_prev(Gtk::Orientation::HORIZONTAL,10),
-	HBox_next(Gtk::Orientation::HORIZONTAL,10),
-	HBox_pause(Gtk::Orientation::HORIZONTAL,10),
-	HBox_run(Gtk::Orientation::HORIZONTAL,10),
-	HBox_hipo4(Gtk::Orientation::HORIZONTAL,10),
-	HBox_reset(Gtk::Orientation::HORIZONTAL,10)*/
 	hist1d_adcMax("adcMax", 200, 0.0, 1000.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -170,6 +164,8 @@ void Window::on_button_prev_clicked(){
 
 void Window::on_button_next_clicked(){
 	std::cout << "Process next event ..." << std::endl;
+	is_paused = false;
+	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
 	if (filename.size() == 0) {
 		return;
 	}
@@ -178,14 +174,17 @@ void Window::on_button_next_clicked(){
 		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
 		hipo_nEventMax = hipo_reader.getEntries();
 	}
-	//this->eventAction();
-	//hipo_nEvent++;
-	//if (nWF == 0) { on_button_next_clicked();}
 	Glib::signal_timeout().connect([this] () -> bool {
-				this->eventAction();
-				hipo_nEvent++;
-				if (nWF == 0) {return true;} // continue the timeout
-				if (hipo_nEvent > hipo_nEventMax) {return false;}
+				if (is_paused) {return false;}
+				if (this->dataEventAction()) {
+					drawWaveforms(); 
+					drawHistograms();
+					DrawingArea_event.queue_draw();
+					Grid_waveforms.queue_draw();
+					Grid_histograms.queue_draw();
+					if (nWF == 0) {return true;} // continue the timeout
+					else {return false;}
+				}
 				else {return false;} // stop the timeout
 			}, 100); // call every 100 ms
 }
@@ -318,6 +317,8 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 		img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
 		img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
 		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+		this->Label_info.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
+		Label_info.queue_draw();
 	}
 	catch (const Gtk::DialogError& err)
 	{
@@ -353,10 +354,12 @@ void Window::on_button_reset_clicked(){
 	// Clear drawing areas
 	Grid_waveforms.remove_column(2);
 	Grid_waveforms.remove_column(1);
+	drawWaveforms();
 	Grid_waveforms.queue_draw();
 	Grid_histograms.remove_column(3);
 	Grid_histograms.remove_column(2);
 	Grid_histograms.remove_column(1);
+	drawHistograms();
 	Grid_histograms.queue_draw();
 	Label_info.set_text("No data");
 }
@@ -378,147 +381,43 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 }
 
 void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
-	// _______________________________________________________________
-	// The following code is inspired by Window::cairo_plot_graph(...)
-	// _______________________________________________________________
-	
+	fCanvas canvas(width, height, -80, 80, -80, 80);
 	int window_size = std::min(width,height);
-	// Setting parameters
-	double plot_ratio = 0.05; // 10%
-	int top_margin = plot_ratio*window_size; 
-	int bottom_margin = plot_ratio*window_size;
-	int left_margin = plot_ratio*window_size;
-	int right_margin = plot_ratio*window_size;
-	// Effective window size
-	int weff = width - left_margin - right_margin;
-	int heff = height - top_margin - bottom_margin;
-	int seff = std::min(weff, heff);
-	//printf("weff : %d , heff : %d\n",weff, heff);
-	// Change the origin to be 
-	cr->translate(left_margin, top_margin + heff);
-	// Determine the min and the max of the data	
-	double xmin = -80, xmax = 80;
-	double ymin = -80, ymax = 80;
-	double x_start = xmin;
-	double x_end = xmax ;
-	double y_start = ymin;
-	double y_end = ymax;
-	// Define scale functions
-	// transform [x1,x2] to [y1,y2]
-	// return the y correspnding to a x
-	auto linear_transformation = [](double x1, double y1, double x2, double y2, double x) -> double {
-		if (x1 == x2) {return x;} // do nothing
-		double slope = (y2-y1)/(x2-x1);
-		double y=  slope*(x-x1) + y1;
-		return y;
-	};
+	canvas.set_top_margin(0.05*window_size);
+	canvas.set_bottom_margin(0.05*window_size);
+	canvas.set_left_margin(0.05*window_size);
+	canvas.set_right_margin(0.05*window_size);
+	canvas.set_frame_line_width(0.005);
+	canvas.set_stick_width(0.002);
+	canvas.set_label_size(0.5);
+	canvas.set_title_size(0.6);
+	canvas.set_x_start(-80);
+	canvas.set_x_end(80);
+	canvas.set_y_start(-80);
+	canvas.set_y_end(80);
+	canvas.define_coord_system(cr);
+	canvas.do_not_draw_secondary_stick();
+	canvas.draw_title(cr, "face connected to the electronics");
+	canvas.draw_xtitle(cr, "");
+	canvas.draw_ytitle(cr, "");
+	canvas.draw_frame(cr);
 	// x coord to width
-	auto x2w = [x_start, x_end, weff, linear_transformation] (double x) {
-		return linear_transformation(x_start, 0, x_end, weff, x);
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
 	};
 	// y coord to height
-	auto y2h = [y_start, y_end, heff, linear_transformation] (double y) {
-		return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
 	};
 
-	// Draw the main frame
-	cr->set_line_width(0.005*seff);
-	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->rectangle(0, 0, weff, -heff);
-	cr->stroke();
+	int seff = canvas.get_seff();
+	int heff = canvas.get_heff();
+	int weff = canvas.get_weff();
+	double x_start = canvas.get_x_start();
+	double x_end = canvas.get_x_end();
+	double y_start = canvas.get_y_start();
+	double y_end = canvas.get_y_end();
 	
-	// Define axis
-	int n1x = 10; // number of secondary division in the x axis
-	//int n1y = (int) (n1x*heff/weff); // number of secondary division in the y axis		
-	int n1y = n1x;
-	int stick_size1 = 0.025*seff;
-	int stick_size2 = 0.020*seff;
-	int xlabel_size = 0.4*bottom_margin;
-	int ylabel_size = 0.4*left_margin;
-	int stick_width = 0.002*seff;
-	fAxis ax(x_start, x_end, n1x, 0, 0);
-	fAxis ay(y_start, y_end, n1y, 0, 0);
-	// Draw main sticks x
-	for (std::string s : ax.get_labels1()) {
-		double value = std::atof(s.c_str());
-		if ((value >= x_start) && (value <= x_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(x2w(value), 0);
-			cr->line_to(x2w(value), -stick_size1);
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
-			cr->move_to(x2w(value), bottom_margin*0.6);
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw main sticks y
-	for (std::string s : ay.get_labels1()) {
-		double value = std::atof(s.c_str());
-		if ((value >= y_start) && (value <= y_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(0, y2h(value));
-			cr->line_to(stick_size1, y2h(value));
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw secondary sticks x
-	for (std::string s : ax.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= x_start) && (value <= x_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(x2w(value), 0);
-			cr->line_to(x2w(value), -stick_size2);
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
-			cr->move_to(x2w(value), bottom_margin*0.6);
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw seconday sticks y
-	for (std::string s : ay.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= y_start) && (value <= y_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(0, y2h(value));
-			cr->line_to(stick_size2, y2h(value));
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
-			cr->show_text(s.c_str());
-		}
-	}
-
-	// Add a title
-	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-	cr->set_font_size(top_margin*0.5);
-	cr->move_to(0.3*weff, -heff - top_margin*0.2);
-	cr->show_text("face connected to the electronics");
-	
-	// _______________________________________________________________
-	// The ramaining part is specific to this method
-	// _______________________________________________________________
-
-
 	// Draw AHDC geometry	
 	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
 		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
@@ -560,22 +459,10 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
 		cr->fill();
 	}
-
-
 }
 
 void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
 	cr->save();
-	
-	//std::vector<double> vx = {1,2,3,4,5};
-	//std::vector<double> vy = {1,4,9,16,25};
-	/*std::vector<double> vx, vy;
-	for (int i = 0; i<= 2000; i++) {
-		double x = i*10/2000.0;
-		vx.push_back(x);
-		vy.push_back(x+cos(x));
-	}*/
-	
 	std::vector<double> vx;
 	std::vector<double> vy = {287, 259, 322, 319, 268, 340, 320, 255, 323, 298, 296, 316, 343, 410, 459, 523, 585, 637, 774, 832, 904, 921, 987, 982, 968, 985, 927, 1017, 959, 939, 828, 853, 787, 840, 774, 735, 709, 678, 642, 655, 648, 577, 529, 559, 571, 599, 552, 506, 470, 475, 459, 496, 485, 448, 406, 400, 434, 374, 358, 385, 453, 397, 411, 392, 397, 417, 375, 437, 381, 360, 411, 340, 374, 390, 362, 366, 312, 388, 300, 347, 391, 346, 364, 336, 318, 323, 322, 363, 346, 347, 384, 339, 294, 323, 323, 344, 301, 288, 322, 268, 314, 289, 325, 274, 308, 301, 322, 312, 307, 333, 302, 246, 305, 270, 321, 286, 316, 347, 347, 335, 326, 350, 322, 343, 282, 273, 288, 273, 315, 291, 335, 295, 259, 362, 321, 284};
 	double xmin = 0.0;
@@ -590,29 +477,14 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
 	canvas.do_not_draw_secondary_stick();
 	canvas.draw_frame(cr);
-		//canvas.set_title_size(0.6);
+	//canvas.set_title_size(0.6);
 	canvas.draw_title(cr, "Example (test fCanvas)");
 	canvas.draw_xtitle(cr, "Time (ns)");
 	canvas.draw_ytitle(cr, "Charge(adc)");
-	//cairo_plot_graph(cr,width,height,vx,vy, "L11W32");
 	cr->restore();
 }
 
 void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation){
-	int window_size = std::min(width,height);
-	// Setting parameters
-	double plot_ratio = 0.10; // 10%
-	int top_margin = plot_ratio*window_size; 
-	int bottom_margin = plot_ratio*window_size;
-	int left_margin = plot_ratio*window_size;
-	int right_margin = plot_ratio*window_size;
-	// Effective window size
-	int weff = width - left_margin - right_margin;
-	int heff = height - top_margin - bottom_margin;
-	int seff = std::min(weff, heff);
-	//printf("weff : %d , heff : %d\n",weff, heff);
-	// Change the origin to be 
-	cr->translate(left_margin, top_margin + heff);
 	// Determine the min and the max of the data	
 	int Npts = vx.size();
 	if (Npts != (int) vy.size()) {return ;}
@@ -624,29 +496,23 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 		ymin = (ymin < vy[i]) ? ymin : vy[i];
 		ymax = (ymax > vy[i]) ? ymax : vy[i];
 	}
-	double margin_ratio = 0.05;
-	double x_start = (xmin == 0) ? 0 : xmin - margin_ratio*(xmax - xmin);
-	double x_end = xmax + margin_ratio*(xmax - xmin);
-	double y_start = (ymin == 0) ? 0 : ymin - margin_ratio*(ymax - ymin);
-	double y_end = ymax + margin_ratio*(ymax - ymin);
-	// Define scale functions
-	// transform [x1,x2] to [y1,y2]
-	// return the y correspnding to a x
-	auto linear_transformation = [](double x1, double y1, double x2, double y2, double x) -> double {
-		if (x1 == x2) {return x;} // do nothing
-		double slope = (y2-y1)/(x2-x1);
-		double y=  slope*(x-x1) + y1;
-		return y;
-	};
+	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
+	canvas.define_coord_system(cr);
+	canvas.draw_title(cr, "");
+	canvas.draw_xtitle(cr, "bin");
+	canvas.draw_ytitle(cr, "adc");
 	// x coord to width
-	auto x2w = [x_start, x_end, weff, linear_transformation] (double x) {
-		return linear_transformation(x_start, 0, x_end, weff, x);
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
 	};
 	// y coord to height
-	auto y2h = [y_start, y_end, heff, linear_transformation] (double y) {
-		return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
 	};
-	
+
+	int seff = canvas.get_seff();
+	int heff = canvas.get_heff();
+	int weff = canvas.get_weff();	
 	// Draw points
 	cr->set_source_rgb(0.0, 0.0, 1.0);
 	cr->set_line_width(0.01*seff);
@@ -656,94 +522,10 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 		cr->line_to(x2w(vx[i]),y2h(vy[i]));
 	}
 	cr->stroke();
-
-	// Draw the frame for axis
-	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->set_line_width(0.01*seff);
-	cr->rectangle(0,0,weff,-heff);
-	cr->stroke();
 	
-	// Define axis
-	int n1x = 10; // number of secondary division in the x axis
-	//int n1y = (int) (n1x*heff/weff); // number of secondary division in the y axis		
-	int n1y = n1x;
-	int stick_size1 = 0.025*seff;
-	int stick_size2 = 0.020*seff;
-	int xlabel_size = 0.4*bottom_margin;
-	int ylabel_size = 0.4*left_margin; 
-	int stick_width = 0.01*seff;
-	fAxis ax(x_start, x_end, n1x, 0, 0);
-	fAxis ay(y_start, y_end, n1y, 0, 0);
-	// Draw main sticks x
-	for (std::string s : ax.get_labels1()) {
-		double value = std::atof(s.c_str());
-		if ((value >= x_start) && (value <= x_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(x2w(value), 0);
-			cr->line_to(x2w(value), -stick_size1);
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
-			cr->move_to(x2w(value), bottom_margin*0.6);
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw main sticks y
-	for (std::string s : ay.get_labels1()) {
-		double value = std::atof(s.c_str());
-		if ((value >= y_start) && (value <= y_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(0, y2h(value));
-			cr->line_to(stick_size1, y2h(value));
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw secondary sticks x
-	for (std::string s : ax.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= x_start) && (value <= x_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(x2w(value), 0);
-			cr->line_to(x2w(value), -stick_size2);
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(xlabel_size);
-			cr->move_to(x2w(value), bottom_margin*0.6);
-			cr->show_text(s.c_str());
-		}
-	}
-	// Draw seconday sticks y
-	for (std::string s : ay.get_labels2()) {
-		double value = std::atof(s.c_str());
-		if ((value >= y_start) && (value <= y_end)) {
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->set_line_width(stick_width);
-			cr->move_to(0, y2h(value));
-			cr->line_to(stick_size2, y2h(value));
-			cr->stroke();
-			// draw label
-			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(ylabel_size);
-			cr->move_to(-left_margin*0.9, y2h(value));
-			cr->show_text(s.c_str());
-		}
-	}
-
+	// ___________________________
 	// Show decoded values
+	// ___________________________
 	std::vector<short> samples;
 	for (int i = 0; i < (int) vy.size(); i++) {
 		samples.push_back((short) vy[i]);
@@ -789,25 +571,18 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	//cr->line_to(x2w(timeMax), 0);
 	cr->stroke();
 
-
 	// Display the layer ID
 	cr->set_source_rgb(1.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 	cr->set_font_size(seff*0.1);
 	cr->move_to(weff*0.7, -heff*0.8);
 	cr->show_text(annotation);
-
-
+	
+	// draw frame and axis
+	canvas.draw_frame(cr);
 }
 
-void Window::eventAction() {
-	dataEventAction();
-	drawWaveforms();
-	drawHistograms();
-	endEventAction();
-}
-
-void Window::dataEventAction() {
+bool Window::dataEventAction() {
 	// hipo4
 	if (hipo_reader.next(hipo_banklist)) {
 		// loop over hits
@@ -849,22 +624,15 @@ void Window::dataEventAction() {
 			Grid_histograms.remove_column(2);
 			Grid_histograms.remove_column(1);
 		}
+		this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
+		hipo_nEvent++;
+		return true;
 	}
-}
-
-void Window::endEventAction() {
-	// Event info
-	DrawingArea_event.queue_draw();
-	Grid_waveforms.queue_draw();
-	Grid_histograms.queue_draw();
-	this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
+	else {return false;}
 }
 
 void Window::drawWaveforms() {
-	//nWF = (int) hipo_banklist[1].getRows();
-	//std::cout << "ListOfSamples size : " << ListOfSamples.size() << std::endl;
-	nWF = (int) std::min((int) ListOfSamples.size(),10);
-	//std::cout << "nWF : " << nWF << std::endl;
+	nWF = (int) std::min((int) ListOfSamples.size(),10); // do not draw more than 10 waveforms
 	// Fill Grid_waveforms
 	for (int row = 1; row <= (nWF/2); row++) {
 		std::vector<double> vx, vy1, vy2;
