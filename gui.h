@@ -55,6 +55,7 @@ protected :
 	hipo::reader hipo_reader;
 	hipo::banklist hipo_banklist;
 	long unsigned int hipo_nEvent = 0;
+	long unsigned int hipo_nEventMax = 1;
 	int nWF; ///< number of waveforms	
 	AhdcDetector *ahdc; ///< AHDC detector
 	std::vector<AhdcWire> ListOfWires; ///< List of wires activated
@@ -63,10 +64,13 @@ protected :
 	AhdcExtractor decoder;
 
 	// Histograms
+	bool is_paused = false;
 	fH1D hist1d_adcMax;
 	fH1D hist1d_leadingEdgeTime;
 	fH1D hist1d_timeOverThreshold;
-	fH1D hist1d_timeMax;	
+	fH1D hist1d_timeMax;
+	fH1D hist1d_adcOffset;
+	fH1D hist1d_constantFractionTime;	
 
 public :
 	Window();
@@ -85,7 +89,7 @@ public :
 	void on_button_run_clicked();
 	void on_button_hipo4_clicked();
 	void on_button_reset_clicked();
-	void on_book_switch_page(Gtk::Widget * _pages, guint page_num); // le template est imposé ! page_num == Pages.get_current_page()
+	void on_book_switch_page(Gtk::Widget * _page, guint page_num); // le template est imposé ! page_num == Pages.get_current_page()
 	void on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog); // used in on_button_hipo4_clicked()
 	void on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
