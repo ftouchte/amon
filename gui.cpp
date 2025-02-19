@@ -40,11 +40,13 @@ Window::Window() :
 	hist1d_adcMax("adcMax", 200, 0.0, 1000.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
-        hist1d_timeMax("timeMax", 100, 0.0, 50.0)
+        hist1d_timeMax("timeMax", 100, 0.0, 50.0),
+	hist1d_adcOffset("adcOffset", 100, 0.0, 1000),
+        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 50.0)
 {
 	// Data
 	ahdc = new AhdcDetector();
-	decoder = *new AhdcExtractor(44.0, 0.5f, 5, 0.3f);
+	decoder = *new AhdcExtractor(1.0, 0.5f, 5, 0.3f); // 1.0 samplingTime
 	// Widgets
 	set_title("ALERT monitoring");
 	set_default_size(1378,654);
@@ -174,6 +176,7 @@ void Window::on_button_next_clicked(){
 	if (hipo_nEvent == 0) {
 		hipo_reader.open(filename.c_str());
 		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+		hipo_nEventMax = hipo_reader.getEntries();
 	}
 	//this->eventAction();
 	//hipo_nEvent++;
@@ -182,24 +185,31 @@ void Window::on_button_next_clicked(){
 				this->eventAction();
 				hipo_nEvent++;
 				if (nWF == 0) {return true;} // continue the timeout
+				if (hipo_nEvent > hipo_nEventMax) {return false;}
 				else {return false;} // stop the timeout
 			}, 100); // call every 100 ms
 }
 
 void Window::on_button_pause_clicked(){
 	std::cout << "Pause ..." << std::endl;
+	is_paused = true;
+	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
 }
 
 void Window::on_button_run_clicked(){
 	std::cout << "Run ..." << std::endl;
+	is_paused = false;
+	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
 	if (filename.size() == 0) {
                 return;
         }
         if (hipo_nEvent == 0) {
                 hipo_reader.open(filename.c_str());
                 hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+		hipo_nEventMax = hipo_reader.getEntries();
         }
 	Glib::signal_timeout().connect([this] () -> bool {
+				if (is_paused) {return false;}
 				if (this->hipo_reader.next(this->hipo_banklist)) {
 					// loop over hits
 					for (int col = 0; col < this->hipo_banklist[1].getRows(); col++){
@@ -207,25 +217,45 @@ void Window::on_button_run_clicked(){
 						int layer = this->hipo_banklist[1].getInt("layer", col);
 						int component = this->hipo_banklist[1].getInt("component", col);
 						std::vector<short> samples;
-						//for (int bin=0; bin < 136; bin++){
-						int adcMax = 0;
 						for (int bin=0; bin < 50; bin++){
 							std::string binName = "s" + std::__cxx11::to_string(bin+1);
 							short value = this->hipo_banklist[1].getInt(binName.c_str(), col);
 							samples.push_back(value);
-							// determine adcMax
-							adcMax = (adcMax < value) ? value : adcMax;
 						}
-						this->hist1d_adcMax.fill(adcMax);
+						/*
+						// decode the signal
+						decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
+						//decoder.adcOffset = 0;
+						std::map<std::string,double> output = decoder.extract(samples);
+						double timeMax = output["timeMax"];
+						double leadingEdgeTime = output["leadingEdgeTime"];
+						double timeOverThreshold = output["timeOverThreshold"];
+						double constantFractionTime = output["constantFractionTime"];
+						double adcOffset = output["adcOffset"];	
+						double adcMax = output["adcMax"] + adcOffset;
+						*/
+						double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
+						double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
+						double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
+						double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+						double adcMax = this->hipo_banklist[0].getInt("ADC", col);
+						double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+						this->hist1d_adcMax.fill(adcMax + adcOffset);
+						this->hist1d_leadingEdgeTime.fill(leadingEdgeTime);
+						this->hist1d_timeOverThreshold.fill(timeOverThreshold);
+						this->hist1d_timeMax.fill(timeMax);
+						this->hist1d_adcOffset.fill(adcOffset);
+						this->hist1d_constantFractionTime.fill(constantFractionTime);
 					}
 					// Clean Grid_waveforms
 					if (hipo_nEvent != 0) {
+						this->Grid_histograms.remove_column(3);
 						this->Grid_histograms.remove_column(2);
 						this->Grid_histograms.remove_column(1);
 						this->drawHistograms();
 						this->Grid_histograms.queue_draw();
 					}
-					this->Label_info.set_text(TString::Format("Event number : %lu  , Number of WF : %d ...",hipo_nEvent, nWF).Data() );
+					this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %s ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, "NaN", filename.c_str()).Data() );
 					this->Label_info.queue_draw();
 					this->hipo_nEvent++;
 					return true; // continue the timeout
@@ -306,7 +336,9 @@ void Window::on_button_reset_clicked(){
 	img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
 	img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
 	img_hipo4.set("./img/icon_file_on.png"); img_hipo4.queue_draw();
+	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
 	hipo_nEvent = 0;
+	hipo_nEventMax = 1;
 	ListOfWires.clear();
 	ListOfWireNames.clear();
 	ListOfSamples.clear();
@@ -316,16 +348,20 @@ void Window::on_button_reset_clicked(){
 	hist1d_leadingEdgeTime.reset();
 	hist1d_timeOverThreshold.reset();
 	hist1d_timeMax.reset();
+	hist1d_adcOffset.reset();
+        hist1d_constantFractionTime.reset();
 	// Clear drawing areas
 	Grid_waveforms.remove_column(2);
 	Grid_waveforms.remove_column(1);
 	Grid_waveforms.queue_draw();
+	Grid_histograms.remove_column(3);
 	Grid_histograms.remove_column(2);
 	Grid_histograms.remove_column(1);
 	Grid_histograms.queue_draw();
+	Label_info.set_text("No data");
 }
 
-void Window::on_book_switch_page(Gtk::Widget * _pages, guint page_num) { 
+void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) { 
 	std::string page_name;
 	switch (page_num) {
 		case 0 :
@@ -333,6 +369,7 @@ void Window::on_book_switch_page(Gtk::Widget * _pages, guint page_num) {
 			break;
 		case 1 :
 			page_name = "Histograms";
+			drawHistograms();
 			break;
 		default :
 			page_name = "Unknown process";
@@ -794,7 +831,7 @@ void Window::dataEventAction() {
 			}
 			hist1d_adcMax.fill(adcMax);
 			// add cut about adcMax
-			if (adcMax < 400) { continue;}
+			if (adcMax < 600) { continue;}
 			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
@@ -807,6 +844,7 @@ void Window::dataEventAction() {
 		if (hipo_nEvent != 0) {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
+			Grid_histograms.remove_column(3);
 			Grid_histograms.remove_column(2);
 			Grid_histograms.remove_column(1);
 		}
@@ -818,7 +856,7 @@ void Window::endEventAction() {
 	DrawingArea_event.queue_draw();
 	Grid_waveforms.queue_draw();
 	Grid_histograms.queue_draw();
-	Label_info.set_text(TString::Format("Event number : %lu  , Number of WF : %d ...",hipo_nEvent, nWF).Data() );
+	this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
 }
 
 void Window::drawWaveforms() {
@@ -868,14 +906,46 @@ void Window::drawHistograms() {
 	// area 1 : hist1d_adcMax
 	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
 	area1->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788});
+							this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788}); // green
 							this->hist1d_adcMax.draw_with_cairo(cr, width, height);
                                               } );
 	Grid_histograms.attach(*area1,1,1);
+	// area 5 : hist1d_adcOffset
+	auto area5 = Gtk::make_managed<Gtk::DrawingArea>();
+	area5->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+                                                        this->hist1d_adcOffset.set_fill_color({0.969, 0.78, 0.494}); // orange
+                                                        this->hist1d_adcOffset.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area5,2,1);
 	// area 2 : hist1d_leadindEdgeTime
 	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-		// set_draw_func ...
-	Grid_histograms.attach(*area2,1,2);
+	area2->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+                                                        this->hist1d_leadingEdgeTime.set_fill_color({0.961, 0.953, 0.608}); // yellow
+                                                        this->hist1d_leadingEdgeTime.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area2,3,1);
+	// area 3 : hist1d_timeOverThreshold
+	auto area3 = Gtk::make_managed<Gtk::DrawingArea>();
+	area3->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+                                                        this->hist1d_timeOverThreshold.set_fill_color({0.922, 0.435, 0.647}); // pink (rose)
+                                                        this->hist1d_timeOverThreshold.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area3,1,2);
+	// area 4 : hist1d_timeMax
+	auto area4 = Gtk::make_managed<Gtk::DrawingArea>();
+	area4->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+                                                        this->hist1d_timeMax.set_fill_color({0.431, 0.765, 0.922}); // blue
+                                                        this->hist1d_timeMax.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area4,2,2);
+	// area 6 : hist1d_constantFractionTime
+	auto area6 = Gtk::make_managed<Gtk::DrawingArea>();
+	area6->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+                                                        this->hist1d_constantFractionTime.set_fill_color({0.855, 0.6, 0.969}); // violet
+                                                        this->hist1d_constantFractionTime.draw_with_cairo(cr, width, height);
+                                              } );
+	Grid_histograms.attach(*area6,3,2);
+
 }
 
 /** Main function */
