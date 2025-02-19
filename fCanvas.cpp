@@ -40,18 +40,18 @@ fCanvas::fCanvas(int _width, int _height, double xmin, double xmax, double ymin,
         frame_line_width = 0.01*seff;
 }
 
-double fCanvas::linear_transformation(double x1, double y1, double x2, double y2, double x) {
+double fCanvas::linear_transformation(double x1, double y1, double x2, double y2, double x) const {
 	if (x1 == x2) {return x;} // do nothing
 	double slope = (y2-y1)/(x2-x1);
 	double y=  slope*(x-x1) + y1;
 	return y;
 }
 
-int fCanvas::x2w(double x) {
+int fCanvas::x2w(double x) const {
 	return linear_transformation(x_start, 0, x_end, weff, x);
 }
 
-int fCanvas::y2h(double y) {
+int fCanvas::y2h(double y) const {
 	return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
 }
 
@@ -66,12 +66,12 @@ void fCanvas::do_not_draw_secondary_stick(){
 	draw_secondary_stick = false;
 }
 
-void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
+void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 	//cr->translate(left_margin, top_margin + heff);
 	define_coord_system(cr);
 	// Draw the frame for axis
 	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->set_line_width(0.01*seff);
+	cr->set_line_width(frame_line_width);
 	cr->rectangle(0,0,weff,-heff);
 	cr->stroke();
 	// Draw main sticks x
@@ -160,7 +160,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr){
 	///////////
 }
 
-void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) {
+void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) const {
 	// draw label
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
@@ -171,7 +171,7 @@ void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string te
 	cr->show_text(text.c_str());
 }
 
-void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) {
+void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) const {
 	// draw label
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
@@ -182,7 +182,7 @@ void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 	cr->show_text(text.c_str());
 }
 
-void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) {
+void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) const {
 	// draw label
 	cr->save();
 	cr->set_source_rgb(0.0, 0.0, 0.0);
@@ -290,23 +290,23 @@ void fCanvas::set_stick_size(double s) { stick_size = s*seff;}
 void fCanvas::set_stick_width(double s) { stick_width = s*seff;}
 void fCanvas::set_frame_line_width(double s) { frame_line_width = seff*s;}
 
-int    fCanvas::get_top_margin() {return top_margin;}
-int    fCanvas::get_bottom_margin() {return bottom_margin;}
-int    fCanvas::get_left_margin() {return left_margin;}
-int    fCanvas::get_right_margin() {return right_margin;}
-int    fCanvas::get_weff() {return weff;}
-int    fCanvas::get_heff() {return heff;}
-int    fCanvas::get_seff() {return seff;}
-double fCanvas::get_x_start() {return x_start;}
-double fCanvas::get_x_end() {return x_end;}
-double fCanvas::get_y_start() {return y_start;}
-double fCanvas::get_y_end() {return y_end;}
-fAxis  fCanvas::get_x_axis() {return ax;}
-fAxis  fCanvas::get_y_axis() {return ay;}
-int    fCanvas::get_title_size() {return title_size;}
-int    fCanvas::get_label_size() {return label_size;}
-int    fCanvas::get_stick_size() {return stick_size;}
-int    fCanvas::get_stick_width() {return stick_size;}
-int    fCanvas::get_frame_line_width() {return frame_line_width;}
+int    fCanvas::get_top_margin() const {return top_margin;}
+int    fCanvas::get_bottom_margin() const {return bottom_margin;}
+int    fCanvas::get_left_margin() const {return left_margin;}
+int    fCanvas::get_right_margin() const {return right_margin;}
+int    fCanvas::get_weff() const {return weff;}
+int    fCanvas::get_heff() const {return heff;}
+int    fCanvas::get_seff() const {return seff;}
+double fCanvas::get_x_start() const {return x_start;}
+double fCanvas::get_x_end() const {return x_end;}
+double fCanvas::get_y_start() const {return y_start;}
+double fCanvas::get_y_end() const {return y_end;}
+fAxis  fCanvas::get_x_axis() const {return ax;}
+fAxis  fCanvas::get_y_axis() const {return ay;}
+int    fCanvas::get_title_size() const {return title_size;}
+int    fCanvas::get_label_size() const {return label_size;}
+int    fCanvas::get_stick_size() const {return stick_size;}
+int    fCanvas::get_stick_width() const {return stick_size;}
+int    fCanvas::get_frame_line_width() const {return frame_line_width;}
 
 
