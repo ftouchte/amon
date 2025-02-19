@@ -35,12 +35,12 @@ private :
 	fAxis ay; ///< Y axis
 
 	int title_size;	
-	int xlabel_size;
-	int ylabel_size;
+	int label_size;
 	int stick_size;
 	int stick_width;
 	int frame_line_width;
 	
+	bool draw_secondary_stick = true;	
 	bool coord_system_not_defined = true;
 	double linear_transformation(double x1, double y1, double x2, double y2, double x); ///< match [x1, x2] to [y1, y2] or ([y2, y1] if y2 < y1) f(x1) = y1 and f(x2) = y2, return y = f(x)
 public :
@@ -48,6 +48,7 @@ public :
 	int x2w(double x); ///< convert x to width (pixel system)
 	int y2h(double y); ///< convert y to height (pixel system)
 	void define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr); ///< must be used only one time !
+	void do_not_draw_secondary_stick();
 	void draw_frame(const Cairo::RefPtr<Cairo::Context>& cr);
 	void draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string text);
 	void draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text);
@@ -64,8 +65,7 @@ public :
 	void set_x_axis(fAxis _ax);
 	void set_y_axis(fAxis _ay);
 	void set_title_size(double s);
-	void set_xlabel_size(double s);
-	void set_ylabel_size(double s);
+	void set_label_size(double s);
 	void set_stick_size(double s);
 	void set_stick_width(double s);
 	void set_frame_line_width(double s);
@@ -84,8 +84,7 @@ public :
 	fAxis  get_x_axis();
 	fAxis  get_y_axis();
 	int    get_title_size();
-	int    get_xlabel_size();
-	int    get_ylabel_size();
+	int    get_label_size();
 	int    get_stick_size();
 	int    get_stick_width();
 	int    get_frame_line_width();

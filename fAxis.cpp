@@ -93,6 +93,9 @@ fAxis::fAxis(double _start, double _end, int _n1, int _n2, int _n3) : start(_sta
 
 fAxis::~fAxis(){} ///< Destructor
 
+double fAxis::get_start() {return start;}
+double fAxis::get_end() {return end;}
+
 int  fAxis::get_n1() {return n1;} ///< get the number of first divisions
 int  fAxis::get_n2() {return n2;} ///< get the number of second divisions
 int  fAxis::get_n3() {return n3;} ///< get the number of third divisions

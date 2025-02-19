@@ -588,6 +588,7 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 		ymax = (ymax < vy[i]) ? vy[i] : ymax;
 	}
 	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
+	canvas.do_not_draw_secondary_stick();
 	canvas.draw_frame(cr);
 		//canvas.set_title_size(0.6);
 	canvas.draw_title(cr, "Example (test fCanvas)");
