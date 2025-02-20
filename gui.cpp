@@ -31,7 +31,7 @@ Window::Window() :
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
-	hist1d_adcMax("adcMax", 200, 0.0, 1000.0),
+	hist1d_adcMax("adcMax + adcOffset", 200, 0.0, 1000.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
         hist1d_timeMax("timeMax", 100, 0.0, 50.0),
@@ -43,7 +43,7 @@ Window::Window() :
 	decoder = *new AhdcExtractor(1.0, 0.5f, 5, 0.3f); // 1.0 samplingTime
 	// Widgets
 	set_title("ALERT monitoring");
-	set_default_size(1378,654);
+	set_default_size(1378,800);
 	set_child(VBox_main);
 	
 	/********************
@@ -160,12 +160,26 @@ Window::~Window() {
 
 void Window::on_button_prev_clicked(){
 	std::cout << "Process prev event ..." << std::endl;
+	// update icons
+	//img_next.set("./img/icon_prev_off.png"); img_prev.queue_draw();
+	//img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
+	//img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
+	//img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
+	//img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+	//img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
 }
 
 void Window::on_button_next_clicked(){
 	std::cout << "Process next event ..." << std::endl;
 	is_paused = false;
+	is_reset = false;
+	// update icons
+	img_next.set("./img/icon_prev_off.png"); img_prev.queue_draw();
+	img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
 	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
+	img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
+	img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+	img_reset.set("./img/icon_reset_on.png"); img_reset.queue_draw();
 	if (filename.size() == 0) {
 		return;
 	}
@@ -177,28 +191,37 @@ void Window::on_button_next_clicked(){
 	Glib::signal_timeout().connect([this] () -> bool {
 				if (is_paused) {return false;}
 				if (this->dataEventAction()) {
-					drawWaveforms(); 
-					drawHistograms();
-					DrawingArea_event.queue_draw();
-					Grid_waveforms.queue_draw();
-					Grid_histograms.queue_draw();
 					if (nWF == 0) {return true;} // continue the timeout
-					else {return false;}
+					else {return false;} // stop the timeout
 				}
 				else {return false;} // stop the timeout
-			}, 100); // call every 100 ms
+			}, 5); // call every 5 ms
 }
 
 void Window::on_button_pause_clicked(){
 	std::cout << "Pause ..." << std::endl;
 	is_paused = true;
+	// update icons
+	//img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
+	//img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
 	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
+	//img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
+	//img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+	//img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+	drawWaveforms();
 }
 
 void Window::on_button_run_clicked(){
 	std::cout << "Run ..." << std::endl;
 	is_paused = false;
+	is_reset = false;
+	// update icons
+	img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
+	img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
 	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
+	img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
+	img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+	img_reset.set("./img/icon_reset_on.png"); img_reset.queue_draw();
 	if (filename.size() == 0) {
                 return;
         }
@@ -208,59 +231,12 @@ void Window::on_button_run_clicked(){
 		hipo_nEventMax = hipo_reader.getEntries();
         }
 	Glib::signal_timeout().connect([this] () -> bool {
-				if (is_paused) {return false;}
-				if (this->hipo_reader.next(this->hipo_banklist)) {
-					// loop over hits
-					for (int col = 0; col < this->hipo_banklist[1].getRows(); col++){
-						int sector = this->hipo_banklist[1].getInt("sector", col);	
-						int layer = this->hipo_banklist[1].getInt("layer", col);
-						int component = this->hipo_banklist[1].getInt("component", col);
-						std::vector<short> samples;
-						for (int bin=0; bin < 50; bin++){
-							std::string binName = "s" + std::__cxx11::to_string(bin+1);
-							short value = this->hipo_banklist[1].getInt(binName.c_str(), col);
-							samples.push_back(value);
-						}
-						/*
-						// decode the signal
-						decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
-						//decoder.adcOffset = 0;
-						std::map<std::string,double> output = decoder.extract(samples);
-						double timeMax = output["timeMax"];
-						double leadingEdgeTime = output["leadingEdgeTime"];
-						double timeOverThreshold = output["timeOverThreshold"];
-						double constantFractionTime = output["constantFractionTime"];
-						double adcOffset = output["adcOffset"];	
-						double adcMax = output["adcMax"] + adcOffset;
-						*/
-						double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
-						double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
-						double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
-						double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
-						double adcMax = this->hipo_banklist[0].getInt("ADC", col);
-						double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-						this->hist1d_adcMax.fill(adcMax + adcOffset);
-						this->hist1d_leadingEdgeTime.fill(leadingEdgeTime);
-						this->hist1d_timeOverThreshold.fill(timeOverThreshold);
-						this->hist1d_timeMax.fill(timeMax);
-						this->hist1d_adcOffset.fill(adcOffset);
-						this->hist1d_constantFractionTime.fill(constantFractionTime);
-					}
-					// Clean Grid_waveforms
-					if (hipo_nEvent != 0) {
-						this->Grid_histograms.remove_column(3);
-						this->Grid_histograms.remove_column(2);
-						this->Grid_histograms.remove_column(1);
-						this->drawHistograms();
-						this->Grid_histograms.queue_draw();
-					}
-					this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %s ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, "NaN", filename.c_str()).Data() );
-					this->Label_info.queue_draw();
-					this->hipo_nEvent++;
+				if (is_paused || is_reset) {return false;}
+				if (this->dataEventAction()) {
 					return true; // continue the timeout
 				}
 				else {return false;} // stop the timeout
-                        }, 5); // call every 1 ms
+                        }, 5); // call every 5 ms
 }
 
 void Window::on_button_hipo4_clicked(){
@@ -313,10 +289,14 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 		filename = file->get_path();
 		std::cout << "File selected : " <<  filename << std::endl;
 		
-		// Possible action
+		// Possible actions
+		img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
 		img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
+		img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
 		img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
 		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+		img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+		// label info
 		this->Label_info.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
 		Label_info.queue_draw();
 	}
@@ -333,11 +313,16 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 
 void Window::on_button_reset_clicked(){
 	std::cout << "Reset ..." << std::endl;
+	is_reset = true;
 	filename = "";
+	// update icons
+	img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
 	img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
+	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
 	img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
 	img_hipo4.set("./img/icon_file_on.png"); img_hipo4.queue_draw();
-	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
+	img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+	// ...
 	hipo_nEvent = 0;
 	hipo_nEventMax = 1;
 	ListOfWires.clear();
@@ -355,12 +340,12 @@ void Window::on_button_reset_clicked(){
 	Grid_waveforms.remove_column(2);
 	Grid_waveforms.remove_column(1);
 	drawWaveforms();
-	Grid_waveforms.queue_draw();
+	//Grid_waveforms.queue_draw();
 	Grid_histograms.remove_column(3);
 	Grid_histograms.remove_column(2);
 	Grid_histograms.remove_column(1);
 	drawHistograms();
-	Grid_histograms.queue_draw();
+	//Grid_histograms.queue_draw();
 	Label_info.set_text("No data");
 }
 
@@ -596,18 +581,38 @@ bool Window::dataEventAction() {
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
 			std::vector<short> samples;
-			//for (int bin=0; bin < 136; bin++){
-			int adcMax = 0;
 			for (int bin=0; bin < 50; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
 				short value = hipo_banklist[1].getInt(binName.c_str(), col);
 				samples.push_back(value);
-				// determine adcMax
-				adcMax = (adcMax < value) ? value : adcMax;
 			}
-			hist1d_adcMax.fill(adcMax);
-			// add cut about adcMax
-			if (adcMax < 600) { continue;}
+			/******** Uncommment me to use local decoder
+			// decode the signal
+			decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
+			//decoder.adcOffset = 0;
+			std::map<std::string,double> output = decoder.extract(samples);
+			double timeMax = output["timeMax"];
+			double leadingEdgeTime = output["leadingEdgeTime"];
+			double timeOverThreshold = output["timeOverThreshold"];
+			double constantFractionTime = output["constantFractionTime"];
+			double adcOffset = output["adcOffset"];	
+			double adcMax = output["adcMax"];
+			*********/
+			// fill histograms
+			double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
+                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
+                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
+                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+                        double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
+                        double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+                        hist1d_adcMax.fill(adcMax + adcOffset);
+                        hist1d_leadingEdgeTime.fill(leadingEdgeTime);
+                        hist1d_timeOverThreshold.fill(timeOverThreshold);
+                        hist1d_timeMax.fill(timeMax);
+                        hist1d_adcOffset.fill(adcOffset);
+                        hist1d_constantFractionTime.fill(constantFractionTime);
+			// add cut on adcMax + adcOffset to plot waveforms
+			if (adcMax + adcOffset < 600) { continue;}
 			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
@@ -624,7 +629,11 @@ bool Window::dataEventAction() {
 			Grid_histograms.remove_column(2);
 			Grid_histograms.remove_column(1);
 		}
-		this->Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
+		// Update drawings
+		DrawingArea_event.queue_draw();
+		drawWaveforms();
+		drawHistograms();
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
 		hipo_nEvent++;
 		return true;
 	}
@@ -669,6 +678,7 @@ void Window::drawWaveforms() {
 					      } );
 		Grid_waveforms.attach(*area1,1,nWF);
 	}
+	Grid_waveforms.queue_draw();
 }
 
 void Window::drawHistograms() {
@@ -714,7 +724,7 @@ void Window::drawHistograms() {
                                                         this->hist1d_constantFractionTime.draw_with_cairo(cr, width, height);
                                               } );
 	Grid_histograms.attach(*area6,3,2);
-
+	Grid_histograms.queue_draw();
 }
 
 /** Main function */
