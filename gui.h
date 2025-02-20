@@ -65,6 +65,7 @@ protected :
 
 	// Histograms
 	bool is_paused = false;
+	bool is_reset = false;
 	fH1D hist1d_adcMax;
 	fH1D hist1d_leadingEdgeTime;
 	fH1D hist1d_timeOverThreshold;
