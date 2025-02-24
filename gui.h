@@ -49,6 +49,10 @@ protected :
 	Gtk::Image img_prev, img_next, img_pause, img_run, img_hipo4, img_reset;
 	Gtk::Box HBox_info;
 	Gtk::Label Label_info;
+	Gtk::Label Label_header;
+	Gtk::Box HBox_Scale_adcMax;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax;
+	Gtk::Scale Scale_adcMax;
 
 	/// DATA
 	std::string filename;
@@ -62,6 +66,7 @@ protected :
 	std::vector<std::string> ListOfWireNames; ///< List of wire names
 	std::vector<std::vector<short>> ListOfSamples;  ///< List of samples
 	AhdcExtractor decoder;
+	double adcCut = 600;
 
 	// Histograms
 	bool is_paused = false;
