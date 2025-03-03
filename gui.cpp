@@ -31,6 +31,10 @@ Window::Window() :
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
+	HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
+	// Value, lower, upper, step_increment, page_increment, page_size
+	Adjustment_adcMax(Gtk::Adjustment::create(600.0, 0.0, 4095, 10, 0.0, 0.0)),
+	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	hist1d_adcMax("adcMax + adcOffset", 200, 0.0, 1000.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -50,7 +54,9 @@ Window::Window() :
 	 * HEADER
 	 * *****************/
 	VBox_main.append(VBox_header);
-	VBox_header.append(*Gtk::make_managed<Gtk::Label>("Header") );
+	VBox_header.append(Label_header);
+	Label_header.set_text("No file selected");
+	Label_header.set_hexpand(true);
 	/*******************
 	 * BODY
 	 * ****************/
@@ -147,9 +153,20 @@ Window::Window() :
 	HBox_reset->append(*Gtk::make_managed<Gtk::Label>("reset") );
 	Button_reset.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_reset_clicked) );
 	
-	// ending
+	// ending (real time control of adcMax cuts)
 	VBox_main.append(VBox_footer);
-	VBox_footer.append(*Gtk::make_managed<Gtk::Label>("Footer") );
+	VBox_footer.append(HBox_Scale_adcMax);
+	HBox_Scale_adcMax.set_margin(10); 
+	HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax + adcOffset CUT"));
+	HBox_Scale_adcMax.append(Scale_adcMax);
+	Scale_adcMax.set_hexpand(true);
+	Scale_adcMax.set_draw_value();
+	Scale_adcMax.set_digits(0);
+	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_adcMax->get_value();
+				this->adcCut = val;
+			});	
+	//VBox_footer.append(*Gtk::make_managed<Gtk::Label>("Footer") );
 }
 
 /** Destructor */
@@ -297,7 +314,7 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
 		img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
 		// label info
-		this->Label_info.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
+		this->Label_header.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
 		Label_info.queue_draw();
 	}
 	catch (const Gtk::DialogError& err)
@@ -346,7 +363,8 @@ void Window::on_button_reset_clicked(){
 	Grid_histograms.remove_column(1);
 	drawHistograms();
 	//Grid_histograms.queue_draw();
-	Label_info.set_text("No data");
+	Label_info.set_text("No data"); Label_info.queue_draw();
+	Label_header.set_text("No file selected"); Label_header.queue_draw();
 }
 
 void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) { 
@@ -574,9 +592,7 @@ bool Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
-		int rand = std::rand() % 25;
-		rand = 0; // no rand
-		for (int col = rand; col < hipo_banklist[1].getRows(); col++){
+		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
@@ -612,7 +628,7 @@ bool Window::dataEventAction() {
                         hist1d_adcOffset.fill(adcOffset);
                         hist1d_constantFractionTime.fill(constantFractionTime);
 			// add cut on adcMax + adcOffset to plot waveforms
-			if (adcMax + adcOffset < 600) { continue;}
+			if (adcMax + adcOffset < adcCut) { continue;}
 			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
@@ -633,7 +649,7 @@ bool Window::dataEventAction() {
 		DrawingArea_event.queue_draw();
 		drawWaveforms();
 		drawHistograms();
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., filename : %s", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, filename.c_str()).Data() );
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
 		hipo_nEvent++;
 		return true;
 	}
