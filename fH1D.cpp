@@ -175,6 +175,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	cr->close_path();
 	cr->set_source_rgb(fill_color.r, fill_color.g, fill_color.b);
 	cr->fill();
+	canvas.set_frame_line_width(0.005);
 	canvas.draw_frame(cr); // draw frame and axis at the end
 
 }
