@@ -35,11 +35,11 @@ Window::Window() :
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(600.0, 0.0, 4095, 10, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
-	hist1d_adcMax("adcMax + adcOffset", 200, 0.0, 1000.0),
+	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
         hist1d_timeMax("timeMax", 100, 0.0, 50.0),
-	hist1d_adcOffset("adcOffset", 100, 0.0, 1000),
+	hist1d_adcOffset("adcOffset (s1+s2+s3+s4+s5)/5", 100, 0.0, 1000),
         hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 50.0)
 {
 	// Data
@@ -83,6 +83,12 @@ Window::Window() :
 	Grid_histograms.set_expand(true);
         Grid_histograms.set_column_homogeneous(true);
         Grid_histograms.set_row_homogeneous(true);
+	hist1d_adcMax.set_xtitle("adc");
+        hist1d_leadingEdgeTime.set_xtitle("bin");
+        hist1d_timeOverThreshold.set_xtitle("bin");
+        hist1d_timeMax.set_xtitle("bin");
+	hist1d_adcOffset.set_xtitle("adc");
+        hist1d_constantFractionTime.set_xtitle("bin");
 	// Page 2 (test)
 	Book.append_page(DrawingArea_test, "Test");
 	DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
@@ -621,7 +627,7 @@ bool Window::dataEventAction() {
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-                        hist1d_adcMax.fill(adcMax + adcOffset);
+                        hist1d_adcMax.fill(adcMax);
                         hist1d_leadingEdgeTime.fill(leadingEdgeTime);
                         hist1d_timeOverThreshold.fill(timeOverThreshold);
                         hist1d_timeMax.fill(timeMax);
@@ -657,7 +663,7 @@ bool Window::dataEventAction() {
 }
 
 void Window::drawWaveforms() {
-	nWF = (int) std::min((int) ListOfSamples.size(),10); // do not draw more than 10 waveforms
+	nWF = (int) std::min((int) ListOfSamples.size(),40); // do not draw more than 10 waveforms
 	// Fill Grid_waveforms
 	for (int row = 1; row <= (nWF/2); row++) {
 		std::vector<double> vx, vy1, vy2;

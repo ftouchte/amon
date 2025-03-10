@@ -45,7 +45,7 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: gui test_fAxis test_fH1D 
+all: gui  
 
 
 histAhdcAdc: histAhdcAdc.o AhdcExtractor.o 
