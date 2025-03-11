@@ -23,18 +23,18 @@
 /** Constructor */
 Window::Window() :
 	// Initialisation // Take of the order of declaration
-	VBox_main(Gtk::Orientation::VERTICAL),
-	VBox_header(Gtk::Orientation::VERTICAL,10),
-	VBox_body(Gtk::Orientation::VERTICAL,10),
-	VBox_footer(Gtk::Orientation::VERTICAL,10),
-	HBox_eventViewer(Gtk::Orientation::HORIZONTAL,10),
-	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
-	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
-	HBox_info(Gtk::Orientation::HORIZONTAL,15),
-	HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
+	VBox_main(Gtk::Orientation::ORIENTATION_VERTICAL),
+	VBox_header(Gtk::Orientation::ORIENTATION_VERTICAL,10),
+	VBox_body(Gtk::Orientation::ORIENTATION_VERTICAL,10),
+	VBox_footer(Gtk::Orientation::ORIENTATION_VERTICAL,10),
+	HBox_eventViewer(Gtk::Orientation::ORIENTATION_HORIZONTAL,10),
+	HBox_histograms(Gtk::Orientation::ORIENTATION_HORIZONTAL,10),
+	HBox_footer(Gtk::Orientation::ORIENTATION_HORIZONTAL,10),
+	HBox_info(Gtk::Orientation::ORIENTATION_HORIZONTAL,15),
+	HBox_Scale_adcMax(Gtk::Orientation::ORIENTATION_HORIZONTAL,10),
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(600.0, 0.0, 4095, 10, 0.0, 0.0)),
-	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
+	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::ORIENTATION_HORIZONTAL),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -48,39 +48,46 @@ Window::Window() :
 	// Widgets
 	set_title("ALERT monitoring");
 	set_default_size(1378,800);
-	set_child(VBox_main);
+	add(VBox_main); // set_child in gtkmm-4.0
 	
 	/********************
 	 * HEADER
 	 * *****************/
-	VBox_main.append(VBox_header);
-	VBox_header.append(Label_header);
+	VBox_main.pack_start(VBox_header, Gtk::PACK_SHRINK);
+	VBox_header.pack_start(Label_header, Gtk::PACK_SHRINK);
 	Label_header.set_text("No file selected");
 	Label_header.set_hexpand(true);
 	/*******************
 	 * BODY
 	 * ****************/
-	VBox_main.append(VBox_body);
-	VBox_body.append(Book);
-	Book.set_margin(10);
-	Book.set_expand(true);
+	VBox_main.pack_start(VBox_body);
+	VBox_body.pack_start(Book);
+	Book.set_margin_left(10);
+	Book.set_margin_right(10);
+	Book.set_margin_top(10);
+	Book.set_margin_bottom(10);
+	Book.set_hexpand(true);
+	Book.set_vexpand(true);
 	Book.signal_switch_page().connect(sigc::mem_fun(*this,&Window::on_book_switch_page) );
 	
 	// Page 0
 	Book.append_page(HBox_eventViewer, "Event Viewer");
-	HBox_eventViewer.append(Grid_eventViewer);
+	HBox_eventViewer.pack_start(Grid_eventViewer);
 	Grid_eventViewer.set_column_homogeneous(true);
 	Grid_eventViewer.set_row_homogeneous(true);
 	Grid_eventViewer.attach(DrawingArea_event,1,1);
-	DrawingArea_event.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_event) );
+	DrawingArea_event.set_ListOfWires(this->ahdc, std::vector<AhdcWire>());
+	//DrawingArea_event.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_event) );
 	Grid_eventViewer.attach(Grid_waveforms,2,1);
-	Grid_waveforms.set_expand(true);
+	Grid_waveforms.set_hexpand(true);
+	Grid_waveforms.set_vexpand(true);
 	Grid_waveforms.set_column_homogeneous(true);
 	Grid_waveforms.set_row_homogeneous(true);
 	// Page 1
 	Book.append_page(HBox_histograms, "Histograms");
-	HBox_histograms.append(Grid_histograms);
-	Grid_histograms.set_expand(true);
+	HBox_histograms.pack_start(Grid_histograms);
+	Grid_histograms.set_hexpand(true);
+	Grid_histograms.set_vexpand(true);
         Grid_histograms.set_column_homogeneous(true);
         Grid_histograms.set_row_homogeneous(true);
 	hist1d_adcMax.set_xtitle("adc");
@@ -90,81 +97,87 @@ Window::Window() :
 	hist1d_adcOffset.set_xtitle("adc");
         hist1d_constantFractionTime.set_xtitle("bin");
 	// Page 2 (test)
-	Book.append_page(DrawingArea_test, "Test");
-	DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
+	//Book.append_page(DrawingArea_test, "Test");
+	//DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
 
 	/******************
 	 * FOOTER
 	 * ***************/
-	VBox_footer.append(HBox_footer);
-	HBox_footer.set_margin(10);
+	VBox_footer.pack_start(HBox_footer, Gtk::PACK_SHRINK);
+	HBox_footer.set_margin_left(10);
+	HBox_footer.set_margin_right(10);
+	HBox_footer.set_margin_top(10);
+	HBox_footer.set_margin_bottom(10);
 	// prev
-	HBox_footer.append(Button_prev);
+	HBox_footer.pack_start(Button_prev, Gtk::PACK_SHRINK);
 	//Button_prev.set_hexpand(true);
-	auto HBox_prev = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,15);
-	Button_prev.set_child(*HBox_prev);
+	auto HBox_prev = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,15);
+	Button_prev.add(*HBox_prev);
 	img_prev.set("./img/icon_prev_off.png");
-	HBox_prev->append(img_prev );
-	HBox_prev->append(*Gtk::make_managed<Gtk::Label>("prev") );
+	HBox_prev->pack_start(img_prev, Gtk::PACK_SHRINK);
+	HBox_prev->pack_start(*Gtk::make_managed<Gtk::Label>("prev"), Gtk::PACK_SHRINK);
 	Button_prev.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_prev_clicked) );
 
 	// next
-	HBox_footer.append(Button_next);
-	auto HBox_next = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,15);
-	Button_next.set_child(*HBox_next);
+	HBox_footer.pack_start(Button_next, Gtk::PACK_SHRINK);
+	auto HBox_next = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,15);
+	Button_next.add(*HBox_next);
 	img_next.set("./img/icon_next_off.png");
-	HBox_next->append(img_next);
-	HBox_next->append(*Gtk::make_managed<Gtk::Label>("next") );
+	HBox_next->pack_start(img_next, Gtk::PACK_SHRINK);
+	HBox_next->pack_start(*Gtk::make_managed<Gtk::Label>("next"), Gtk::PACK_SHRINK);
 	Button_next.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_next_clicked) );
 
 	// pause
-	HBox_footer.append(Button_pause);
-	auto HBox_pause = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
-	Button_pause.set_child(*HBox_pause);
+	HBox_footer.pack_start(Button_pause, Gtk::PACK_SHRINK);
+	auto HBox_pause = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,20);
+	Button_pause.add(*HBox_pause);
 	img_pause.set("./img/icon_pause_off.png");
-	HBox_pause->append(img_pause );
-	HBox_pause->append(*Gtk::make_managed<Gtk::Label>("pause") );
+	HBox_pause->pack_start(img_pause, Gtk::PACK_SHRINK);
+	HBox_pause->pack_start(*Gtk::make_managed<Gtk::Label>("pause"), Gtk::PACK_SHRINK);
 	Button_pause.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_pause_clicked) );
 
 	// run
-	HBox_footer.append(Button_run);
-	auto HBox_run = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
-	Button_run.set_child(*HBox_run);
+	HBox_footer.pack_start(Button_run, Gtk::PACK_SHRINK);
+	auto HBox_run = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,20);
+	Button_run.add(*HBox_run);
 	img_run.set("./img/icon_run_off.png");
-	HBox_run->append(img_run);
-	HBox_run->append(*Gtk::make_managed<Gtk::Label>("run") );
+	HBox_run->pack_start(img_run, Gtk::PACK_SHRINK);
+	HBox_run->pack_start(*Gtk::make_managed<Gtk::Label>("run"), Gtk::PACK_SHRINK);
 	Button_run.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_run_clicked) );
 
 	// middle
-	HBox_footer.append(HBox_info);
+	HBox_footer.pack_start(HBox_info);
 	HBox_info.set_hexpand(true);
-	HBox_info.append(Label_info);
+	HBox_info.pack_start(Label_info);
 	Label_info.set_text("No data");
 
 	// hipo4
-	HBox_footer.append(Button_hipo4);
-	auto HBox_hipo4 = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
-	Button_hipo4.set_child(*HBox_hipo4);
+	HBox_footer.pack_start(Button_hipo4, Gtk::PACK_SHRINK);
+	auto HBox_hipo4 = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,20);
+	Button_hipo4.add(*HBox_hipo4);
 	img_hipo4.set("./img/icon_file_on.png");
-	HBox_hipo4->append(img_hipo4);
-	HBox_hipo4->append(*Gtk::make_managed<Gtk::Label>("hipo4") );
+	HBox_hipo4->pack_start(img_hipo4, Gtk::PACK_SHRINK);
+	HBox_hipo4->pack_start(*Gtk::make_managed<Gtk::Label>("hipo4"), Gtk::PACK_SHRINK);
 	Button_hipo4.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_hipo4_clicked) );
 
 	// reset
-	HBox_footer.append(Button_reset);
-	auto HBox_reset = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
-	Button_reset.set_child(*HBox_reset);
+	HBox_footer.pack_start(Button_reset, Gtk::PACK_SHRINK);
+	auto HBox_reset = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::ORIENTATION_HORIZONTAL,20);
+	Button_reset.add(*HBox_reset);
 	img_reset.set("./img/icon_reset_off.png");
-	HBox_reset->append(img_reset);
-	HBox_reset->append(*Gtk::make_managed<Gtk::Label>("reset") );
+	HBox_reset->pack_start(img_reset, Gtk::PACK_SHRINK);
+	HBox_reset->pack_start(*Gtk::make_managed<Gtk::Label>("reset"), Gtk::PACK_SHRINK);
 	Button_reset.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_reset_clicked) );
 	
 	// ending (real time control of adcMax cuts)
-	VBox_main.append(VBox_footer);
-	VBox_footer.append(HBox_Scale_adcMax);
-	HBox_Scale_adcMax.set_margin(10); 
-	HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax + adcOffset CUT"));
-	HBox_Scale_adcMax.append(Scale_adcMax);
+	VBox_main.pack_start(VBox_footer, Gtk::PACK_SHRINK);
+	VBox_footer.pack_start(HBox_Scale_adcMax, Gtk::PACK_SHRINK);
+	HBox_Scale_adcMax.set_margin_left(10);
+	HBox_Scale_adcMax.set_margin_right(10);
+	HBox_Scale_adcMax.set_margin_top(10);
+	HBox_Scale_adcMax.set_margin_bottom(10);
+	HBox_Scale_adcMax.pack_start(*Gtk::make_managed<Gtk::Label>("adcMax + adcOffset CUT"), Gtk::PACK_SHRINK);
+	HBox_Scale_adcMax.pack_start(Scale_adcMax, Gtk::PACK_EXPAND_WIDGET);
 	Scale_adcMax.set_hexpand(true);
 	Scale_adcMax.set_draw_value();
 	Scale_adcMax.set_digits(0);
@@ -172,7 +185,8 @@ Window::Window() :
 				const double val = this->Adjustment_adcMax->get_value();
 				this->adcCut = val;
 			});	
-	//VBox_footer.append(*Gtk::make_managed<Gtk::Label>("Footer") );
+	//VBox_footer.pack_start(*Gtk::make_managed<Gtk::Label>("Footer") );
+	show_all_children();
 }
 
 /** Destructor */
@@ -265,8 +279,10 @@ void Window::on_button_run_clicked(){
 void Window::on_button_hipo4_clicked(){
 	std::cout << "Open file dialog ..." << std::endl;
 
-	auto dialog = Gtk::FileDialog::create();
-
+	Gtk::FileChooserDialog dialog(*this, "Select a file", Gtk::FileChooserAction::FILE_CHOOSER_ACTION_OPEN);
+	dialog.add_button("_Cnacel", Gtk::ResponseType::RESPONSE_CANCEL);
+	dialog.add_button("_Open", Gtk::ResponseType::RESPONSE_OK);
+	/*
 	// Add filters, so that only certain file types can be selected:
 	auto filters = Gio::ListStore<Gtk::FileFilter>::create();
 
@@ -298,11 +314,28 @@ void Window::on_button_hipo4_clicked(){
 	filters->append(filter_any);
 
 	dialog->set_filters(filters);
-
+	*/
+	
 	// Show the dialog and wait for a user response:
-	dialog->open(sigc::bind(sigc::mem_fun(*this, &Window::on_file_dialog_finish), dialog));
+	if (dialog.run() == Gtk::RESPONSE_OK) {
+		filename = dialog.get_filename();
+		std::cout << "File selected : " << filename << std::endl;
+		
+		// Possible actions
+		img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
+		img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
+		img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
+		img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
+		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
+		img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+		// label info
+		this->Label_header.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
+		Label_info.queue_draw();
+        }
+
 }
-void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog) {
+
+/*void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog) {
 	// Handle the response:
 	try
 	{
@@ -332,7 +365,7 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 	{
 		std::cout << "Unexpected exception. " << err.what() << std::endl;
 	}
-}
+}*/
 
 void Window::on_button_reset_clicked(){
 	std::cout << "Reset ..." << std::endl;
@@ -493,7 +526,7 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 	cr->restore();
 }
 
-void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation){
+/*void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation){
 	// Determine the min and the max of the data	
 	int Npts = vx.size();
 	if (Npts != (int) vy.size()) {return ;}
@@ -589,7 +622,7 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	
 	// draw frame and axis
 	canvas.draw_frame(cr);
-}
+}*/
 
 bool Window::dataEventAction() {
 	// hipo4
@@ -652,6 +685,7 @@ bool Window::dataEventAction() {
 			Grid_histograms.remove_column(1);
 		}
 		// Update drawings
+		DrawingArea_event.set_ListOfWires(this->ahdc, ListOfWires);
 		DrawingArea_event.queue_draw();
 		drawWaveforms();
 		drawHistograms();
@@ -675,16 +709,10 @@ void Window::drawWaveforms() {
 		std::string title1 = ListOfWireNames[(2*row-1)-1];
 		std::string title2 = ListOfWireNames[(2*row)-1];
 		// column 1
-		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					      } );
+		auto area1 = Gtk::make_managed<fAreaWaveform>(vx, vy1, title1);
 		Grid_waveforms.attach(*area1,1,row);
 		// column 2
-		auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-		area2->set_draw_func([this, vx,  vy2, title2] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy2, title2.c_str());
-					      } );
+		auto area2 = Gtk::make_managed<fAreaWaveform>(vx, vy2, title2);
 		Grid_waveforms.attach(*area2,2,row);
 	}
 	if (nWF % 2 == 1) {
@@ -694,10 +722,7 @@ void Window::drawWaveforms() {
 			vy1.push_back(ListOfSamples[nWF-1][i]); // the last waveform in that case
 		}
 		std::string title1 = ListOfWireNames[nWF-1];
-		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					      } );
+		auto area1 = Gtk::make_managed<fAreaWaveform>(vx, vy1, title1);
 		Grid_waveforms.attach(*area1,1,nWF);
 	}
 	Grid_waveforms.queue_draw();
@@ -705,46 +730,22 @@ void Window::drawWaveforms() {
 
 void Window::drawHistograms() {
 	// area 1 : hist1d_adcMax
-	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-	area1->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788}); // green
-							this->hist1d_adcMax.draw_with_cairo(cr, width, height);
-                                              } );
+	auto area1 = Gtk::make_managed<fAreaH1D>(&hist1d_adcMax);
 	Grid_histograms.attach(*area1,1,1);
 	// area 5 : hist1d_adcOffset
-	auto area5 = Gtk::make_managed<Gtk::DrawingArea>();
-	area5->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_adcOffset.set_fill_color({0.969, 0.78, 0.494}); // orange
-                                                        this->hist1d_adcOffset.draw_with_cairo(cr, width, height);
-                                              } );
+	auto area5 = Gtk::make_managed<fAreaH1D>(&hist1d_adcOffset);
 	Grid_histograms.attach(*area5,2,1);
-	// area 2 : hist1d_leadindEdgeTime
-	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-	area2->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_leadingEdgeTime.set_fill_color({0.961, 0.953, 0.608}); // yellow
-                                                        this->hist1d_leadingEdgeTime.draw_with_cairo(cr, width, height);
-                                              } );
+	// area 2 : hist1d_leadingEdgeTime
+	auto area2 = Gtk::make_managed<fAreaH1D>(&hist1d_leadingEdgeTime);
 	Grid_histograms.attach(*area2,3,1);
 	// area 3 : hist1d_timeOverThreshold
-	auto area3 = Gtk::make_managed<Gtk::DrawingArea>();
-	area3->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_timeOverThreshold.set_fill_color({0.922, 0.435, 0.647}); // pink (rose)
-                                                        this->hist1d_timeOverThreshold.draw_with_cairo(cr, width, height);
-                                              } );
+	auto area3 = Gtk::make_managed<fAreaH1D>(&hist1d_timeOverThreshold);
 	Grid_histograms.attach(*area3,1,2);
 	// area 4 : hist1d_timeMax
-	auto area4 = Gtk::make_managed<Gtk::DrawingArea>();
-	area4->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_timeMax.set_fill_color({0.431, 0.765, 0.922}); // blue
-                                                        this->hist1d_timeMax.draw_with_cairo(cr, width, height);
-                                              } );
+	auto area4 = Gtk::make_managed<fAreaH1D>(&hist1d_timeMax);
 	Grid_histograms.attach(*area4,2,2);
 	// area 6 : hist1d_constantFractionTime
-	auto area6 = Gtk::make_managed<Gtk::DrawingArea>();
-	area6->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_constantFractionTime.set_fill_color({0.855, 0.6, 0.969}); // violet
-                                                        this->hist1d_constantFractionTime.draw_with_cairo(cr, width, height);
-                                              } );
+	auto area6 = Gtk::make_managed<fAreaH1D>(&hist1d_constantFractionTime);
 	Grid_histograms.attach(*area6,3,2);
 	Grid_histograms.queue_draw();
 }
@@ -754,8 +755,9 @@ int main (int argc, char * argv[]) {
 	std::cout << "Start GUi..." << std::endl;
 
 	auto app = Gtk::Application::create("org.gtkmm.example");
-
-	return app->make_window_and_run<Window>(argc, argv);
+	
+	Window window;
+	return app->run(window);
 }
 
 

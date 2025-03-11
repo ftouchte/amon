@@ -31,8 +31,8 @@ ROOTLIBS = $(shell root-config --libs)
 # ROOT include flags
 ROOTCFLAGS = $(shell root-config --cflags)
 
-GTKLIBS = $(shell pkg-config --libs gtkmm-4.0)
-GTKFLAGS = $(shell pkg-config --cflags gtkmm-4.0)
+GTKLIBS = $(shell pkg-config --libs gtkmm-3.0)
+GTKFLAGS = $(shell pkg-config --cflags gtkmm-3.0)
 
 CAIROLIBS = $(shell pkg-config --libs cairomm-1.16)
 CAIROFLAGS = $(shell pkg-config --cflags cairomm-1.16)
@@ -57,7 +57,7 @@ test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o fH2D.o
 test_fAxis: test_fAxis.o fAxis.o 
 	$(CXX) -o test_fAxis.exe $^
 
-gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o
+gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fGtkmm.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
 

@@ -86,7 +86,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 			cr->stroke();
 			// draw label
 			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+			cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 			cr->set_font_size(label_size);
 			Cairo::TextExtents te;
         		cr->get_text_extents(s, te);
@@ -106,7 +106,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 			cr->stroke();
 			// draw label
 			cr->set_source_rgb(0.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+			cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 			cr->set_font_size(label_size);
 			Cairo::TextExtents te;
 			cr->get_text_extents(s, te);
@@ -127,7 +127,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 				cr->stroke();
 				// draw label
 				/*cr->set_source_rgb(0.0, 0.0, 0.0);
-				cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+				cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 				cr->set_font_size(label_size);
 				Cairo::TextExtents te;
 				cr->get_text_extents(s, te);
@@ -148,7 +148,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 				cr->stroke();
 				// draw label
 				/*cr->set_source_rgb(0.0, 0.0, 0.0);
-				cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+				cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 				cr->set_font_size(label_size);
 				Cairo::TextExtents te;
 				cr->get_text_extents(s, te);
@@ -163,7 +163,7 @@ void fCanvas::draw_frame(const Cairo::RefPtr<Cairo::Context>& cr) {
 void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) const {
 	// draw label
 	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+	cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 	cr->set_font_size(title_size);
 	Cairo::TextExtents te;
 	cr->get_text_extents(text, te);
@@ -174,7 +174,7 @@ void fCanvas::draw_title(const Cairo::RefPtr<Cairo::Context>& cr, std::string te
 void fCanvas::draw_xtitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string text) const {
 	// draw label
 	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+	cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 	cr->set_font_size(title_size);
 	Cairo::TextExtents te;
 	cr->get_text_extents(text, te);
@@ -186,7 +186,7 @@ void fCanvas::draw_ytitle(const Cairo::RefPtr<Cairo::Context>& cr, std::string t
 	// draw label
 	cr->save();
 	cr->set_source_rgb(0.0, 0.0, 0.0);
-	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+	cr->select_font_face("@cairo:sans-serif",Cairo::FontSlant::FONT_SLANT_NORMAL,Cairo::FontWeight::FONT_WEIGHT_NORMAL);
 	cr->set_font_size(title_size);
 	cr->rotate_degrees(-90);
 	//cr->move_to(-left_margin*0.9, -heff);

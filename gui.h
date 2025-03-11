@@ -16,6 +16,7 @@
 #include "AhdcDetector.h"
 #include "AhdcExtractor.h"
 #include "fH1D.h"
+#include "fGtkmm.h"
 
 class Window : public Gtk::Window {
 protected :
@@ -33,10 +34,10 @@ protected :
 	
 	Gtk::Notebook Book;
 	// page 0
-	Gtk::Box HBox_eventViewer;
+	Gtk::Box HBox_eventViewer, HBox_test;
 	Gtk::Grid Grid_eventViewer, Grid_waveforms; // 2x1 and NxP 
-	Gtk::DrawingArea DrawingArea_event;
-	Gtk::DrawingArea DrawingArea_test;
+	fAreaAhdcView DrawingArea_event;
+	//Gtk::DrawingArea DrawingArea_test;
 	// page 1
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
@@ -94,7 +95,6 @@ public :
 	void on_button_hipo4_clicked();
 	void on_button_reset_clicked();
 	void on_book_switch_page(Gtk::Widget * _page, guint page_num); // le template est imposé ! page_num == Pages.get_current_page()
-	void on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog); // used in on_button_hipo4_clicked()
 	void on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation);
