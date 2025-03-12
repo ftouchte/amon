@@ -66,7 +66,7 @@ protected :
 	std::vector<std::string> ListOfWireNames; ///< List of wire names
 	std::vector<std::vector<short>> ListOfSamples;  ///< List of samples
 	AhdcExtractor decoder;
-	double adcCut = 600;
+	double adcCut = 150;
 
 	// Histograms
 	bool is_paused = false;

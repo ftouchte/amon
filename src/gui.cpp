@@ -33,7 +33,7 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(600.0, 0.0, 4095, 10, 0.0, 0.0)),
+	Adjustment_adcMax(Gtk::Adjustment::create(150.0, 0.0, 4095, 10, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
@@ -598,16 +598,17 @@ bool Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
+		bool doIshowWF = false;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
-			std::vector<short> samples;
-			for (int bin=0; bin < 50; bin++){
-				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(), col);
-				samples.push_back(value);
-			}
+			//std::vector<short> samples;
+			//for (int bin=0; bin < 50; bin++){
+			//	std::string binName = "s" + std::__cxx11::to_string(bin+1);
+			//	short value = hipo_banklist[1].getInt(binName.c_str(), col);
+			//	samples.push_back(value);
+			//}
 			/******** Uncommment me to use local decoder
 			// decode the signal
 			decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
@@ -620,6 +621,7 @@ bool Window::dataEventAction() {
 			double adcOffset = output["adcOffset"];	
 			double adcMax = output["adcMax"];
 			*********/
+
 			// fill histograms
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
                         double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
@@ -627,22 +629,63 @@ bool Window::dataEventAction() {
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-                        hist1d_adcMax.fill(adcMax);
-                        hist1d_leadingEdgeTime.fill(leadingEdgeTime);
-                        hist1d_timeOverThreshold.fill(timeOverThreshold);
-                        hist1d_timeMax.fill(timeMax);
-                        hist1d_adcOffset.fill(adcOffset);
-                        hist1d_constantFractionTime.fill(constantFractionTime);
-			// add cut on adcMax + adcOffset to plot waveforms
-			if (adcMax < adcCut) { continue;}
-			// --------------------
-			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
-			char buffer[50];
-			sprintf(buffer, "L%d W%d", layer, component);
-			ListOfWireNames.push_back(buffer);
-			ListOfSamples.push_back(samples);
+                        
+			// add cuts to fill histograms
+			//hist1d_adcMax.fill(adcMax);
+			//hist1d_adcOffset.fill(adcOffset);
+			//if (adcMax > adcCut) {
+			if ((leadingEdgeTime > 25) && (leadingEdgeTime < 35) && (adcMax > adcCut)) { 
+				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
+					hist1d_adcMax.fill(adcMax);
+					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
+					hist1d_timeOverThreshold.fill(timeOverThreshold);
+					hist1d_timeMax.fill(timeMax);
+					hist1d_adcOffset.fill(adcOffset);
+					hist1d_constantFractionTime.fill(constantFractionTime);
+					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+				//}
+				//// add cut on adcMax to plot waveforms
+				//if (adcMax < adcCut) { continue;}
+				//if ((layer == 51) || (layer == 42)) { continue;}
+				// --------------------
+				//	ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
+				//	char buffer[50];
+				//	sprintf(buffer, "L%d W%d", layer, component);
+				//	ListOfWireNames.push_back(buffer);
+				//	ListOfSamples.push_back(samples);
+				//}
+			}
 		}
-		
+		// Criteria to show all the event 	
+		if (doIshowWF) {
+			for (int col = 0; col < hipo_banklist[1].getRows(); col++){
+				int sector = hipo_banklist[1].getInt("sector", col);	
+				int layer = hipo_banklist[1].getInt("layer", col);
+				int component = hipo_banklist[1].getInt("component", col);
+				std::vector<short> samples;
+				for (int bin=0; bin < 50; bin++){
+					std::string binName = "s" + std::__cxx11::to_string(bin+1);
+					short value = hipo_banklist[1].getInt(binName.c_str(), col);
+					samples.push_back(value);
+				}
+				// more criterias
+				//double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
+				//double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
+				//double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
+				//double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
+				//double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
+				//if (adcMax > adcCut) {
+					ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
+					char buffer[50];
+					sprintf(buffer, "L%d W%d", layer, component);
+					ListOfWireNames.push_back(buffer);
+					ListOfSamples.push_back(samples);
+				//}
+			}
+		}
+
 		// Clean Grid_waveforms
 		if (hipo_nEvent != 0) {
 			Grid_waveforms.remove_column(2);
