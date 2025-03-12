@@ -163,7 +163,7 @@ Window::Window() :
 	VBox_main.append(VBox_footer);
 	VBox_footer.append(HBox_Scale_adcMax);
 	HBox_Scale_adcMax.set_margin(10); 
-	HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax + adcOffset CUT"));
+	HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
 	HBox_Scale_adcMax.append(Scale_adcMax);
 	Scale_adcMax.set_hexpand(true);
 	Scale_adcMax.set_draw_value();
@@ -634,7 +634,7 @@ bool Window::dataEventAction() {
                         hist1d_adcOffset.fill(adcOffset);
                         hist1d_constantFractionTime.fill(constantFractionTime);
 			// add cut on adcMax + adcOffset to plot waveforms
-			if (adcMax + adcOffset < adcCut) { continue;}
+			if (adcMax < adcCut) { continue;}
 			// --------------------
 			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
 			char buffer[50];
