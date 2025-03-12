@@ -280,7 +280,7 @@ void Window::on_button_hipo4_clicked(){
 	std::cout << "Open file dialog ..." << std::endl;
 
 	Gtk::FileChooserDialog dialog(*this, "Select a file", Gtk::FileChooserAction::FILE_CHOOSER_ACTION_OPEN);
-	dialog.add_button("_Cnacel", Gtk::ResponseType::RESPONSE_CANCEL);
+	dialog.add_button("_Cancel", Gtk::ResponseType::RESPONSE_CANCEL);
 	dialog.add_button("_Open", Gtk::ResponseType::RESPONSE_OK);
 	/*
 	// Add filters, so that only certain file types can be selected:
@@ -335,37 +335,6 @@ void Window::on_button_hipo4_clicked(){
 
 }
 
-/*void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog) {
-	// Handle the response:
-	try
-	{
-		auto file = dialog->open_finish(result);
-
-		// Notice that this is a std::string, not a Glib::ustring.
-		filename = file->get_path();
-		std::cout << "File selected : " <<  filename << std::endl;
-		
-		// Possible actions
-		img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-		img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
-		img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
-		img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
-		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-		img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
-		// label info
-		this->Label_header.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
-		Label_info.queue_draw();
-	}
-	catch (const Gtk::DialogError& err)
-	{
-		// Can be thrown by dialog->open_finish(result).
-		std::cout << "No file selected. " << err.what() << std::endl;
-	}
-	catch (const Glib::Error& err)
-	{
-		std::cout << "Unexpected exception. " << err.what() << std::endl;
-	}
-}*/
 
 void Window::on_button_reset_clicked(){
 	std::cout << "Reset ..." << std::endl;
@@ -384,6 +353,7 @@ void Window::on_button_reset_clicked(){
 	ListOfWires.clear();
 	ListOfWireNames.clear();
 	ListOfSamples.clear();
+	DrawingArea_event.set_ListOfWires(this->ahdc, ListOfWires);
 	DrawingArea_event.queue_draw();
 	// reset histograms
 	hist1d_adcMax.reset();
