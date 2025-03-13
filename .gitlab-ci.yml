@@ -1,7 +1,7 @@
 test:
   image: codecr.jlab.org/hallb/clas12/container-forge/analysis
   script:
-    - ls -l /
+    - ls -l / /builds
     - echo dog > table.txt
   artifacts:
     paths:
