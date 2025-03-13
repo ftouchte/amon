@@ -35,14 +35,17 @@ protected :
 	// page 0
 	Gtk::Box HBox_eventViewer;
 	Gtk::Grid Grid_eventViewer, Grid_waveforms; // 2x1 and NxP 
+	Gtk::Grid Grid_waveformsPerLayer;
 	Gtk::DrawingArea DrawingArea_event;
 	Gtk::DrawingArea DrawingArea_test;
 	// page 1
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
+	
 	/******************
          * FOOTER
          * ***************/
+	
 	Gtk::Box HBox_footer;
 	//Gtk::Box HBox_prev, HBox_next, HBox_pause, HBox_run, HBox_info,  HBox_hipo4, HBox_reset;
 	Gtk::Button Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset;
@@ -50,11 +53,19 @@ protected :
 	Gtk::Box HBox_info;
 	Gtk::Label Label_info;
 	Gtk::Label Label_header;
-	Gtk::Box HBox_Scale_adcMax;
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax;
-	Gtk::Scale Scale_adcMax;
-
-	/// DATA
+	
+	/**********************
+	 * Settings
+	 * *******************/
+	//Gtk::Window Window_settings;
+	//Gtk::Box VBox_settings;
+	//Gtk::Box HBox_Scale_adcMax, HBox_Scale_tmin, HBox_Scale_tmax;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax, Adjustment_tmin, Adjustment_tmax;
+	Gtk::Scale Scale_adcMax, Scale_tmin, Scale_tmax;
+	
+	/**********************
+	 *  DATA
+	 * *******************/
 	std::string filename;
 	hipo::reader hipo_reader;
 	hipo::banklist hipo_banklist;
@@ -65,8 +76,11 @@ protected :
 	std::vector<AhdcWire> ListOfWires; ///< List of wires activated
 	std::vector<std::string> ListOfWireNames; ///< List of wire names
 	std::vector<std::vector<short>> ListOfSamples;  ///< List of samples
+	std::vector< std::vector<std::vector<short>>  > ListOfSamplesPerLayer;
 	AhdcExtractor decoder;
 	double adcCut = 150;
+	double tmin = 0;
+	double tmax = 49;
 
 	// Histograms
 	bool is_paused = false;
@@ -84,6 +98,7 @@ public :
 
 	bool dataEventAction();
 	void drawWaveforms();
+	void drawWaveformsPerLayer();
 	void drawHistograms();
 	
 	// Signals
