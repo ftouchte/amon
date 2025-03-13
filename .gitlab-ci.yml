@@ -6,6 +6,7 @@ test:
     - ls -l .
     - make
     - echo dog > table.txt
+    - pacman -S -s gtkmm
   artifacts:
     paths:
       - table.txt
