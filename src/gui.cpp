@@ -33,7 +33,7 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(600.0, 0.0, 4095, 10, 0.0, 0.0)),
+	Adjustment_adcMax(Gtk::Adjustment::create(150.0, 0.0, 4095, 10, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
@@ -103,7 +103,7 @@ Window::Window() :
 	//Button_prev.set_hexpand(true);
 	auto HBox_prev = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,15);
 	Button_prev.set_child(*HBox_prev);
-	img_prev.set("./img/icon_prev_off.png");
+	img_prev.set("../img/icon_prev_off.png");
 	HBox_prev->append(img_prev );
 	HBox_prev->append(*Gtk::make_managed<Gtk::Label>("prev") );
 	Button_prev.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_prev_clicked) );
@@ -112,7 +112,7 @@ Window::Window() :
 	HBox_footer.append(Button_next);
 	auto HBox_next = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,15);
 	Button_next.set_child(*HBox_next);
-	img_next.set("./img/icon_next_off.png");
+	img_next.set("../img/icon_next_off.png");
 	HBox_next->append(img_next);
 	HBox_next->append(*Gtk::make_managed<Gtk::Label>("next") );
 	Button_next.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_next_clicked) );
@@ -121,7 +121,7 @@ Window::Window() :
 	HBox_footer.append(Button_pause);
 	auto HBox_pause = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
 	Button_pause.set_child(*HBox_pause);
-	img_pause.set("./img/icon_pause_off.png");
+	img_pause.set("../img/icon_pause_off.png");
 	HBox_pause->append(img_pause );
 	HBox_pause->append(*Gtk::make_managed<Gtk::Label>("pause") );
 	Button_pause.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_pause_clicked) );
@@ -130,7 +130,7 @@ Window::Window() :
 	HBox_footer.append(Button_run);
 	auto HBox_run = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
 	Button_run.set_child(*HBox_run);
-	img_run.set("./img/icon_run_off.png");
+	img_run.set("../img/icon_run_off.png");
 	HBox_run->append(img_run);
 	HBox_run->append(*Gtk::make_managed<Gtk::Label>("run") );
 	Button_run.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_run_clicked) );
@@ -145,7 +145,7 @@ Window::Window() :
 	HBox_footer.append(Button_hipo4);
 	auto HBox_hipo4 = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
 	Button_hipo4.set_child(*HBox_hipo4);
-	img_hipo4.set("./img/icon_file_on.png");
+	img_hipo4.set("../img/icon_file_on.png");
 	HBox_hipo4->append(img_hipo4);
 	HBox_hipo4->append(*Gtk::make_managed<Gtk::Label>("hipo4") );
 	Button_hipo4.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_hipo4_clicked) );
@@ -154,7 +154,7 @@ Window::Window() :
 	HBox_footer.append(Button_reset);
 	auto HBox_reset = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
 	Button_reset.set_child(*HBox_reset);
-	img_reset.set("./img/icon_reset_off.png");
+	img_reset.set("../img/icon_reset_off.png");
 	HBox_reset->append(img_reset);
 	HBox_reset->append(*Gtk::make_managed<Gtk::Label>("reset") );
 	Button_reset.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_reset_clicked) );
@@ -184,12 +184,12 @@ Window::~Window() {
 void Window::on_button_prev_clicked(){
 	std::cout << "Process prev event ..." << std::endl;
 	// update icons
-	//img_next.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-	//img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
-	//img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
-	//img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
-	//img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-	//img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+	//img_next.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+	//img_next.set("../img/icon_next_off.png"); img_next.queue_draw();
+	//img_pause.set("../img/icon_pause_off.png"); img_pause.queue_draw();
+	//img_run.set("../img/icon_run_off.png"); img_run.queue_draw();
+	//img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
+	//img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
 }
 
 void Window::on_button_next_clicked(){
@@ -197,12 +197,12 @@ void Window::on_button_next_clicked(){
 	is_paused = false;
 	is_reset = false;
 	// update icons
-	img_next.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-	img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
-	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
-	img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
-	img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-	img_reset.set("./img/icon_reset_on.png"); img_reset.queue_draw();
+	img_next.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+	img_next.set("../img/icon_next_on.png"); img_next.queue_draw();
+	img_pause.set("../img/icon_pause_on.png"); img_pause.queue_draw();
+	img_run.set("../img/icon_run_on.png"); img_run.queue_draw();
+	img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
+	img_reset.set("../img/icon_reset_on.png"); img_reset.queue_draw();
 	if (filename.size() == 0) {
 		return;
 	}
@@ -225,12 +225,12 @@ void Window::on_button_pause_clicked(){
 	std::cout << "Pause ..." << std::endl;
 	is_paused = true;
 	// update icons
-	//img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-	//img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
-	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
-	//img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
-	//img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-	//img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+	//img_prev.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+	//img_next.set("../img/icon_next_off.png"); img_next.queue_draw();
+	img_pause.set("../img/icon_pause_off.png"); img_pause.queue_draw();
+	//img_run.set("../img/icon_run_off.png"); img_run.queue_draw();
+	//img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
+	//img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
 	drawWaveforms();
 }
 
@@ -239,12 +239,12 @@ void Window::on_button_run_clicked(){
 	is_paused = false;
 	is_reset = false;
 	// update icons
-	img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-	img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
-	img_pause.set("./img/icon_pause_on.png"); img_pause.queue_draw();
-	img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
-	img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-	img_reset.set("./img/icon_reset_on.png"); img_reset.queue_draw();
+	img_prev.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+	img_next.set("../img/icon_next_on.png"); img_next.queue_draw();
+	img_pause.set("../img/icon_pause_on.png"); img_pause.queue_draw();
+	img_run.set("../img/icon_run_on.png"); img_run.queue_draw();
+	img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
+	img_reset.set("../img/icon_reset_on.png"); img_reset.queue_draw();
 	if (filename.size() == 0) {
                 return;
         }
@@ -313,12 +313,12 @@ void Window::on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result,
 		std::cout << "File selected : " <<  filename << std::endl;
 		
 		// Possible actions
-		img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-		img_next.set("./img/icon_next_on.png"); img_next.queue_draw();
-		img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
-		img_run.set("./img/icon_run_on.png"); img_run.queue_draw();
-		img_hipo4.set("./img/icon_file_off.png"); img_hipo4.queue_draw();
-		img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+		img_prev.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+		img_next.set("../img/icon_next_on.png"); img_next.queue_draw();
+		img_pause.set("../img/icon_pause_off.png"); img_pause.queue_draw();
+		img_run.set("../img/icon_run_on.png"); img_run.queue_draw();
+		img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
+		img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
 		// label info
 		this->Label_header.set_text(TString::Format("File selected : %s", filename.c_str()).Data() );
 		Label_info.queue_draw();
@@ -339,12 +339,12 @@ void Window::on_button_reset_clicked(){
 	is_reset = true;
 	filename = "";
 	// update icons
-	img_prev.set("./img/icon_prev_off.png"); img_prev.queue_draw();
-	img_next.set("./img/icon_next_off.png"); img_next.queue_draw();
-	img_pause.set("./img/icon_pause_off.png"); img_pause.queue_draw();
-	img_run.set("./img/icon_run_off.png"); img_run.queue_draw();
-	img_hipo4.set("./img/icon_file_on.png"); img_hipo4.queue_draw();
-	img_reset.set("./img/icon_reset_off.png"); img_reset.queue_draw();
+	img_prev.set("../img/icon_prev_off.png"); img_prev.queue_draw();
+	img_next.set("../img/icon_next_off.png"); img_next.queue_draw();
+	img_pause.set("../img/icon_pause_off.png"); img_pause.queue_draw();
+	img_run.set("../img/icon_run_off.png"); img_run.queue_draw();
+	img_hipo4.set("../img/icon_file_on.png"); img_hipo4.queue_draw();
+	img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
 	// ...
 	hipo_nEvent = 0;
 	hipo_nEventMax = 1;
@@ -598,16 +598,17 @@ bool Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
+		bool doIshowWF = false;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
-			std::vector<short> samples;
-			for (int bin=0; bin < 50; bin++){
-				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(), col);
-				samples.push_back(value);
-			}
+			//std::vector<short> samples;
+			//for (int bin=0; bin < 50; bin++){
+			//	std::string binName = "s" + std::__cxx11::to_string(bin+1);
+			//	short value = hipo_banklist[1].getInt(binName.c_str(), col);
+			//	samples.push_back(value);
+			//}
 			/******** Uncommment me to use local decoder
 			// decode the signal
 			decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
@@ -620,6 +621,7 @@ bool Window::dataEventAction() {
 			double adcOffset = output["adcOffset"];	
 			double adcMax = output["adcMax"];
 			*********/
+
 			// fill histograms
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
                         double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
@@ -627,22 +629,63 @@ bool Window::dataEventAction() {
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-                        hist1d_adcMax.fill(adcMax);
-                        hist1d_leadingEdgeTime.fill(leadingEdgeTime);
-                        hist1d_timeOverThreshold.fill(timeOverThreshold);
-                        hist1d_timeMax.fill(timeMax);
-                        hist1d_adcOffset.fill(adcOffset);
-                        hist1d_constantFractionTime.fill(constantFractionTime);
-			// add cut on adcMax + adcOffset to plot waveforms
-			if (adcMax < adcCut) { continue;}
-			// --------------------
-			ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
-			char buffer[50];
-			sprintf(buffer, "L%d W%d", layer, component);
-			ListOfWireNames.push_back(buffer);
-			ListOfSamples.push_back(samples);
+                        
+			// add cuts to fill histograms
+			//hist1d_adcMax.fill(adcMax);
+			//hist1d_adcOffset.fill(adcOffset);
+			//if (adcMax > adcCut) {
+			if ((leadingEdgeTime > 25) && (leadingEdgeTime < 35) && (adcMax > adcCut)) { 
+				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
+					hist1d_adcMax.fill(adcMax);
+					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
+					hist1d_timeOverThreshold.fill(timeOverThreshold);
+					hist1d_timeMax.fill(timeMax);
+					hist1d_adcOffset.fill(adcOffset);
+					hist1d_constantFractionTime.fill(constantFractionTime);
+					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+				//}
+				//// add cut on adcMax to plot waveforms
+				//if (adcMax < adcCut) { continue;}
+				//if ((layer == 51) || (layer == 42)) { continue;}
+				// --------------------
+				//	ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
+				//	char buffer[50];
+				//	sprintf(buffer, "L%d W%d", layer, component);
+				//	ListOfWireNames.push_back(buffer);
+				//	ListOfSamples.push_back(samples);
+				//}
+			}
 		}
-		
+		// Criteria to show all the event 	
+		if (doIshowWF) {
+			for (int col = 0; col < hipo_banklist[1].getRows(); col++){
+				int sector = hipo_banklist[1].getInt("sector", col);	
+				int layer = hipo_banklist[1].getInt("layer", col);
+				int component = hipo_banklist[1].getInt("component", col);
+				std::vector<short> samples;
+				for (int bin=0; bin < 50; bin++){
+					std::string binName = "s" + std::__cxx11::to_string(bin+1);
+					short value = hipo_banklist[1].getInt(binName.c_str(), col);
+					samples.push_back(value);
+				}
+				// more criterias
+				//double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
+				//double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
+				//double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
+				//double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
+				//double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
+				//if (adcMax > adcCut) {
+					ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
+					char buffer[50];
+					sprintf(buffer, "L%d W%d", layer, component);
+					ListOfWireNames.push_back(buffer);
+					ListOfSamples.push_back(samples);
+				//}
+			}
+		}
+
 		// Clean Grid_waveforms
 		if (hipo_nEvent != 0) {
 			Grid_waveforms.remove_column(2);
