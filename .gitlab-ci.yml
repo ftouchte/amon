@@ -5,6 +5,7 @@ test:
     - cd /builds/touchte/amon/src
     - ls -l .
     - pacman -S -s gtkmm
+    - pacman -Syu --noconfirm gtkmm-4.0
     - make
     - echo dog > table.txt
   artifacts:
