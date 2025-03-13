@@ -31,10 +31,19 @@ Window::Window() :
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
-	HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
+	//VBox_settings(Gtk::Orientation::VERTICAL,10),
+	//HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
+	//HBox_Scale_tmin(Gtk::Orientation::HORIZONTAL,10),
+	//HBox_Scale_tmax(Gtk::Orientation::HORIZONTAL,10),
+	
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(150.0, 0.0, 4095, 10, 0.0, 0.0)),
+	Adjustment_tmin(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_tmax(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
+	Scale_tmin(Adjustment_tmin, Gtk::Orientation::HORIZONTAL),
+	Scale_tmax(Adjustment_tmax, Gtk::Orientation::HORIZONTAL),
+	ListOfSamplesPerLayer(8),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -78,6 +87,11 @@ Window::Window() :
 	Grid_waveforms.set_column_homogeneous(true);
 	Grid_waveforms.set_row_homogeneous(true);
 	// Page 1
+	Book.append_page(Grid_waveformsPerLayer, "Waveforms Per Layer");
+	Grid_waveformsPerLayer.set_expand(true);
+	Grid_waveformsPerLayer.set_column_homogeneous(true);
+	Grid_waveformsPerLayer.set_row_homogeneous(true);
+	// Page 2
 	Book.append_page(HBox_histograms, "Histograms");
 	HBox_histograms.append(Grid_histograms);
 	Grid_histograms.set_expand(true);
@@ -89,13 +103,14 @@ Window::Window() :
         hist1d_timeMax.set_xtitle("bin");
 	hist1d_adcOffset.set_xtitle("adc");
         hist1d_constantFractionTime.set_xtitle("bin");
-	// Page 2 (test)
+	// Page 3 (test)
 	Book.append_page(DrawingArea_test, "Test");
 	DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
 
 	/******************
 	 * FOOTER
 	 * ***************/
+	VBox_main.append(VBox_footer);
 	VBox_footer.append(HBox_footer);
 	HBox_footer.set_margin(10);
 	// prev
@@ -160,18 +175,11 @@ Window::Window() :
 	Button_reset.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_reset_clicked) );
 	
 	// ending (real time control of adcMax cuts)
-	VBox_main.append(VBox_footer);
-	VBox_footer.append(HBox_Scale_adcMax);
-	HBox_Scale_adcMax.set_margin(10); 
-	HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
-	HBox_Scale_adcMax.append(Scale_adcMax);
-	Scale_adcMax.set_hexpand(true);
-	Scale_adcMax.set_draw_value();
-	Scale_adcMax.set_digits(0);
-	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_adcMax->get_value();
-				this->adcCut = val;
-			});	
+	//VBox_footer.append(HBox_Scale_adcMax);
+	//HBox_Scale_adcMax.set_margin(10); 
+	//HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
+	//HBox_Scale_adcMax.append(Scale_adcMax);
+	
 	//VBox_footer.append(*Gtk::make_managed<Gtk::Label>("Footer") );
 }
 
@@ -190,6 +198,53 @@ void Window::on_button_prev_clicked(){
 	//img_run.set("../img/icon_run_off.png"); img_run.queue_draw();
 	//img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
 	//img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
+	// Initialization
+	auto Window_settings = Gtk::make_managed<Gtk::Window>();
+	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL,10);
+	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_tmin = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_tmax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	// Window for settings
+	Window_settings->set_title("Settings");
+	Window_settings->set_default_size(500,300);
+	Window_settings->set_child(*VBox_settings);
+	// Scale_adcMax
+	VBox_settings->append(*HBox_Scale_adcMax);
+	HBox_Scale_adcMax->set_margin(10);
+	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
+	HBox_Scale_adcMax->append(Scale_adcMax);
+	Scale_adcMax.set_hexpand(true);
+	Scale_adcMax.set_draw_value();
+	Scale_adcMax.set_digits(0);
+	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_adcMax->get_value();
+				this->adcCut = val;
+			});	
+	// Scale_tmin
+	VBox_settings->append(*HBox_Scale_tmin);
+        HBox_Scale_tmin->set_margin(10);
+        HBox_Scale_tmin->append(*Gtk::make_managed<Gtk::Label>("tmin CUT"));
+        HBox_Scale_tmin->append(Scale_tmin);	
+	Scale_tmin.set_hexpand(true);
+	Scale_tmin.set_draw_value();
+	Scale_tmin.set_digits(0);
+	Adjustment_tmin->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_tmin->get_value();
+				this->tmin = val;
+			});
+	// Scale_tmax
+	VBox_settings->append(*HBox_Scale_tmax);
+        HBox_Scale_tmax->set_margin(10);
+        HBox_Scale_tmax->append(*Gtk::make_managed<Gtk::Label>("tmax CUT"));
+        HBox_Scale_tmax->append(Scale_tmax);
+	Scale_tmax.set_hexpand(true);
+	Scale_tmax.set_draw_value();
+	Scale_tmax.set_digits(0);
+	Adjustment_tmax->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_tmax->get_value();
+				this->tmax = val;
+			});
+	Window_settings->show();
 }
 
 void Window::on_button_next_clicked(){
@@ -232,6 +287,7 @@ void Window::on_button_pause_clicked(){
 	//img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
 	//img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
 	drawWaveforms();
+	drawWaveformsPerLayer();
 }
 
 void Window::on_button_run_clicked(){
@@ -351,24 +407,32 @@ void Window::on_button_reset_clicked(){
 	ListOfWires.clear();
 	ListOfWireNames.clear();
 	ListOfSamples.clear();
+	for (int ilayer = 0; ilayer < 8; ilayer++) {
+		ListOfSamplesPerLayer[ilayer].clear();
+	}
+	// Clear drawing areas
 	DrawingArea_event.queue_draw();
-	// reset histograms
+	Grid_waveforms.remove_column(2);
+	Grid_waveforms.remove_column(1);
+	drawWaveforms();
+	Grid_waveformsPerLayer.remove_column(4);
+	Grid_waveformsPerLayer.remove_column(3);
+	Grid_waveformsPerLayer.remove_column(2);
+	Grid_waveformsPerLayer.remove_column(1);
+	drawWaveformsPerLayer();
+	// Reset histograms
 	hist1d_adcMax.reset();
 	hist1d_leadingEdgeTime.reset();
 	hist1d_timeOverThreshold.reset();
 	hist1d_timeMax.reset();
 	hist1d_adcOffset.reset();
         hist1d_constantFractionTime.reset();
-	// Clear drawing areas
-	Grid_waveforms.remove_column(2);
-	Grid_waveforms.remove_column(1);
-	drawWaveforms();
-	//Grid_waveforms.queue_draw();
+	// Clear histograms
 	Grid_histograms.remove_column(3);
 	Grid_histograms.remove_column(2);
 	Grid_histograms.remove_column(1);
 	drawHistograms();
-	//Grid_histograms.queue_draw();
+	// Update Label
 	Label_info.set_text("No data"); Label_info.queue_draw();
 	Label_header.set_text("No file selected"); Label_header.queue_draw();
 }
@@ -380,6 +444,10 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 			page_name = "Event Viewer";
 			break;
 		case 1 :
+			page_name = "Waveforms Per Layer";
+			drawWaveformsPerLayer();
+			break;
+		case 2 :
 			page_name = "Histograms";
 			drawHistograms();
 			break;
@@ -598,6 +666,9 @@ bool Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
+		for (int ilayer = 0; ilayer < 8; ilayer++) {
+			ListOfSamplesPerLayer[ilayer].clear();
+		}
 		bool doIshowWF = false;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			int sector = hipo_banklist[1].getInt("sector", col);	
@@ -634,7 +705,7 @@ bool Window::dataEventAction() {
 			//hist1d_adcMax.fill(adcMax);
 			//hist1d_adcOffset.fill(adcOffset);
 			//if (adcMax > adcCut) {
-			if ((leadingEdgeTime > 25) && (leadingEdgeTime < 35) && (adcMax > adcCut)) { 
+			if ((leadingEdgeTime > tmin) && (leadingEdgeTime < tmax) && (adcMax > adcCut)) { 
 				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
@@ -682,6 +753,37 @@ bool Window::dataEventAction() {
 					sprintf(buffer, "L%d W%d", layer, component);
 					ListOfWireNames.push_back(buffer);
 					ListOfSamples.push_back(samples);
+					// Fill ListOfSamplesPerLayer
+					int index = -1;
+					switch (layer) {
+						case 11 :
+							index = 0;
+							break;
+						case 21 :
+							index = 1;
+							break;
+						case 22 : 
+							index = 2;
+							break;
+						case 31 : 
+							index = 3;
+							break;
+						case 32 :
+							index = 4;
+							break;
+						case 41 :
+							index = 5;
+							break;
+						case 42 :
+							index = 6;
+							break;
+						case 51 : 
+							index = 7;
+							break;
+						default :
+							index = -1;
+					}
+					ListOfSamplesPerLayer[index].push_back(samples);
 				//}
 			}
 		}
@@ -690,6 +792,10 @@ bool Window::dataEventAction() {
 		if (hipo_nEvent != 0) {
 			Grid_waveforms.remove_column(2);
 			Grid_waveforms.remove_column(1);
+			Grid_waveformsPerLayer.remove_column(4);
+			Grid_waveformsPerLayer.remove_column(3);
+			Grid_waveformsPerLayer.remove_column(2);
+			Grid_waveformsPerLayer.remove_column(1);
 			Grid_histograms.remove_column(3);
 			Grid_histograms.remove_column(2);
 			Grid_histograms.remove_column(1);
@@ -697,6 +803,7 @@ bool Window::dataEventAction() {
 		// Update drawings
 		DrawingArea_event.queue_draw();
 		drawWaveforms();
+		drawWaveformsPerLayer();
 		drawHistograms();
 		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
 		hipo_nEvent++;
@@ -744,6 +851,69 @@ void Window::drawWaveforms() {
 		Grid_waveforms.attach(*area1,1,nWF);
 	}
 	Grid_waveforms.queue_draw();
+}
+
+void Window::drawWaveformsPerLayer() {
+	for (int layer = 0; layer < 8; layer++) {
+		if (ListOfSamplesPerLayer[layer].size() == 0) { continue;}
+		// find ymin and ymax for all signals in this layer
+		double ymin = ListOfSamplesPerLayer[layer][0][0];
+		double ymax = ymin;
+		int Npts = ListOfSamplesPerLayer[layer][0].size();
+		for (std::vector<short> samples : ListOfSamplesPerLayer[layer]) { // loop over signals
+			for (int value : samples) { // loop over values
+				ymin = (ymin < value) ? ymin : value;
+				ymax = (ymax > value) ? ymax : value;
+			}
+		}
+		// Drawings
+		auto area = Gtk::make_managed<Gtk::DrawingArea>();
+		area->set_draw_func([this, layer, Npts, ymin, ymax] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+			// Define main canvas
+			fCanvas canvas(width, height, 0, Npts-1, ymin, ymax);
+			canvas.define_coord_system(cr);
+			canvas.draw_title(cr, "");
+			canvas.draw_xtitle(cr, "bin");
+			canvas.draw_ytitle(cr, "adc");
+			// x coord to width
+			auto x2w = [canvas] (double x) {
+				return canvas.x2w(x);
+			};
+			// y coord to height
+			auto y2h = [canvas] (double y) {
+				return canvas.y2h(y);
+			};
+			int seff = canvas.get_seff();
+			//int heff = canvas.get_heff();
+			//int weff = canvas.get_weff();
+			// Draw waveforms
+			int NumberOfSignals = ListOfSamplesPerLayer[layer].size();
+			for (int nth = 0; nth < NumberOfSignals; nth++) {
+				std::vector<short> samples = ListOfSamplesPerLayer[layer][nth]; // n-th signals in this layer
+				double r1 = 0.0, g1 = 0.0, b1 = 1.0;
+				double r2 = 0.0, g2 = 1.0, b2 = 0.0;
+				double t = (1.0*nth)/NumberOfSignals;
+				double r = (1-t)*r1 + t*r2;
+				double g = (1-t)*g1 + t*g2;
+				double b = (1-t)*b1 + t*b2;
+				cr->set_source_rgb(r, g, b);
+				cr->set_line_width(0.01*seff);
+				cr->move_to(x2w(0),y2h(samples[0]));
+				for (int i = 1; i < Npts; i++) {
+					// draw a line between points i and i-1
+					cr->line_to(x2w(i),y2h(samples[i]));
+				}
+				cr->stroke();
+			}
+			// draw frame and axis
+			canvas.draw_frame(cr);
+		});
+		int row = layer/4 +1;
+		int column = layer%4 + 1;
+		Grid_waveformsPerLayer.attach(*area,column,row);
+	}	
+	// end
+	Grid_waveformsPerLayer.queue_draw();
 }
 
 void Window::drawHistograms() {
