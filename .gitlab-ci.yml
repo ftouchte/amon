@@ -2,6 +2,9 @@ test:
   image: codecr.jlab.org/hallb/clas12/container-forge/analysis
   script:
     - ls -l / /builds
+    - cd /builds/touchte/amon/src
+    - ls -l .
+    - make
     - echo dog > table.txt
   artifacts:
     paths:
