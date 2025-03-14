@@ -33,16 +33,24 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	//VBox_settings(Gtk::Orientation::VERTICAL,10),
 	//HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
-	//HBox_Scale_tmin(Gtk::Orientation::HORIZONTAL,10),
-	//HBox_Scale_tmax(Gtk::Orientation::HORIZONTAL,10),
+	//HBox_Scale_leadingEdgeTime_min(Gtk::Orientation::HORIZONTAL,10),
+	//HBox_Scale_leadingEdgeTime_max(Gtk::Orientation::HORIZONTAL,10),
 	
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(150.0, 0.0, 4095, 10, 0.0, 0.0)),
-	Adjustment_tmin(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_tmax(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
-	Scale_tmin(Adjustment_tmin, Gtk::Orientation::HORIZONTAL),
-	Scale_tmax(Adjustment_tmax, Gtk::Orientation::HORIZONTAL),
+	Scale_leadingEdgeTime_min(Adjustment_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
+	Scale_leadingEdgeTime_max(Adjustment_leadingEdgeTime_max, Gtk::Orientation::HORIZONTAL),
+	Scale_timeOverThreshold_min(Adjustment_timeOverThreshold_min, Gtk::Orientation::HORIZONTAL),
+	Scale_timeOverThreshold_max(Adjustment_timeOverThreshold_max, Gtk::Orientation::HORIZONTAL),
+	Scale_timeMax_min(Adjustment_timeMax_min, Gtk::Orientation::HORIZONTAL),
+	Scale_timeMax_max(Adjustment_timeMax_max, Gtk::Orientation::HORIZONTAL),
 	ListOfSamplesPerLayer(8),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
@@ -113,6 +121,15 @@ Window::Window() :
 	VBox_main.append(VBox_footer);
 	VBox_footer.append(HBox_footer);
 	HBox_footer.set_margin(10);
+	// settings
+	HBox_footer.append(Button_settings);
+	//Button_settings.set_hexpand(true);
+	auto HBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,15);
+	Button_settings.set_child(*HBox_settings);
+	img_settings.set("../img/icon_settings2.png");
+	HBox_settings->append(img_settings );
+	HBox_settings->append(*Gtk::make_managed<Gtk::Label>("settings") );
+	Button_settings.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_settings_clicked) );
 	// prev
 	HBox_footer.append(Button_prev);
 	//Button_prev.set_hexpand(true);
@@ -189,6 +206,127 @@ Window::~Window() {
 	delete ahdc;
 }
 
+void Window::on_button_settings_clicked(){
+	std::cout << "Open settings tab ..." << std::endl;
+	// Initialization
+	auto Window_settings = Gtk::make_managed<Gtk::Window>();
+	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL,10);
+	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_leadingEdgeTime_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_leadingEdgeTime_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_timeOverThreshold_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	// Window for settings
+	Window_settings->set_title("Settings");
+	Window_settings->set_default_size(500,300);
+	Window_settings->set_child(*VBox_settings);
+	// Scale_adcMax
+	auto Label1 = Gtk::make_managed<Gtk::Label>();
+	Label1->set_markup("<b> adcMax </b>");
+	VBox_settings->append(*Label1);
+	VBox_settings->append(*HBox_Scale_adcMax);
+	HBox_Scale_adcMax->set_margin(10);
+	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+	HBox_Scale_adcMax->append(Scale_adcMax);
+	Scale_adcMax.set_hexpand(true);
+	Scale_adcMax.set_draw_value();
+	Scale_adcMax.set_digits(0);
+	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_adcMax->get_value();
+				this->adcCut = val;
+			});
+	auto Separator1 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator1);	
+	// Scale_leadingEdgeTime_min
+	auto Label2 = Gtk::make_managed<Gtk::Label>();
+	Label2->set_markup("<b> leadingEdgeTime </b>");
+	VBox_settings->append(*Label2);
+	VBox_settings->append(*HBox_Scale_leadingEdgeTime_min);
+        HBox_Scale_leadingEdgeTime_min->set_margin(10);
+        HBox_Scale_leadingEdgeTime_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_leadingEdgeTime_min->append(Scale_leadingEdgeTime_min);	
+	Scale_leadingEdgeTime_min.set_hexpand(true);
+	Scale_leadingEdgeTime_min.set_draw_value();
+	Scale_leadingEdgeTime_min.set_digits(0);
+	Adjustment_leadingEdgeTime_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_leadingEdgeTime_min->get_value();
+				this->leadingEdgeTime_min = val;
+			});
+	// Scale_leadingEdgeTime_max
+	VBox_settings->append(*HBox_Scale_leadingEdgeTime_max);
+        HBox_Scale_leadingEdgeTime_max->set_margin(10);
+        HBox_Scale_leadingEdgeTime_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_leadingEdgeTime_max->append(Scale_leadingEdgeTime_max);
+	Scale_leadingEdgeTime_max.set_hexpand(true);
+	Scale_leadingEdgeTime_max.set_draw_value();
+	Scale_leadingEdgeTime_max.set_digits(0);
+	Adjustment_leadingEdgeTime_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_leadingEdgeTime_max->get_value();
+				this->leadingEdgeTime_max = val;
+			});
+	auto Separator2 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator2);	
+	// Scale_timeOverThreshold_min
+	auto Label3 = Gtk::make_managed<Gtk::Label>();
+	Label3->set_markup("<b> timeOverThreshold </b>");
+        VBox_settings->append(*Label3);
+	VBox_settings->append(*HBox_Scale_timeOverThreshold_min);
+        HBox_Scale_timeOverThreshold_min->set_margin(10);
+        HBox_Scale_timeOverThreshold_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_timeOverThreshold_min->append(Scale_timeOverThreshold_min);
+	Scale_timeOverThreshold_min.set_hexpand(true);
+	Scale_timeOverThreshold_min.set_draw_value();
+	Scale_timeOverThreshold_min.set_digits(0);
+	Adjustment_timeOverThreshold_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_timeOverThreshold_min->get_value();
+				this->timeOverThreshold_min = val;
+			});
+	// Scale_timeOverThreshold_max
+	VBox_settings->append(*HBox_Scale_timeOverThreshold_max);
+        HBox_Scale_timeOverThreshold_max->set_margin(10);
+        HBox_Scale_timeOverThreshold_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_timeOverThreshold_max->append(Scale_timeOverThreshold_max);
+	Scale_timeOverThreshold_max.set_hexpand(true);
+	Scale_timeOverThreshold_max.set_draw_value();
+	Scale_timeOverThreshold_max.set_digits(0);
+	Adjustment_timeOverThreshold_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_timeOverThreshold_max->get_value();
+				this->timeOverThreshold_max = val;
+			});
+	auto Separator3 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator3);	
+	// Scale_timeMax_min
+	auto Label4 = Gtk::make_managed<Gtk::Label>();
+	Label4->set_markup("<b> timeMax </b>");
+        VBox_settings->append(*Label4);
+	VBox_settings->append(*HBox_Scale_timeMax_min);
+        HBox_Scale_timeMax_min->set_margin(10);
+        HBox_Scale_timeMax_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_timeMax_min->append(Scale_timeMax_min);
+	Scale_timeMax_min.set_hexpand(true);
+	Scale_timeMax_min.set_draw_value();
+	Scale_timeMax_min.set_digits(0);
+	Adjustment_timeMax_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_timeMax_min->get_value();
+				this->timeMax_min = val;
+			});
+	// Scale_timeMax_max
+	VBox_settings->append(*HBox_Scale_timeMax_max);
+        HBox_Scale_timeMax_max->set_margin(10);
+        HBox_Scale_timeMax_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_timeMax_max->append(Scale_timeMax_max);
+	Scale_timeMax_max.set_hexpand(true);
+	Scale_timeMax_max.set_draw_value();
+	Scale_timeMax_max.set_digits(0);
+	Adjustment_timeMax_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_timeMax_max->get_value();
+				this->timeMax_max = val;
+			});
+	Window_settings->show();
+}
+
 void Window::on_button_prev_clicked(){
 	std::cout << "Process prev event ..." << std::endl;
 	// update icons
@@ -198,53 +336,6 @@ void Window::on_button_prev_clicked(){
 	//img_run.set("../img/icon_run_off.png"); img_run.queue_draw();
 	//img_hipo4.set("../img/icon_file_off.png"); img_hipo4.queue_draw();
 	//img_reset.set("../img/icon_reset_off.png"); img_reset.queue_draw();
-	// Initialization
-	auto Window_settings = Gtk::make_managed<Gtk::Window>();
-	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL,10);
-	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_tmin = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_tmax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	// Window for settings
-	Window_settings->set_title("Settings");
-	Window_settings->set_default_size(500,300);
-	Window_settings->set_child(*VBox_settings);
-	// Scale_adcMax
-	VBox_settings->append(*HBox_Scale_adcMax);
-	HBox_Scale_adcMax->set_margin(10);
-	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
-	HBox_Scale_adcMax->append(Scale_adcMax);
-	Scale_adcMax.set_hexpand(true);
-	Scale_adcMax.set_draw_value();
-	Scale_adcMax.set_digits(0);
-	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_adcMax->get_value();
-				this->adcCut = val;
-			});	
-	// Scale_tmin
-	VBox_settings->append(*HBox_Scale_tmin);
-        HBox_Scale_tmin->set_margin(10);
-        HBox_Scale_tmin->append(*Gtk::make_managed<Gtk::Label>("tmin CUT"));
-        HBox_Scale_tmin->append(Scale_tmin);	
-	Scale_tmin.set_hexpand(true);
-	Scale_tmin.set_draw_value();
-	Scale_tmin.set_digits(0);
-	Adjustment_tmin->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_tmin->get_value();
-				this->tmin = val;
-			});
-	// Scale_tmax
-	VBox_settings->append(*HBox_Scale_tmax);
-        HBox_Scale_tmax->set_margin(10);
-        HBox_Scale_tmax->append(*Gtk::make_managed<Gtk::Label>("tmax CUT"));
-        HBox_Scale_tmax->append(Scale_tmax);
-	Scale_tmax.set_hexpand(true);
-	Scale_tmax.set_draw_value();
-	Scale_tmax.set_digits(0);
-	Adjustment_tmax->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_tmax->get_value();
-				this->tmax = val;
-			});
-	Window_settings->show();
 }
 
 void Window::on_button_next_clicked(){
@@ -705,7 +796,7 @@ bool Window::dataEventAction() {
 			//hist1d_adcMax.fill(adcMax);
 			//hist1d_adcOffset.fill(adcOffset);
 			//if (adcMax > adcCut) {
-			if ((leadingEdgeTime > tmin) && (leadingEdgeTime < tmax) && (adcMax > adcCut)) { 
+			if ((leadingEdgeTime > leadingEdgeTime_min) && (leadingEdgeTime < leadingEdgeTime_max) && (adcMax > adcCut) && (timeOverThreshold > timeOverThreshold_min) && (timeOverThreshold < timeOverThreshold_max) && (timeMax > timeMax_min) && (timeMax < timeMax_max)) { 
 				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
@@ -713,7 +804,8 @@ bool Window::dataEventAction() {
 					hist1d_timeMax.fill(timeMax);
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
-					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+					//doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+					doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
 				//}
 				//// add cut on adcMax to plot waveforms
 				//if (adcMax < adcCut) { continue;}
@@ -748,42 +840,42 @@ bool Window::dataEventAction() {
 				//double adcOffset = this->hipo_banklist[0].getInt("ped", col);
 				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
 				//if (adcMax > adcCut) {
-					ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
-					char buffer[50];
-					sprintf(buffer, "L%d W%d", layer, component);
-					ListOfWireNames.push_back(buffer);
-					ListOfSamples.push_back(samples);
-					// Fill ListOfSamplesPerLayer
-					int index = -1;
-					switch (layer) {
-						case 11 :
-							index = 0;
-							break;
-						case 21 :
-							index = 1;
-							break;
-						case 22 : 
-							index = 2;
-							break;
-						case 31 : 
-							index = 3;
-							break;
-						case 32 :
-							index = 4;
-							break;
-						case 41 :
-							index = 5;
-							break;
-						case 42 :
-							index = 6;
-							break;
-						case 51 : 
-							index = 7;
-							break;
-						default :
-							index = -1;
-					}
-					ListOfSamplesPerLayer[index].push_back(samples);
+				ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
+				char buffer[50];
+				sprintf(buffer, "L%d W%d", layer, component);
+				ListOfWireNames.push_back(buffer);
+				ListOfSamples.push_back(samples);
+				// Fill ListOfSamplesPerLayer
+				int index = -1;
+				switch (layer) {
+					case 11 :
+						index = 0;
+						break;
+					case 21 :
+						index = 1;
+						break;
+					case 22 : 
+						index = 2;
+						break;
+					case 31 : 
+						index = 3;
+						break;
+					case 32 :
+						index = 4;
+						break;
+					case 41 :
+						index = 5;
+						break;
+					case 42 :
+						index = 6;
+						break;
+					case 51 : 
+						index = 7;
+						break;
+					default :
+						index = -1;
+				}
+				ListOfSamplesPerLayer[index].push_back(samples);
 				//}
 			}
 		}
@@ -855,11 +947,15 @@ void Window::drawWaveforms() {
 
 void Window::drawWaveformsPerLayer() {
 	for (int layer = 0; layer < 8; layer++) {
-		if (ListOfSamplesPerLayer[layer].size() == 0) { continue;}
+		//if (ListOfSamplesPerLayer[layer].size() == 0) { continue;}
 		// find ymin and ymax for all signals in this layer
-		double ymin = ListOfSamplesPerLayer[layer][0][0];
-		double ymax = ymin;
-		int Npts = ListOfSamplesPerLayer[layer][0].size();
+		double ymin = 0.0, ymax = 0.0;
+		int Npts = 50;
+		if (ListOfSamplesPerLayer[layer].size() > 0) {
+			ymin = ListOfSamplesPerLayer[layer][0][0];
+			ymax = ymin;
+			Npts = ListOfSamplesPerLayer[layer][0].size(); // overwritten
+		}
 		for (std::vector<short> samples : ListOfSamplesPerLayer[layer]) { // loop over signals
 			for (int value : samples) { // loop over values
 				ymin = (ymin < value) ? ymin : value;
@@ -884,8 +980,8 @@ void Window::drawWaveformsPerLayer() {
 				return canvas.y2h(y);
 			};
 			int seff = canvas.get_seff();
-			//int heff = canvas.get_heff();
-			//int weff = canvas.get_weff();
+			int heff = canvas.get_heff();
+			int weff = canvas.get_weff();
 			// Draw waveforms
 			int NumberOfSignals = ListOfSamplesPerLayer[layer].size();
 			for (int nth = 0; nth < NumberOfSignals; nth++) {
@@ -897,7 +993,7 @@ void Window::drawWaveformsPerLayer() {
 				double g = (1-t)*g1 + t*g2;
 				double b = (1-t)*b1 + t*b2;
 				cr->set_source_rgb(r, g, b);
-				cr->set_line_width(0.01*seff);
+				cr->set_line_width(0.005*seff);
 				cr->move_to(x2w(0),y2h(samples[0]));
 				for (int i = 1; i < Npts; i++) {
 					// draw a line between points i and i-1
@@ -906,7 +1002,18 @@ void Window::drawWaveformsPerLayer() {
 				cr->stroke();
 			}
 			// draw frame and axis
+			canvas.set_frame_line_width(0.005);
 			canvas.draw_frame(cr);
+			// add layer name
+			char buffer[50];
+			sprintf(buffer, "%d", layer);
+			cr->set_source_rgb(1.0, 0.0, 0.0);
+			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+			cr->set_font_size(0.7*canvas.get_top_margin());
+			Cairo::TextExtents te;
+			cr->get_text_extents(buffer, te);
+			cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*canvas.get_top_margin());
+			cr->show_text(buffer);
 		});
 		int row = layer/4 +1;
 		int column = layer%4 + 1;
