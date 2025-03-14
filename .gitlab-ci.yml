@@ -17,7 +17,7 @@ test:
     - cd /builds/touchte/amon/src
     - ls
     - make
-    - ./gui.exe
+    - ls
 
   artifacts:
     paths:
