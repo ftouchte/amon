@@ -2,10 +2,24 @@ test:
   image: codecr.jlab.org/hallb/clas12/container-forge/analysis
   script:
     - ls -l / /builds
-    - cd /builds/touchte/amon/src
     - ls -l .
-    - pacman -S -s gtkmm
+    - cd /builds/touchte/amon
     - pacman -Syu --noconfirm gtkmm-4.0
+    - wget https://github.com/gavalian/hipo/archive/refs/tags/4.2.0.tar.gz
+    - tar -xf 4.2.0.tar.gz
+    - cd hipo-4.2.0/
+    - mkdir build && mkdir install
+    - meson setup build --prefix=`pwd`/install
+    - cd build
+    - ninja
+    - ninja install
+    - ls ../install/lib
+    - cd /builds/touchte/amon/src
+    - ls
+
+
+    - cd ../src
+    - make
 
   artifacts:
     paths:
