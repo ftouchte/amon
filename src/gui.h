@@ -48,8 +48,8 @@ protected :
 	
 	Gtk::Box HBox_footer;
 	//Gtk::Box HBox_prev, HBox_next, HBox_pause, HBox_run, HBox_info,  HBox_hipo4, HBox_reset;
-	Gtk::Button Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset;
-	Gtk::Image img_prev, img_next, img_pause, img_run, img_hipo4, img_reset;
+	Gtk::Button Button_settings, Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset;
+	Gtk::Image img_settings, img_prev, img_next, img_pause, img_run, img_hipo4, img_reset;
 	Gtk::Box HBox_info;
 	Gtk::Label Label_info;
 	Gtk::Label Label_header;
@@ -59,9 +59,15 @@ protected :
 	 * *******************/
 	//Gtk::Window Window_settings;
 	//Gtk::Box VBox_settings;
-	//Gtk::Box HBox_Scale_adcMax, HBox_Scale_tmin, HBox_Scale_tmax;
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax, Adjustment_tmin, Adjustment_tmax;
-	Gtk::Scale Scale_adcMax, Scale_tmin, Scale_tmax;
+	//Gtk::Box HBox_Scale_adcMax, HBox_Scale_leadingEdgeTime_min, HBox_Scale_leadingEdgeTime_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax; 
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_leadingEdgeTime_min, Adjustment_leadingEdgeTime_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeOverThreshold_min, Adjustment_timeOverThreshold_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeMax_min, Adjustment_timeMax_max;
+	Gtk::Scale Scale_adcMax;
+	Gtk::Scale Scale_leadingEdgeTime_min, Scale_leadingEdgeTime_max;
+	Gtk::Scale Scale_timeOverThreshold_min, Scale_timeOverThreshold_max;
+	Gtk::Scale Scale_timeMax_min, Scale_timeMax_max;
 	
 	/**********************
 	 *  DATA
@@ -79,9 +85,13 @@ protected :
 	std::vector< std::vector<std::vector<short>>  > ListOfSamplesPerLayer;
 	AhdcExtractor decoder;
 	double adcCut = 150;
-	double tmin = 0;
-	double tmax = 49;
-
+	double leadingEdgeTime_min = 0;
+	double leadingEdgeTime_max = 49;
+	double timeOverThreshold_min = 0;
+	double timeOverThreshold_max = 49;
+	double timeMax_min = 0;
+	double timeMax_max = 49;
+	
 	// Histograms
 	bool is_paused = false;
 	bool is_reset = false;
@@ -102,6 +112,7 @@ public :
 	void drawHistograms();
 	
 	// Signals
+	void on_button_settings_clicked();
 	void on_button_prev_clicked();
 	void on_button_next_clicked();
 	void on_button_pause_clicked();
