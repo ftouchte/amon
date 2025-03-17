@@ -16,12 +16,14 @@
 #include <gtkmm.h>
 
 #include "fAxis.h"
+#include "fColorPalette.h"
 
+/*
 struct fColor {
         double r;
         double g;
         double b;
-};
+};*/
 
 class fH1D {
 private :

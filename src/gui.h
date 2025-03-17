@@ -82,6 +82,7 @@ protected :
 	std::vector<AhdcWire> ListOfWires; ///< List of wires activated
 	std::vector<std::string> ListOfWireNames; ///< List of wire names
 	std::vector<std::vector<short>> ListOfSamples;  ///< List of samples
+	std::vector<double> ListOfAdc;		///< List of adcMax
 	std::vector< std::vector<std::vector<short>>  > ListOfSamplesPerLayer;
 	AhdcExtractor decoder;
 	double adcCut = 150;
