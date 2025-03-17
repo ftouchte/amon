@@ -8,6 +8,7 @@
 #include "gui.h"
 #include "fAxis.h"
 #include "fCanvas.h"
+#include "fColorPalette.h"
 #include "AhdcExtractor.h"
 #include <iostream>
 #include <string>
@@ -364,7 +365,7 @@ void Window::on_button_next_clicked(){
 					else {return false;} // stop the timeout
 				}
 				else {return false;} // stop the timeout
-			}, 5); // call every 5 ms
+			}, 10); // call every 10 ms
 }
 
 void Window::on_button_pause_clicked(){
@@ -406,7 +407,7 @@ void Window::on_button_run_clicked(){
 					return true; // continue the timeout
 				}
 				else {return false;} // stop the timeout
-                        }, 5); // call every 5 ms
+                        }, 10); // call every 10 ms
 }
 
 void Window::on_button_hipo4_clicked(){
@@ -498,6 +499,7 @@ void Window::on_button_reset_clicked(){
 	ListOfWires.clear();
 	ListOfWireNames.clear();
 	ListOfSamples.clear();
+	ListOfAdc.clear();
 	for (int ilayer = 0; ilayer < 8; ilayer++) {
 		ListOfSamplesPerLayer[ilayer].clear();
 	}
@@ -554,7 +556,8 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	canvas.set_top_margin(0.05*window_size);
 	canvas.set_bottom_margin(0.05*window_size);
 	canvas.set_left_margin(0.05*window_size);
-	canvas.set_right_margin(0.05*window_size);
+	//canvas.set_right_margin(0.05*window_size);
+	canvas.set_right_margin(0.15*window_size);
 	canvas.set_frame_line_width(0.005);
 	canvas.set_stick_width(0.002);
 	canvas.set_label_size(0.5);
@@ -609,7 +612,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
 					cr->stroke();
 					if ((wire.top.x == 0) && (wire.top.y < 0)) {
-						// these wires hava a component id == 1 (it is the start of the numerotation)
+						// these wires have a component id == 1 (it is the start of the numerotation)
 						cr->set_line_width(0.002*seff);
 						cr->set_source_rgba(0.0, 1.0, 0.0, 0.5);
 						cr->move_to(x2w(wire.top.x) + marker_size, y2h(wire.top.y));
@@ -621,34 +624,122 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		}
 	}
 	// Show activated wires
-	for (AhdcWire wire : ListOfWires) {
-		cr->set_source_rgb(1.0, 0.0, 0.0);
+	double zmin = 0.0;
+	double zmax = 4095.0;
+	if (ListOfAdc.size() > 0) {
+		zmin = ListOfAdc[0];
+		zmax = zmin;
+	}
+	for (double adc : ListOfAdc) {
+		zmin = (zmin < adc) ? zmin : adc;
+		zmax = (zmax > adc) ? zmax : adc;	
+	}
+	for (int i = 0; i < (int) ListOfWires.size(); i++) {
+		AhdcWire wire = ListOfWires[i];
+		double adc = ListOfAdc[i];
+		// ---- test
+		//zmin = 0.0;
+		//zmax = 1200.0;
+		//adc = std::min(adc, zmax);
+		// ---- end test
+		fColorPalette Palette(5, 1);
+		if (zmin != zmax) {
+			int ncolors = Palette.get_ncolors();
+			double slope = (1.0*(ncolors-1))/(zmax-zmin);
+			int color = floor(slope*(adc-zmin) + 0.0);
+			//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
+			//printf("color : %d\n", color);
+			fColor rgb = Palette.get_color(color);
+			cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		} else {
+			fColor rgb = Palette.get_color(0);
+			cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		}
 		double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
 		cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
 		cr->fill();
 	}
+	// Draw Color Palette
+	fColorPalette Palette(5, 1);
+	cr->set_source_rgb(0.0, 0.0, 0.0);
+	cr->set_line_width(0.005*seff);
+	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
+	cr->line_to(x2w(80) + 0.1*window_size, y2h(-80));
+	cr->line_to(x2w(80) + 0.1*window_size, y2h(80));
+	cr->stroke();
+	for (int i = 0; i < Palette.get_ncolors(); i++) {
+		int ncolors = Palette.get_ncolors();
+		fColor rgb = Palette.get_color(i);
+		double slope = 160.0/(ncolors); // == 80 - (-80)
+		double z = slope*(i-0.0) - 80.0;
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->move_to(x2w(80) + 0.01*window_size, y2h(z));
+		cr->line_to(x2w(80) +  0.1*window_size, y2h(z));
+		cr->line_to(x2w(80) +  0.1*window_size, y2h(z+1.0*slope));
+		cr->line_to(x2w(80) + 0.01*window_size, y2h(z+1.0*slope));
+		cr->close_path();
+		cr->fill();
+	}
+	// Draw zmax
+	{ // don't want to rename some variables
+		char buffer[50];
+		sprintf(buffer, "%.0lf", zmax);
+		fColor rgb = Palette.get_color(Palette.get_ncolors()-1);
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		cr->move_to(x2w(80) + 0.05*window_size - 0.5*te.width, y2h(80) - 0.1*canvas.get_top_margin());
+		cr->show_text(buffer);
+	}
+	// Draw zmin
+	{ 
+		char buffer[50];
+		sprintf(buffer, "%.0lf", zmin);
+		fColor rgb = Palette.get_color(0);
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		cr->move_to(x2w(80) + 0.05*window_size - 0.5*te.width, y2h(-80) + 0.1*canvas.get_top_margin() + te.height);
+		cr->show_text(buffer);
+	}	
 }
 
 void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
 	cr->save();
-	std::vector<double> vx;
-	std::vector<double> vy = {287, 259, 322, 319, 268, 340, 320, 255, 323, 298, 296, 316, 343, 410, 459, 523, 585, 637, 774, 832, 904, 921, 987, 982, 968, 985, 927, 1017, 959, 939, 828, 853, 787, 840, 774, 735, 709, 678, 642, 655, 648, 577, 529, 559, 571, 599, 552, 506, 470, 475, 459, 496, 485, 448, 406, 400, 434, 374, 358, 385, 453, 397, 411, 392, 397, 417, 375, 437, 381, 360, 411, 340, 374, 390, 362, 366, 312, 388, 300, 347, 391, 346, 364, 336, 318, 323, 322, 363, 346, 347, 384, 339, 294, 323, 323, 344, 301, 288, 322, 268, 314, 289, 325, 274, 308, 301, 322, 312, 307, 333, 302, 246, 305, 270, 321, 286, 316, 347, 347, 335, 326, 350, 322, 343, 282, 273, 288, 273, 315, 291, 335, 295, 259, 362, 321, 284};
-	double xmin = 0.0;
-	double xmax = 0.0;
-	double ymin = 0.0;
-	double ymax = 0.0;
-	for (int i = 0; i < (int) vy.size(); i++) {
-		vx.push_back(i*44.0);
-		xmax = (xmax < vx[i]) ? vx[i] : xmax;
-		ymax = (ymax < vy[i]) ? vy[i] : ymax;
-	}
-	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
+	fColorPalette Palette(5, 1);	
+	int ncolors = Palette.get_ncolors();
+	fCanvas canvas(width, height, 0.0, 1.0*ncolors, 0.0, 1.0);
+	canvas.define_coord_system(cr);
+	// x coord to width
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
+	};
+	// y coord to height
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
+	};
+	for (int i = 0; i < ncolors; i++) {
+		fColor rgb = Palette.get_color(i);
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->set_line_width(0.01*canvas.get_seff());
+		cr->move_to(x2w(1.0*i), y2h(0.0));
+		cr->line_to(x2w(1.0*(i+1)), y2h(0.0));
+		cr->line_to(x2w(1.0*(i+1)), y2h(1.0));
+		cr->line_to(x2w(1.0*i), y2h(1.0));
+		cr->close_path();
+		//cr->stroke_preserve();
+		cr->fill();
+	}	
 	canvas.do_not_draw_secondary_stick();
 	canvas.draw_frame(cr);
 	//canvas.set_title_size(0.6);
-	canvas.draw_title(cr, "Example (test fCanvas)");
-	canvas.draw_xtitle(cr, "Time (ns)");
-	canvas.draw_ytitle(cr, "Charge(adc)");
+	canvas.draw_title(cr, "Example (test fColorPalette)");
+	canvas.draw_xtitle(cr, "color");
+	canvas.draw_ytitle(cr, "");
 	cr->restore();
 }
 
@@ -757,6 +848,7 @@ bool Window::dataEventAction() {
 		ListOfWires.clear();
 		ListOfWireNames.clear();
 		ListOfSamples.clear();
+		ListOfAdc.clear();
 		for (int ilayer = 0; ilayer < 8; ilayer++) {
 			ListOfSamplesPerLayer[ilayer].clear();
 		}
@@ -816,6 +908,7 @@ bool Window::dataEventAction() {
 				//	sprintf(buffer, "L%d W%d", layer, component);
 				//	ListOfWireNames.push_back(buffer);
 				//	ListOfSamples.push_back(samples);
+				//	ListOfAdc.push_back(adcMax);
 				//}
 			}
 		}
@@ -845,6 +938,7 @@ bool Window::dataEventAction() {
 				sprintf(buffer, "L%d W%d", layer, component);
 				ListOfWireNames.push_back(buffer);
 				ListOfSamples.push_back(samples);
+				ListOfAdc.push_back(adcMax);
 				// Fill ListOfSamplesPerLayer
 				int index = -1;
 				switch (layer) {
