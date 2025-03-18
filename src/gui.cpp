@@ -38,7 +38,7 @@ Window::Window() :
 	//HBox_Scale_leadingEdgeTime_max(Gtk::Orientation::HORIZONTAL,10),
 	
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(150.0, 0.0, 4095, 10, 0.0, 0.0)),
+	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, 4095, 10, 0.0, 0.0)),
 	Adjustment_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Adjustment_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Adjustment_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
@@ -365,7 +365,7 @@ void Window::on_button_next_clicked(){
 					else {return false;} // stop the timeout
 				}
 				else {return false;} // stop the timeout
-			}, 10); // call every 10 ms
+			}, 20); // call every 10 ms
 }
 
 void Window::on_button_pause_clicked(){
@@ -407,7 +407,7 @@ void Window::on_button_run_clicked(){
 					return true; // continue the timeout
 				}
 				else {return false;} // stop the timeout
-                        }, 10); // call every 10 ms
+                        }, 20); // call every 10 ms
 }
 
 void Window::on_button_hipo4_clicked(){
@@ -888,7 +888,7 @@ bool Window::dataEventAction() {
 			//hist1d_adcMax.fill(adcMax);
 			//hist1d_adcOffset.fill(adcOffset);
 			//if (adcMax > adcCut) {
-			if ((leadingEdgeTime > leadingEdgeTime_min) && (leadingEdgeTime < leadingEdgeTime_max) && (adcMax > adcCut) && (timeOverThreshold > timeOverThreshold_min) && (timeOverThreshold < timeOverThreshold_max) && (timeMax > timeMax_min) && (timeMax < timeMax_max)) { 
+			if ((leadingEdgeTime >= leadingEdgeTime_min) && (leadingEdgeTime <= leadingEdgeTime_max) && (adcMax >= adcCut) && (timeOverThreshold >= timeOverThreshold_min) && (timeOverThreshold <= timeOverThreshold_max) && (timeMax >= timeMax_min) && (timeMax <= timeMax_max)) { 
 				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
@@ -999,7 +999,7 @@ bool Window::dataEventAction() {
 }
 
 void Window::drawWaveforms() {
-	nWF = (int) std::min((int) ListOfSamples.size(),40); // do not draw more than 10 waveforms
+	nWF = (int) std::min((int) ListOfSamples.size(),20); // do not draw more than 10 waveforms
 	// Fill Grid_waveforms
 	for (int row = 1; row <= (nWF/2); row++) {
 		std::vector<double> vx, vy1, vy2;
@@ -1044,21 +1044,36 @@ void Window::drawWaveformsPerLayer() {
 		//if (ListOfSamplesPerLayer[layer].size() == 0) { continue;}
 		// find ymin and ymax for all signals in this layer
 		double ymin = 0.0, ymax = 0.0;
-		int Npts = 50;
+		int Npts = 0;
 		if (ListOfSamplesPerLayer[layer].size() > 0) {
 			ymin = ListOfSamplesPerLayer[layer][0][0];
 			ymax = ymin;
 			Npts = ListOfSamplesPerLayer[layer][0].size(); // overwritten
 		}
+		std::vector<double> sum_samples(Npts, 0.0); // store the sum of each signals for a given layer
 		for (std::vector<short> samples : ListOfSamplesPerLayer[layer]) { // loop over signals
-			for (int value : samples) { // loop over values
+			for (int i = 0; i < (int) samples.size(); i++) { // loop over values
+				double value = samples[i];
+				sum_samples[i] = sum_samples[i] + value;
 				ymin = (ymin < value) ? ymin : value;
 				ymax = (ymax > value) ? ymax : value;
+				//ymin = (ymin < sum_samples[i]) ? ymin : sum_samples[i];
+				//ymax = (ymax > sum_samples[i]) ? ymax : sum_samples[i];
 			}
 		}
+		// renormalize sum_samples
+		int nwfs = ListOfSamplesPerLayer[layer].size();
+		if (nwfs > 0) {
+			for (int i = 0; i < (int) sum_samples.size(); i++) {
+				sum_samples[i] = sum_samples[i]/nwfs;
+			}
+			//ymin = ymin/nwfs;
+			//ymax = ymax/nwfs;
+		}
 		// Drawings
+		auto button = Gtk::make_managed<Gtk::Button>();
 		auto area = Gtk::make_managed<Gtk::DrawingArea>();
-		area->set_draw_func([this, layer, Npts, ymin, ymax] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		auto draw_function = [this, layer, Npts, ymin, ymax, sum_samples] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
 			// Define main canvas
 			fCanvas canvas(width, height, 0, Npts-1, ymin, ymax);
 			canvas.define_coord_system(cr);
@@ -1095,23 +1110,45 @@ void Window::drawWaveformsPerLayer() {
 				}
 				cr->stroke();
 			}
+			// draw the sum of signals
+			if (Npts > 0) {
+				cr->set_source_rgb(1.0, 0.0, 0.0);
+				cr->set_line_width(0.005*seff);
+				cr->move_to(x2w(0),y2h(sum_samples[0]));
+				for (int i = 1; i < Npts; i++) {
+					// draw a line between points i and i-1
+					cr->line_to(x2w(i),y2h(sum_samples[i]));
+				}
+				cr->stroke();
+			}
 			// draw frame and axis
 			canvas.set_frame_line_width(0.005);
 			canvas.draw_frame(cr);
 			// add layer name
 			char buffer[50];
-			sprintf(buffer, "%d", layer);
+			sprintf(buffer, "Layer %d", layer+1);
 			cr->set_source_rgb(1.0, 0.0, 0.0);
 			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(0.7*canvas.get_top_margin());
+			cr->set_font_size(0.6*canvas.get_top_margin());
 			Cairo::TextExtents te;
 			cr->get_text_extents(buffer, te);
 			cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*canvas.get_top_margin());
 			cr->show_text(buffer);
-		});
+		};
+		area->set_draw_func(draw_function);
 		int row = layer/4 +1;
 		int column = layer%4 + 1;
-		Grid_waveformsPerLayer.attach(*area,column,row);
+		button->set_child(*area);
+		button->signal_clicked().connect([this, draw_function] () -> void {
+					auto window = Gtk::make_managed<Gtk::Window>();
+					window->set_title("");
+					window->set_default_size(1200,800);
+					auto area_bis = Gtk::make_managed<Gtk::DrawingArea>();
+					area_bis->set_draw_func(draw_function);
+					window->set_child(*area_bis);
+					window->show();
+				});
+		Grid_waveformsPerLayer.attach(*button,column,row);
 	}	
 	// end
 	Grid_waveformsPerLayer.queue_draw();
@@ -1119,47 +1156,120 @@ void Window::drawWaveformsPerLayer() {
 
 void Window::drawHistograms() {
 	// area 1 : hist1d_adcMax
+	auto button1 = Gtk::make_managed<Gtk::Button>();
 	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-	area1->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788}); // green
-							this->hist1d_adcMax.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area1,1,1);
+	button1->set_child(*area1);
+	auto draw_function1 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_adcMax.set_fill_color({0.251, 1, 0.788}); // green
+		this->hist1d_adcMax.draw_with_cairo(cr, width, height);
+	};
+	area1->set_draw_func(draw_function1);
+	button1->signal_clicked().connect([this, draw_function1] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area1_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area1_bis->set_draw_func(draw_function1);
+				window->set_child(*area1_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button1,1,1);
+
 	// area 5 : hist1d_adcOffset
+	auto button5 = Gtk::make_managed<Gtk::Button>();
 	auto area5 = Gtk::make_managed<Gtk::DrawingArea>();
-	area5->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_adcOffset.set_fill_color({0.969, 0.78, 0.494}); // orange
-                                                        this->hist1d_adcOffset.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area5,2,1);
+	button5->set_child(*area5);
+	auto draw_function5 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_adcOffset.set_fill_color({0.969, 0.78, 0.494}); // orange
+		this->hist1d_adcOffset.draw_with_cairo(cr, width, height);
+	};
+	area5->set_draw_func(draw_function5);
+	button5->signal_clicked().connect([this, draw_function5] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area5_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area5_bis->set_draw_func(draw_function5);
+				window->set_child(*area5_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button5,2,1);
 	// area 2 : hist1d_leadindEdgeTime
+	auto button2 = Gtk::make_managed<Gtk::Button>();
 	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-	area2->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_leadingEdgeTime.set_fill_color({0.961, 0.953, 0.608}); // yellow
-                                                        this->hist1d_leadingEdgeTime.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area2,3,1);
+	button2->set_child(*area2);
+	auto draw_function2 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_leadingEdgeTime.set_fill_color({0.961, 0.953, 0.608}); // yellow
+		this->hist1d_leadingEdgeTime.draw_with_cairo(cr, width, height);
+	};
+	area2->set_draw_func(draw_function2);
+	button2->signal_clicked().connect([this, draw_function2] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area2_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area2_bis->set_draw_func(draw_function2);
+				window->set_child(*area2_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button2,3,1);
 	// area 3 : hist1d_timeOverThreshold
+	auto button3 = Gtk::make_managed<Gtk::Button>();
 	auto area3 = Gtk::make_managed<Gtk::DrawingArea>();
-	area3->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_timeOverThreshold.set_fill_color({0.922, 0.435, 0.647}); // pink (rose)
-                                                        this->hist1d_timeOverThreshold.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area3,1,2);
+	button3->set_child(*area3);
+	auto draw_function3 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_timeOverThreshold.set_fill_color({0.922, 0.435, 0.647}); // pink (rose)
+		this->hist1d_timeOverThreshold.draw_with_cairo(cr, width, height);
+	};
+	area3->set_draw_func(draw_function3);
+	button3->signal_clicked().connect([this, draw_function3] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area3_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area3_bis->set_draw_func(draw_function3);
+				window->set_child(*area3_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button3,1,2);
 	// area 4 : hist1d_timeMax
+	auto button4 = Gtk::make_managed<Gtk::Button>();
 	auto area4 = Gtk::make_managed<Gtk::DrawingArea>();
-	area4->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_timeMax.set_fill_color({0.431, 0.765, 0.922}); // blue
-                                                        this->hist1d_timeMax.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area4,2,2);
+	button4->set_child(*area4);
+	auto draw_function4 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_timeMax.set_fill_color({0.431, 0.765, 0.922}); // blue
+		this->hist1d_timeMax.draw_with_cairo(cr, width, height);
+	};
+	area4->set_draw_func(draw_function4);
+	button4->signal_clicked().connect([this, draw_function4] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area4_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area4_bis->set_draw_func(draw_function4);
+				window->set_child(*area4_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button4,2,2);
 	// area 6 : hist1d_constantFractionTime
+	auto button6 = Gtk::make_managed<Gtk::Button>();
 	auto area6 = Gtk::make_managed<Gtk::DrawingArea>();
-	area6->set_draw_func([this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-                                                        this->hist1d_constantFractionTime.set_fill_color({0.855, 0.6, 0.969}); // violet
-                                                        this->hist1d_constantFractionTime.draw_with_cairo(cr, width, height);
-                                              } );
-	Grid_histograms.attach(*area6,3,2);
+	button6->set_child(*area6);
+	auto draw_function6 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		this->hist1d_constantFractionTime.set_fill_color({0.855, 0.6, 0.969}); // violet
+		this->hist1d_constantFractionTime.draw_with_cairo(cr, width, height);
+	};
+	area6->set_draw_func(draw_function6);
+	button6->signal_clicked().connect([this, draw_function6] () -> void {
+				auto window = Gtk::make_managed<Gtk::Window>();
+				window->set_title("");
+				window->set_default_size(1200,800);
+				auto area6_bis = Gtk::make_managed<Gtk::DrawingArea>();
+				area6_bis->set_draw_func(draw_function6);
+				window->set_child(*area6_bis);
+				window->show();
+			});
+	Grid_histograms.attach(*button6,3,2);
 	Grid_histograms.queue_draw();
 }
 
