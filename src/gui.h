@@ -85,7 +85,7 @@ protected :
 	std::vector<double> ListOfAdc;		///< List of adcMax
 	std::vector< std::vector<std::vector<short>>  > ListOfSamplesPerLayer;
 	AhdcExtractor decoder;
-	double adcCut = 150;
+	double adcCut = 0;
 	double leadingEdgeTime_min = 0;
 	double leadingEdgeTime_max = 49;
 	double timeOverThreshold_min = 0;
