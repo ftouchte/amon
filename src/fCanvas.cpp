@@ -55,6 +55,14 @@ int fCanvas::y2h(double y) const {
 	return linear_transformation(y_start, 0, y_end, -heff, y); // minus heff because of the axis orientation
 }
 
+double fCanvas::w2x(double w) const {
+	return linear_transformation(0, x_start, weff, x_end, w);
+}
+
+double fCanvas::h2y(double h) const {
+	return linear_transformation(0, y_start, -heff, y_end, h); // minus heff because of the axis orientation
+}
+
 void fCanvas::define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr) {
 	if (coord_system_not_defined) {
 		cr->translate(left_margin, top_margin + heff);
