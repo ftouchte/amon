@@ -11,7 +11,7 @@
 #include <gtkmm.h>
 #include <string>
 #include <vector>
-#include "reader.h"
+#include "hipo4/reader.h"
 
 #include "AhdcDetector.h"
 #include "AhdcExtractor.h"
