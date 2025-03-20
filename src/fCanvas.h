@@ -47,6 +47,8 @@ public :
 	fCanvas(int width, int height, double xmin, double xmax, double ymin, double ymax);
 	int x2w(double x) const; ///< convert x to width (pixel system)
 	int y2h(double y) const; ///< convert y to height (pixel system)
+	double w2x(double w) const; ///< convert width to x 
+	double h2y(double h) const; ///< convert height to y
 	void define_coord_system(const Cairo::RefPtr<Cairo::Context>& cr); ///< must be used only one time !
 	void do_not_draw_secondary_stick();
 	void draw_frame(const Cairo::RefPtr<Cairo::Context>& cr);
