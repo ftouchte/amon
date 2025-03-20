@@ -4,3 +4,4 @@
 *.evio*
 *.pdf
 /output/*
+*.swp
