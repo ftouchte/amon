@@ -16,10 +16,12 @@
 
 #PATH2HIPO := /homeijclab/touchte-codjo/hipo
 #PATH2HIPO := /home/ftouchte/hipo
-PATH2HIPO := /home/touchte-codjo/framework/hipo
+#PATH2HIPO := /home/touchte-codjo/framework/hipo
+PATH2HIPO := /usr/local
+
 
 HIPOCFLAGS  := -I$(PATH2HIPO)/hipo4 -I$(PATH2HIPO)/hipo4/chart   
-HIPOLIBS    := -L$(PATH2HIPO)/lib -lhipo4 
+HIPOLIBS    := -L$(PATH2HIPO)/install/lib -lhipo4 
 									
 LZ4LIBS     := -L$(PATH2HIPO)/lz4/lib -llz4
 LZ4INCLUDES := -I$(PATH2HIPO)/lz4/lib
