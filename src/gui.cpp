@@ -897,8 +897,8 @@ bool Window::dataEventAction() {
 					hist1d_timeMax.fill(timeMax);
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
-					//doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
-					doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
+					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+					//doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
 				//}
 				//// add cut on adcMax to plot waveforms
 				//if (adcMax < adcCut) { continue;}
