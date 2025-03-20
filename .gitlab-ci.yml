@@ -1,0 +1,51 @@
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "webide"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_COMMIT_BRANCH == "development"'
+    - if: '$CI_COMMIT_TAG'
+
+
+variables:
+  REF_NAME: ${CI_COMMIT_REF_NAME}
+
+test:
+  image: codecr.jlab.org/hallb/clas12/clas12-containers/hipo:main
+  script:
+    - apt install -y libgtkmm-4.0-dev 
+    - cd src
+    - ls
+    - make
+    - ls
+  artifacts:
+    paths:
+      - table.txt
+
+
+amon_docker:
+  image: gcr.io/kaniko-project/executor:debug
+  script:
+    - echo "${CI_COMMIT_REF_NAME}"
+    - >-
+      /kaniko/executor
+      --context     $CI_PROJECT_DIR
+      --dockerfile  $CI_PROJECT_DIR/.containers/amon.Dockerfile
+      --destination $CI_REGISTRY_IMAGE/amon:${CI_COMMIT_REF_NAME}
+      --build-arg REF_NAME=${CI_COMMIT_REF_NAME}
+
+
+
+#coatjava:singularity:
+#  image: eicweb.phy.anl.gov:4567/containers/image_recipes/ubuntu_dind:latest
+#  tags:
+#     - silicon
+#  allow_failure: true
+#  script:
+#    - apptainer build  --build-arg REF_NAME=${REF_NAME} coatjava.sif .containers/coatjava.def
+#    - ls -lrth
+#  artifacts:
+#      paths:
+#        - coatjava.sif
+#

@@ -8,7 +8,7 @@
  * *************************************************/
 
 #include "AhdcExtractor.h"
-#include "reader.h"
+#include "hipo4/reader.h"
 
 #include <string>
 #include <iostream>
