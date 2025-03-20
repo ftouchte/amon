@@ -21,10 +21,10 @@ PATH2HIPO := /usr/local
 
 
 HIPOCFLAGS  := -I$(PATH2HIPO)/hipo4 -I$(PATH2HIPO)/hipo4/chart   
-HIPOLIBS    := -L$(PATH2HIPO)/install/lib -lhipo4 
+HIPOLIBS    := -L$(PATH2HIPO)/hipo4/lib -lhipo4 
 									
-LZ4LIBS     := -L$(PATH2HIPO)/lz4/lib -llz4
-LZ4INCLUDES := -I$(PATH2HIPO)/lz4/lib
+LZ4LIBS     := -L$(PATH2HIPO)/hipo4/lz4/lib -llz4
+LZ4INCLUDES := -I$(PATH2HIPO)/hipo4/lz4/lib
 
 FELIXFLAGS := -I/homeijclab/touchte-codjo/Bureau/alert/cpp/ahdc
 
