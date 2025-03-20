@@ -111,6 +111,7 @@ public :
 	void drawWaveforms();
 	void drawWaveformsPerLayer();
 	void drawHistograms();
+	bool GetNearestAhdcWire(double x, double y, AhdcWire & _wire, int & _layer, int & _component);
 	
 	// Signals
 	void on_button_settings_clicked();
@@ -124,6 +125,7 @@ public :
 	void on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog); // used in on_button_hipo4_clicked()
 	void on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
+	void on_mouse_clicked(int n_press, double x, double y);
 	void cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation);
 };
 

@@ -192,13 +192,14 @@ Window::Window() :
 	HBox_reset->append(*Gtk::make_managed<Gtk::Label>("reset") );
 	Button_reset.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_reset_clicked) );
 	
-	// ending (real time control of adcMax cuts)
-	//VBox_footer.append(HBox_Scale_adcMax);
-	//HBox_Scale_adcMax.set_margin(10); 
-	//HBox_Scale_adcMax.append(*Gtk::make_managed<Gtk::Label>("adcMax CUT"));
-	//HBox_Scale_adcMax.append(Scale_adcMax);
-	
 	//VBox_footer.append(*Gtk::make_managed<Gtk::Label>("Footer") );
+	
+	/**************************
+	 * Go back in eventViewer
+	 * **********************/
+	auto mouse_click = Gtk::GestureClick::create();
+	mouse_click->signal_released().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
+	DrawingArea_event.add_controller(mouse_click);
 }
 
 /** Destructor */
@@ -896,8 +897,8 @@ bool Window::dataEventAction() {
 					hist1d_timeMax.fill(timeMax);
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
-					//doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
-					doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
+					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
+					//doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
 				//}
 				//// add cut on adcMax to plot waveforms
 				//if (adcMax < adcCut) { continue;}
@@ -1271,6 +1272,82 @@ void Window::drawHistograms() {
 			});
 	Grid_histograms.attach(*button6,3,2);
 	Grid_histograms.queue_draw();
+}
+
+void Window::on_mouse_clicked (int n_press, double x, double y) {
+	// ************ This portion of code must correspond to the one of on_draw_event !!! ***************
+	int width = DrawingArea_event.get_width();
+	int height = DrawingArea_event.get_height();
+	fCanvas canvas(width, height, -80, 80, -80, 80);
+	int window_size = std::min(width,height);
+	canvas.set_top_margin(0.05*window_size);
+	canvas.set_bottom_margin(0.05*window_size);
+	canvas.set_left_margin(0.05*window_size);
+	//canvas.set_right_margin(0.05*window_size);
+	canvas.set_right_margin(0.15*window_size);
+	canvas.set_frame_line_width(0.005);
+	canvas.set_stick_width(0.002);
+	canvas.set_label_size(0.5);
+	canvas.set_title_size(0.6);
+	canvas.set_x_start(-80);
+	canvas.set_x_end(80);
+	canvas.set_y_start(-80);
+	canvas.set_y_end(80);
+	// **********************             end of the portion of code     *******************************
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
+	};
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
+	};
+	auto w2x = [canvas] (double w) {
+		return canvas.w2x(w);
+	};
+	auto h2y = [canvas] (double h) {
+		return canvas.h2y(h);
+	};	
+	//printf("n_press : %d, x : %lf, y : %lf\n", n_press, x, y); // x and y coord in widget allocation coordinates
+	double w = x - canvas.get_left_margin(); // due to the effect of fCanvas::define_coord_system()
+	double h = y - canvas.get_top_margin() - canvas.get_heff(); // due to the effect of fCanvas::define_coord_system()
+	double ahdc_x = w2x(w);
+	double ahdc_y = h2y(h);	
+	//printf("              ahdc_x : %lf, ahdc_y : %lf\n", ahdc_x, ahdc_y);
+	// Now, I need to retrieve the closest AhdcWire arond this point (ahdc_x, ahdc_y)
+	// then retrieve the layer id
+	// then retrieve the waveform
+	// may think to reorganize ListOfSamples, ListOfWires and ListOfSamplesPerLayer
+	AhdcWire wire;
+	int layer = -1;
+	int component = -1;
+	if (this->GetNearestAhdcWire(ahdc_x, ahdc_y, wire, layer, component)) {
+		printf("======     AhdcWire  ======\n");
+		printf("    x     : %lf\n", wire.top.x);
+		printf("    y     : %lf\n", wire.top.y);
+		printf("    layer : %d\n", layer);
+		printf("    comp  : %d\n", component);
+	}
+}
+
+bool Window::GetNearestAhdcWire(double x, double y, AhdcWire & _wire, int & _layer, int & _component) {
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire wire = *ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					double dx = wire.top.x - x;
+					double dy = wire.top.y - y;
+					double dr = sqrt(dx*dx + dy*dy);
+					if (dr < 2) {
+						_wire = wire;
+						_layer = 10*(sl+1) + (l+1);
+						_component = w+1;
+					       return true;	
+					}	       
+				}
+			}
+		}
+	}
+	return false;
 }
 
 /** Main function */
