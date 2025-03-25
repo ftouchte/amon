@@ -175,6 +175,88 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	cr->close_path();
 	cr->set_source_rgb(fill_color.r, fill_color.g, fill_color.b);
 	cr->fill();
+
+	// Draw statistics
+	int weff = canvas.get_weff();
+	int heff = canvas.get_heff();
+	int seff = canvas.get_seff();
+	int label_size = canvas.get_label_size();
+	int hlegend = -heff;
+	{	// Draw nEntries
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(label_size);
+		char buffer[50];
+		sprintf(buffer, "%12s : %ld", "nEntries", nEntries);
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		//cr->move_to(weff - te.width, 0.95*bottom_margin);
+		hlegend += 1.2*te.height;
+		cr->move_to(0.7*weff + 10, hlegend); 
+		cr->show_text(buffer);
+	}
+	{	// Draw overflow
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(label_size);
+		char buffer[50];
+		sprintf(buffer, "%12s : %d", "overflow", overflow);
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		//cr->move_to(weff - te.width, 0.95*bottom_margin);
+		hlegend += 1.2*te.height;
+		cr->move_to(0.7*weff + 10, hlegend); 
+		cr->show_text(buffer);
+	}
+	{	// Draw underflow
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(label_size);
+		char buffer[50];
+		sprintf(buffer, "%12s : %d", "underflow", underflow);
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		//cr->move_to(weff - te.width, 0.95*bottom_margin);
+		hlegend += 1.2*te.height;
+		cr->move_to(0.7*weff + 10, hlegend); 
+		cr->show_text(buffer);
+	}
+	{	// Draw mean
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(label_size);
+		char buffer[50];
+		sprintf(buffer, "%12s : %lf", "mean", getMean());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		//cr->move_to(weff - te.width, 0.95*bottom_margin);
+		hlegend += 1.2*te.height;
+		cr->move_to(0.7*weff + 10, hlegend); 
+		cr->show_text(buffer);
+	}
+	{	// Draw stdev
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(label_size);
+		char buffer[50];
+		sprintf(buffer, "%12s : %lf", "stdev", getStDev());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		//cr->move_to(weff - te.width, 0.95*bottom_margin);
+		hlegend += 1.2*te.height;
+		cr->move_to(0.7*weff + 10, hlegend); 
+		cr->show_text(buffer);
+		// end
+		hlegend += 0.2*te.height;
+	}
+	cr->set_source_rgb(0.0, 0.0, 0.0);
+	cr->set_line_width(0.005*seff);
+	//cr->move_to(weff, -heff);
+	cr->move_to(0.7*weff, -heff);
+	cr->line_to(0.7*weff, hlegend);
+	cr->line_to(weff, hlegend);
+	cr->stroke();
+	// Draw frame
 	canvas.set_frame_line_width(0.005);
 	canvas.draw_frame(cr); // draw frame and axis at the end
 

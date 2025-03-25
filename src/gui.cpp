@@ -405,7 +405,7 @@ void Window::on_button_run_clicked(){
 	Glib::signal_timeout().connect([this] () -> bool {
 				if (is_paused || is_reset) {return false;}
 				if (this->dataEventAction()) {
-					return true; // continue the timeout
+					return true && (hipo_nEvent < 10000); // continue the timeout
 				}
 				else {return false;} // stop the timeout
                         }, 20); // call every 10 ms
@@ -878,10 +878,11 @@ bool Window::dataEventAction() {
 			*********/
 
 			// fill histograms
-			double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
-                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
-                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
-                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+			double samplingTime = 44.0;
+			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
+                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
+                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
+                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
                         
@@ -926,10 +927,10 @@ bool Window::dataEventAction() {
 					samples.push_back(value);
 				}
 				// more criterias
-				//double timeMax = this->hipo_banklist[0].getFloat("time", col)/44.0;
-				//double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/44.0;
-				//double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/44.0;
-				//double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/44.0;
+				//double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
+				//double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
+				//double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
+				//double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
 				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
 				//double adcOffset = this->hipo_banklist[0].getInt("ped", col);
 				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
