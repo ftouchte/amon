@@ -59,7 +59,7 @@ test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o fH2D.o
 test_fAxis: test_fAxis.o fAxis.o 
 	$(CXX) -o test_fAxis.exe $^
 
-gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fColorPalette.o
+gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fColorPalette.o AhdcPulse.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
 
