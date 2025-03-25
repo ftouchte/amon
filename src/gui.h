@@ -79,11 +79,7 @@ protected :
 	long unsigned int hipo_nEventMax = 1;
 	int nWF; ///< number of waveforms	
 	AhdcDetector *ahdc; ///< AHDC detector
-	std::vector<AhdcWire> ListOfWires; ///< List of wires activated
-	std::vector<std::string> ListOfWireNames; ///< List of wire names
-	std::vector<std::vector<short>> ListOfSamples;  ///< List of samples
 	std::vector<double> ListOfAdc;		///< List of adcMax
-	std::vector< std::vector<std::vector<short>>  > ListOfSamplesPerLayer;
 	AhdcExtractor decoder;
 	double adcCut = 0;
 	double leadingEdgeTime_min = 0;
@@ -111,7 +107,9 @@ public :
 	void drawWaveforms();
 	void drawWaveformsPerLayer();
 	void drawHistograms();
-	bool GetNearestAhdcWire(double x, double y, AhdcWire & _wire, int & _layer, int & _component);
+	AhdcWire* getNearestAhdcWire(double x, double y, int & _layer, int & _component);
+	void clearAhdcData();
+	int getNumberOfWaveforms();
 	
 	// Signals
 	void on_button_settings_clicked();

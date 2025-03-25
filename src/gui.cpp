@@ -52,7 +52,6 @@ Window::Window() :
 	Scale_timeOverThreshold_max(Adjustment_timeOverThreshold_max, Gtk::Orientation::HORIZONTAL),
 	Scale_timeMax_min(Adjustment_timeMax_min, Gtk::Orientation::HORIZONTAL),
 	Scale_timeMax_max(Adjustment_timeMax_max, Gtk::Orientation::HORIZONTAL),
-	ListOfSamplesPerLayer(8),
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -198,7 +197,7 @@ Window::Window() :
 	 * Go back in eventViewer
 	 * **********************/
 	auto mouse_click = Gtk::GestureClick::create();
-	mouse_click->signal_released().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
+	mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
 	DrawingArea_event.add_controller(mouse_click);
 }
 
@@ -497,13 +496,8 @@ void Window::on_button_reset_clicked(){
 	// ...
 	hipo_nEvent = 0;
 	hipo_nEventMax = 1;
-	ListOfWires.clear();
-	ListOfWireNames.clear();
-	ListOfSamples.clear();
+	clearAhdcData();
 	ListOfAdc.clear();
-	for (int ilayer = 0; ilayer < 8; ilayer++) {
-		ListOfSamplesPerLayer[ilayer].clear();
-	}
 	// Clear drawing areas
 	DrawingArea_event.queue_draw();
 	Grid_waveforms.remove_column(2);
@@ -590,41 +584,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	double y_start = canvas.get_y_start();
 	double y_end = canvas.get_y_end();
 	
-	// Draw AHDC geometry	
-	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
-		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
-			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
-				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
-					AhdcWire wire = *ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
-					// max radius == 68 cm
-					// the distance between to wires of the last layer (radius == 68 cm) is
-					// d = | exp((n+1)*theta) - exp(n*theta) | * radius
-					// theta == 360°/99; 99 is the number of wires of this layer
-					// so d = radius*sqrt( (cos(theta) -1)^2 + sin(theta)^2) 
-					// so d = 4.315
-					// marker radius should be < d/2, we take 2.0
-					double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
-					cr->set_line_width(0.002*seff);
-					cr->set_source_rgba(0.0, 0.0, 0.0,0.5);
-					// if the previous reference point of the cairo context is not in the curve (when using cr->arc(...))
-					// a straight line is added from the previous point to the place where the arc is started
-					// solution : move_to the start place before setting the path
-					cr->move_to(x2w(wire.top.x) + marker_size, y2h(wire.top.y)); // correspond to angle == 0 
-					cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
-					cr->stroke();
-					if ((wire.top.x == 0) && (wire.top.y < 0)) {
-						// these wires have a component id == 1 (it is the start of the numerotation)
-						cr->set_line_width(0.002*seff);
-						cr->set_source_rgba(0.0, 1.0, 0.0, 0.5);
-						cr->move_to(x2w(wire.top.x) + marker_size, y2h(wire.top.y));
-						cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
-						cr->stroke();
-					}
-				}
-			}
-		}
-	}
-	// Show activated wires
+	// Draw color palette
 	double zmin = 0.0;
 	double zmax = 4095.0;
 	if (ListOfAdc.size() > 0) {
@@ -635,32 +595,6 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		zmin = (zmin < adc) ? zmin : adc;
 		zmax = (zmax > adc) ? zmax : adc;	
 	}
-	for (int i = 0; i < (int) ListOfWires.size(); i++) {
-		AhdcWire wire = ListOfWires[i];
-		double adc = ListOfAdc[i];
-		// ---- test
-		//zmin = 0.0;
-		//zmax = 1200.0;
-		//adc = std::min(adc, zmax);
-		// ---- end test
-		fColorPalette Palette(5, 1);
-		if (zmin != zmax) {
-			int ncolors = Palette.get_ncolors();
-			double slope = (1.0*(ncolors-1))/(zmax-zmin);
-			int color = floor(slope*(adc-zmin) + 0.0);
-			//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
-			//printf("color : %d\n", color);
-			fColor rgb = Palette.get_color(color);
-			cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
-		} else {
-			fColor rgb = Palette.get_color(0);
-			cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
-		}
-		double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
-		cr->arc(x2w(wire.top.x), y2h(wire.top.y) , marker_size, 0, 2*M_PI);
-		cr->fill();
-	}
-	// Draw Color Palette
 	fColorPalette Palette(5, 1);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
@@ -681,8 +615,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->close_path();
 		cr->fill();
 	}
-	// Draw zmax
-	{ // don't want to rename some variables
+	{ // Draw zmax
 		char buffer[50];
 		sprintf(buffer, "%.0lf", zmax);
 		fColor rgb = Palette.get_color(Palette.get_ncolors()-1);
@@ -707,6 +640,59 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->move_to(x2w(80) + 0.05*window_size - 0.5*te.width, y2h(-80) + 0.1*canvas.get_top_margin() + te.height);
 		cr->show_text(buffer);
 	}	
+	// Draw AHDC geometry	
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					// max radius == 68 cm
+					// the distance between to wires of the last layer (radius == 68 cm) is
+					// d = | exp((n+1)*theta) - exp(n*theta) | * radius
+					// theta == 360°/99; 99 is the number of wires of this layer
+					// so d = radius*sqrt( (cos(theta) -1)^2 + sin(theta)^2) 
+					// so d = 4.315
+					// marker radius should be < d/2, we take 2.0
+					double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
+					cr->set_line_width(0.002*seff);
+					cr->set_source_rgba(0.0, 0.0, 0.0,0.5);
+					// if the previous reference point of the cairo context is not in the curve (when using cr->arc(...))
+					// a straight line is added from the previous point to the place where the arc is started
+					// solution : move_to the start place before setting the path
+					cr->move_to(x2w(wire->top.x) + marker_size, y2h(wire->top.y)); // correspond to angle == 0 
+					cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+					cr->stroke();
+					if ((wire->top.x == 0) && (wire->top.y < 0)) {
+						// these wires have a component id == 1 (it is the start of the numerotation)
+						cr->set_line_width(0.002*seff);
+						cr->set_source_rgba(0.0, 1.0, 0.0, 0.5);
+						cr->move_to(x2w(wire->top.x) + marker_size, y2h(wire->top.y));
+						cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+						cr->stroke();
+					}
+					// show activated wires
+					double adcMax = wire->pulse.get_adcMax();
+					if (adcMax > 0) {
+						if (zmin != zmax) {
+							int ncolors = Palette.get_ncolors();
+							double slope = (1.0*(ncolors-1))/(zmax-zmin);
+							int color = floor(slope*(adcMax-zmin) + 0.0);
+							//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
+							//printf("color : %d\n", color);
+							fColor rgb = Palette.get_color(color);
+							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+						} else {
+							fColor rgb = Palette.get_color(0);
+							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+						}
+						double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
+						cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+						cr->fill();
+					}
+				}
+			}
+		}
+	}
 }
 
 void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
@@ -846,36 +832,13 @@ bool Window::dataEventAction() {
 	// hipo4
 	if (hipo_reader.next(hipo_banklist)) {
 		// loop over hits
-		ListOfWires.clear();
-		ListOfWireNames.clear();
-		ListOfSamples.clear();
+		clearAhdcData();
 		ListOfAdc.clear();
-		for (int ilayer = 0; ilayer < 8; ilayer++) {
-			ListOfSamplesPerLayer[ilayer].clear();
-		}
 		bool doIshowWF = false;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
-			//std::vector<short> samples;
-			//for (int bin=0; bin < 50; bin++){
-			//	std::string binName = "s" + std::__cxx11::to_string(bin+1);
-			//	short value = hipo_banklist[1].getInt(binName.c_str(), col);
-			//	samples.push_back(value);
-			//}
-			/******** Uncommment me to use local decoder
-			// decode the signal
-			decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
-			//decoder.adcOffset = 0;
-			std::map<std::string,double> output = decoder.extract(samples);
-			double timeMax = output["timeMax"];
-			double leadingEdgeTime = output["leadingEdgeTime"];
-			double timeOverThreshold = output["timeOverThreshold"];
-			double constantFractionTime = output["constantFractionTime"];
-			double adcOffset = output["adcOffset"];	
-			double adcMax = output["adcMax"];
-			*********/
 
 			// fill histograms
 			double samplingTime = 44.0;
@@ -885,13 +848,10 @@ bool Window::dataEventAction() {
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+                        //double integral = this->hipo_banklist[0].getInt("integral", col);
                         
-			// add cuts to fill histograms
-			//hist1d_adcMax.fill(adcMax);
-			//hist1d_adcOffset.fill(adcOffset);
-			//if (adcMax > adcCut) {
 			if ((leadingEdgeTime >= leadingEdgeTime_min) && (leadingEdgeTime <= leadingEdgeTime_max) && (adcMax >= adcCut) && (timeOverThreshold >= timeOverThreshold_min) && (timeOverThreshold <= timeOverThreshold_max) && (timeMax >= timeMax_min) && (timeMax <= timeMax_max)) { 
-				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
+					
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
 					hist1d_timeOverThreshold.fill(timeOverThreshold);
@@ -900,18 +860,6 @@ bool Window::dataEventAction() {
 					hist1d_constantFractionTime.fill(constantFractionTime);
 					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
 					//doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
-				//}
-				//// add cut on adcMax to plot waveforms
-				//if (adcMax < adcCut) { continue;}
-				//if ((layer == 51) || (layer == 42)) { continue;}
-				// --------------------
-				//	ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
-				//	char buffer[50];
-				//	sprintf(buffer, "L%d W%d", layer, component);
-				//	ListOfWireNames.push_back(buffer);
-				//	ListOfSamples.push_back(samples);
-				//	ListOfAdc.push_back(adcMax);
-				//}
 			}
 		}
 		// Criteria to show all the event 	
@@ -920,59 +868,30 @@ bool Window::dataEventAction() {
 				int sector = hipo_banklist[1].getInt("sector", col);	
 				int layer = hipo_banklist[1].getInt("layer", col);
 				int component = hipo_banklist[1].getInt("component", col);
-				std::vector<short> samples;
+				std::vector<double> samples;
 				for (int bin=0; bin < 50; bin++){
 					std::string binName = "s" + std::__cxx11::to_string(bin+1);
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
 				}
-				// more criterias
-				//double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
-				//double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
-				//double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
-				//double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
+				double samplingTime = 44.0;
+				double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
+				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
+				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
+				double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
 				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
-				//double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-				//if ((adcMax > adcCut) && (layer != 51) && (layer != 42)) {
-				//if (adcMax > adcCut) {
-				ListOfWires.push_back(*ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1));
-				char buffer[50];
-				sprintf(buffer, "L%d W%d", layer, component);
-				ListOfWireNames.push_back(buffer);
-				ListOfSamples.push_back(samples);
+				double adcOffset = this->hipo_banklist[0].getInt("ped", col);
+				double integral = this->hipo_banklist[0].getInt("integral", col);
+				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
+				wire->pulse.set_adcMax(adcMax);
+				wire->pulse.set_adcOffset(adcOffset);
+				wire->pulse.set_integral(integral);
+				wire->pulse.set_timeMax(timeMax);
+				wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
+				wire->pulse.set_timeOverThreshold(timeOverThreshold);
+				wire->pulse.set_constantFractionTime(constantFractionTime);
+				wire->pulse.set_samples(samples);
 				ListOfAdc.push_back(adcMax);
-				// Fill ListOfSamplesPerLayer
-				int index = -1;
-				switch (layer) {
-					case 11 :
-						index = 0;
-						break;
-					case 21 :
-						index = 1;
-						break;
-					case 22 : 
-						index = 2;
-						break;
-					case 31 : 
-						index = 3;
-						break;
-					case 32 :
-						index = 4;
-						break;
-					case 41 :
-						index = 5;
-						break;
-					case 42 :
-						index = 6;
-						break;
-					case 51 : 
-						index = 7;
-						break;
-					default :
-						index = -1;
-				}
-				ListOfSamplesPerLayer[index].push_back(samples);
-				//}
 			}
 		}
 
@@ -1001,156 +920,181 @@ bool Window::dataEventAction() {
 }
 
 void Window::drawWaveforms() {
-	nWF = (int) std::min((int) ListOfSamples.size(),20); // do not draw more than 10 waveforms
-	// Fill Grid_waveforms
-	for (int row = 1; row <= (nWF/2); row++) {
-		std::vector<double> vx, vy1, vy2;
-		for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
-			vx.push_back(i*decoder.samplingTime);
-			vy1.push_back(ListOfSamples[(2*row-1)-1][i]);
-			vy2.push_back(ListOfSamples[(2*row)-1][i]);
-		}
-		std::string title1 = ListOfWireNames[(2*row-1)-1];
-		std::string title2 = ListOfWireNames[(2*row)-1];
-		// column 1
-		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					      } );
-		Grid_waveforms.attach(*area1,1,row);
-		// column 2
-		auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
-		area2->set_draw_func([this, vx,  vy2, title2] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy2, title2.c_str());
-					      } );
-		Grid_waveforms.attach(*area2,2,row);
+	int num = 0;
+	int row = 0;
+	int col = 0;
+	std::vector<double> bins;
+	for (int i = 0; i < 50; i++) {
+		bins.push_back(1.0*i);
 	}
-	if (nWF % 2 == 1) {
-		std::vector<double> vx, vy1;
-		for (int i = 0; i < (int) ListOfSamples[0].size(); i++) {
-			vx.push_back(i*decoder.samplingTime);
-			vy1.push_back(ListOfSamples[nWF-1][i]); // the last waveform in that case
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					if (wire->pulse.get_adcMax() > 0) {
+						if (num >= 10) {break;}
+						std::vector<double> samples = wire->pulse.get_samples();
+						// 0 or 1
+						col = (num % 2) + 1;
+ 						row = (num / 2) + 1;
+						char buffer[50];
+						sprintf(buffer, "L%d W%d", 10*(sl+1) + (l+1), w+1);
+						auto area = Gtk::make_managed<Gtk::DrawingArea>();
+						area->set_draw_func([this, bins, samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+											cairo_plot_graph(cr, width, height, bins, samples, buffer);
+									      } );
+						Grid_waveforms.attach(*area, col, row);
+						num++;
+					}
+				}
+			}
 		}
-		std::string title1 = ListOfWireNames[nWF-1];
-		auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
-		area1->set_draw_func([this, vx,  vy1, title1] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, vx, vy1, title1.c_str());
-					      } );
-		Grid_waveforms.attach(*area1,1,nWF);
 	}
-	Grid_waveforms.queue_draw();
+	nWF = num;
 }
 
 void Window::drawWaveformsPerLayer() {
-	for (int layer = 0; layer < 8; layer++) {
-		//if (ListOfSamplesPerLayer[layer].size() == 0) { continue;}
-		// find ymin and ymax for all signals in this layer
-		double ymin = 0.0, ymax = 0.0;
-		int Npts = 0;
-		if (ListOfSamplesPerLayer[layer].size() > 0) {
-			ymin = ListOfSamplesPerLayer[layer][0][0];
-			ymax = ymin;
-			Npts = ListOfSamplesPerLayer[layer][0].size(); // overwritten
-		}
-		std::vector<double> sum_samples(Npts, 0.0); // store the sum of each signals for a given layer
-		for (std::vector<short> samples : ListOfSamplesPerLayer[layer]) { // loop over signals
-			for (int i = 0; i < (int) samples.size(); i++) { // loop over values
-				double value = samples[i];
-				sum_samples[i] = sum_samples[i] + value;
-				ymin = (ymin < value) ? ymin : value;
-				ymax = (ymax > value) ? ymax : value;
-				//ymin = (ymin < sum_samples[i]) ? ymin : sum_samples[i];
-				//ymax = (ymax > sum_samples[i]) ? ymax : sum_samples[i];
-			}
-		}
-		// renormalize sum_samples
-		int nwfs = ListOfSamplesPerLayer[layer].size();
-		if (nwfs > 0) {
-			for (int i = 0; i < (int) sum_samples.size(); i++) {
-				sum_samples[i] = sum_samples[i]/nwfs;
-			}
-			//ymin = ymin/nwfs;
-			//ymax = ymax/nwfs;
-		}
-		// Drawings
-		auto button = Gtk::make_managed<Gtk::Button>();
-		auto area = Gtk::make_managed<Gtk::DrawingArea>();
-		auto draw_function = [this, layer, Npts, ymin, ymax, sum_samples] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
-			// Define main canvas
-			fCanvas canvas(width, height, 0, Npts-1, ymin, ymax);
-			canvas.define_coord_system(cr);
-			canvas.draw_title(cr, "");
-			canvas.draw_xtitle(cr, "bin");
-			canvas.draw_ytitle(cr, "adc");
-			// x coord to width
-			auto x2w = [canvas] (double x) {
-				return canvas.x2w(x);
-			};
-			// y coord to height
-			auto y2h = [canvas] (double y) {
-				return canvas.y2h(y);
-			};
-			int seff = canvas.get_seff();
-			int heff = canvas.get_heff();
-			int weff = canvas.get_weff();
-			// Draw waveforms
-			int NumberOfSignals = ListOfSamplesPerLayer[layer].size();
-			for (int nth = 0; nth < NumberOfSignals; nth++) {
-				std::vector<short> samples = ListOfSamplesPerLayer[layer][nth]; // n-th signals in this layer
-				double r1 = 0.0, g1 = 0.0, b1 = 1.0;
-				double r2 = 0.0, g2 = 1.0, b2 = 0.0;
-				double t = (1.0*nth)/NumberOfSignals;
-				double r = (1-t)*r1 + t*r2;
-				double g = (1-t)*g1 + t*g2;
-				double b = (1-t)*b1 + t*b2;
-				cr->set_source_rgb(r, g, b);
-				cr->set_line_width(0.005*seff);
-				cr->move_to(x2w(0),y2h(samples[0]));
-				for (int i = 1; i < Npts; i++) {
-					// draw a line between points i and i-1
-					cr->line_to(x2w(i),y2h(samples[i]));
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				AhdcLayer* layer = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l);
+				std::vector<double> sum_samples(50, 0.0); // sum of signals per layer
+				double ymin = 0, ymax = 0;
+				int nhits = 0;
+				for (int w = 0; w < layer->GetNumberOfWires(); w++){
+					AhdcWire* wire = layer->GetWire(w);
+					if (wire->pulse.get_adcMax() > 0) {
+						nhits++;
+						std::vector<double> samples = wire->pulse.get_samples();
+						for (int i = 0; i < 50; i++) {
+							double value = samples[i];
+							sum_samples[i] = sum_samples[i] + value;
+							ymin = (ymin < value) ? ymin : value;
+							ymax = (ymax > value) ? ymax : value;
+						}
+					}
 				}
-				cr->stroke();
-			}
-			// draw the sum of signals
-			if (Npts > 0) {
-				cr->set_source_rgb(1.0, 0.0, 0.0);
-				cr->set_line_width(0.005*seff);
-				cr->move_to(x2w(0),y2h(sum_samples[0]));
-				for (int i = 1; i < Npts; i++) {
-					// draw a line between points i and i-1
-					cr->line_to(x2w(i),y2h(sum_samples[i]));
+				// normalisation
+				if (nhits > 0) {
+					for (int i = 0; i < 50; i++) {
+						sum_samples[i] = sum_samples[i]/nhits;
+					}
 				}
-				cr->stroke();
+				// Drawings
+				int Npts = 50;
+				auto button = Gtk::make_managed<Gtk::Button>();
+				auto area = Gtk::make_managed<Gtk::DrawingArea>();
+				auto draw_function = [this, sl, l, layer, Npts, ymin, ymax, sum_samples, nhits] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
+					// Define main canvas
+					fCanvas canvas(width, height, 0, Npts-1, ymin, ymax);
+					canvas.define_coord_system(cr);
+					canvas.draw_title(cr, "");
+					canvas.draw_xtitle(cr, "bin");
+					canvas.draw_ytitle(cr, "adc");
+					// x coord to width
+					auto x2w = [canvas] (double x) {
+						return canvas.x2w(x);
+					};
+					// y coord to height
+					auto y2h = [canvas] (double y) {
+						return canvas.y2h(y);
+					};
+					int seff = canvas.get_seff();
+					int heff = canvas.get_heff();
+					int weff = canvas.get_weff();
+					// Draw each signals
+					int nth = 0;
+					for (int w = 0; w < layer->GetNumberOfWires(); w++){
+						AhdcWire* wire = layer->GetWire(w);
+						if (wire->pulse.get_adcMax() > 0) {
+							std::vector<double> samples = wire->pulse.get_samples();
+							double r1 = 0.0, g1 = 0.0, b1 = 1.0;
+							double r2 = 0.0, g2 = 1.0, b2 = 0.0;
+							double t = (1.0*nth)/nhits;
+							double r = (1-t)*r1 + t*r2;
+							double g = (1-t)*g1 + t*g2;
+							double b = (1-t)*b1 + t*b2;
+							cr->set_source_rgb(r, g, b);
+							cr->set_line_width(0.005*seff);
+							cr->move_to(x2w(0),y2h(samples[0]));
+							for (int i = 1; i < Npts; i++) {
+								// draw a line between points i and i-1
+								cr->line_to(x2w(i),y2h(samples[i]));
+							}
+							cr->stroke();
+							nth++;
+						}
+					}
+					// draw the sum of signals
+					cr->set_source_rgb(1.0, 0.0, 0.0);
+					cr->set_line_width(0.005*seff);
+					cr->move_to(x2w(0),y2h(sum_samples[0]));
+					for (int i = 1; i < Npts; i++) {
+						// draw a line between points i and i-1
+						cr->line_to(x2w(i),y2h(sum_samples[i]));
+					}
+					cr->stroke();
+					// draw frame and axis
+					canvas.set_frame_line_width(0.005);
+					canvas.draw_frame(cr);
+					// add layer name
+					char buffer[50];
+					sprintf(buffer, "Layer %d", 10*(sl+1) + (l+1));
+					cr->set_source_rgb(1.0, 0.0, 0.0);
+					cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+					cr->set_font_size(0.6*canvas.get_top_margin());
+					Cairo::TextExtents te;
+					cr->get_text_extents(buffer, te);
+					cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*canvas.get_top_margin());
+					cr->show_text(buffer);
+				};
+				area->set_draw_func(draw_function);
+				button->set_child(*area);
+				button->signal_clicked().connect([this, draw_function] () -> void {
+							auto window = Gtk::make_managed<Gtk::Window>();
+							window->set_title("");
+							window->set_default_size(1200,800);
+							auto area_bis = Gtk::make_managed<Gtk::DrawingArea>();
+							area_bis->set_draw_func(draw_function);
+							window->set_child(*area_bis);
+							window->show();
+						});
+				int num_layer = 10*(sl+1) + (l+1);
+				int index = -1;
+				switch (num_layer) {
+					case 11 :
+						index = 0;
+						break;
+					case 21 :
+						index = 1;
+						break;
+					case 22 : 
+						index = 2;
+						break;
+					case 31 : 
+						index = 3;
+						break;
+					case 32 :
+						index = 4;
+						break;
+					case 41 :
+						index = 5;
+						break;
+					case 42 :
+						index = 6;
+						break;
+					case 51 : 
+						index = 7;
+						break;
+					default :
+						index = -1;
+				}
+				int row = (index / 4) + 1 ;
+				int col = (index % 4) + 1;
+				Grid_waveformsPerLayer.attach(*button, col, row);
 			}
-			// draw frame and axis
-			canvas.set_frame_line_width(0.005);
-			canvas.draw_frame(cr);
-			// add layer name
-			char buffer[50];
-			sprintf(buffer, "Layer %d", layer+1);
-			cr->set_source_rgb(1.0, 0.0, 0.0);
-			cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-			cr->set_font_size(0.6*canvas.get_top_margin());
-			Cairo::TextExtents te;
-			cr->get_text_extents(buffer, te);
-			cr->move_to(0.5*weff - 0.5*te.width, -heff-0.2*canvas.get_top_margin());
-			cr->show_text(buffer);
-		};
-		area->set_draw_func(draw_function);
-		int row = layer/4 +1;
-		int column = layer%4 + 1;
-		button->set_child(*area);
-		button->signal_clicked().connect([this, draw_function] () -> void {
-					auto window = Gtk::make_managed<Gtk::Window>();
-					window->set_title("");
-					window->set_default_size(1200,800);
-					auto area_bis = Gtk::make_managed<Gtk::DrawingArea>();
-					area_bis->set_draw_func(draw_function);
-					window->set_child(*area_bis);
-					window->show();
-				});
-		Grid_waveformsPerLayer.attach(*button,column,row);
+		}
 	}	
 	// end
 	Grid_waveformsPerLayer.queue_draw();
@@ -1316,39 +1260,84 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 	// Now, I need to retrieve the closest AhdcWire arond this point (ahdc_x, ahdc_y)
 	// then retrieve the layer id
 	// then retrieve the waveform
-	// may think to reorganize ListOfSamples, ListOfWires and ListOfSamplesPerLayer
-	AhdcWire wire;
 	int layer = -1;
 	int component = -1;
-	if (this->GetNearestAhdcWire(ahdc_x, ahdc_y, wire, layer, component)) {
+	AhdcWire* wire = this->getNearestAhdcWire(ahdc_x, ahdc_y, layer, component);
+	if (wire != nullptr) {
 		printf("======     AhdcWire  ======\n");
-		printf("    x     : %lf\n", wire.top.x);
-		printf("    y     : %lf\n", wire.top.y);
+		printf("    x     : %lf\n", wire->top.x);
+		printf("    y     : %lf\n", wire->top.y);
 		printf("    layer : %d\n", layer);
 		printf("    comp  : %d\n", component);
+		// popup window
+		auto window = Gtk::make_managed<Gtk::Window>();
+		window->set_title("AHDC pulse");
+		window->set_default_size(1200,800);
+		std::vector<double> samples = wire->pulse.get_samples();
+		std::vector<double> bins;
+		for (int i = 0; i < 50; i++) {
+			bins.push_back(1.0*i);
+		}
+		char buffer[50];
+		sprintf(buffer, "L%d W%d", layer, component);
+		auto area = Gtk::make_managed<Gtk::DrawingArea>();
+		area->set_draw_func([this, bins,  samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							cairo_plot_graph(cr, width, height, bins, samples, buffer);
+					      } );
+		window->set_child(*area);
+		window->show();
 	}
 }
 
-bool Window::GetNearestAhdcWire(double x, double y, AhdcWire & _wire, int & _layer, int & _component) {
+AhdcWire* Window::getNearestAhdcWire(double x, double y, int & _layer, int & _component) {
 	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
 		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
 			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
-					AhdcWire wire = *ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
-					double dx = wire.top.x - x;
-					double dy = wire.top.y - y;
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					double dx = wire->top.x - x;
+					double dy = wire->top.y - y;
 					double dr = sqrt(dx*dx + dy*dy);
 					if (dr < 2) {
-						_wire = wire;
 						_layer = 10*(sl+1) + (l+1);
 						_component = w+1;
-					       return true;	
-					}	       
+					       return wire;	
+					} 
 				}
 			}
 		}
 	}
-	return false;
+	return nullptr;
+}
+
+void Window::clearAhdcData() {
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					wire->pulse.reset();
+				}
+			}
+		}
+	}
+}
+
+int Window::getNumberOfWaveforms() {
+	int nb = 0;
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					if (wire->pulse.get_adcMax() > 0) {
+						nb++;
+					}
+				}
+			}
+		}
+	}
+	return nb;
 }
 
 /** Main function */

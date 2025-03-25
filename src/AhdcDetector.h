@@ -12,6 +12,7 @@
 
 #include "Point3D.h"
 #include "TGraph.h"
+#include "AhdcPulse.h"
 
 namespace futils {
 	double toRadian(double);
@@ -28,6 +29,7 @@ class AhdcWire : public TGraph {
 public : 
 	Point3D top; ///< center point of the top the wire (z == -150 mm)
 	Point3D bot; ///< center point of the bottom the wire (z == +150 mm)
+	AhdcPulse pulse; ///< ahdc pulse
 public :
 	AhdcWire(Point3D _top, Point3D _bot);
 	AhdcWire(double x1 = 0, double y1 = 0, double z1 = 0, double x2 = 0, double y2 = 0, double z2 = 0);
