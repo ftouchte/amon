@@ -219,6 +219,7 @@ void Window::on_button_settings_clicked(){
 	auto HBox_Scale_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_CheckButtons = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	// Window for settings
 	Window_settings->set_title("Settings");
 	Window_settings->set_default_size(500,300);
@@ -324,6 +325,21 @@ void Window::on_button_settings_clicked(){
 	Adjustment_timeMax_max->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_timeMax_max->get_value();
 				this->timeMax_max = val;
+			});
+	// A lot of CheckButton(s)
+	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator4);
+	VBox_settings->append(*HBox_CheckButtons);
+	HBox_CheckButtons->set_margin(10);
+	HBox_CheckButtons->append(*Gtk::make_managed<Gtk::Label>("Shape recognition"));
+	HBox_CheckButtons->append(CheckButton_shape_recognition);
+	CheckButton_shape_recognition.signal_toggled().connect([this] () -> void {
+				flag_shape_recognition = this->CheckButton_shape_recognition.get_active();
+				if (flag_shape_recognition) {
+					printf("Flag shape recognition is activated\n");
+				} else {
+					printf("Flag shape recognition is desactivated\n");
+				}
 			});
 	Window_settings->show();
 }
@@ -839,7 +855,16 @@ bool Window::dataEventAction() {
 			int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
 			int component = hipo_banklist[1].getInt("component", col);
-
+			std::vector<double> samples;
+			for (int bin=0; bin < 50; bin++){
+				std::string binName = "s" + std::__cxx11::to_string(bin+1);
+				short value = hipo_banklist[1].getInt(binName.c_str(), col);
+				samples.push_back(value);
+			}
+			bool flag_recognized = true;
+			if (flag_shape_recognition) {
+				flag_recognized = is_oscillating(samples);
+			}
 			// fill histograms
 			double samplingTime = 44.0;
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
@@ -850,7 +875,7 @@ bool Window::dataEventAction() {
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
                         //double integral = this->hipo_banklist[0].getInt("integral", col);
                         
-			if ((leadingEdgeTime >= leadingEdgeTime_min) && (leadingEdgeTime <= leadingEdgeTime_max) && (adcMax >= adcCut) && (timeOverThreshold >= timeOverThreshold_min) && (timeOverThreshold <= timeOverThreshold_max) && (timeMax >= timeMax_min) && (timeMax <= timeMax_max)) { 
+			if ((leadingEdgeTime >= leadingEdgeTime_min) && (leadingEdgeTime <= leadingEdgeTime_max) && (adcMax >= adcCut) && (timeOverThreshold >= timeOverThreshold_min) && (timeOverThreshold <= timeOverThreshold_max) && (timeMax >= timeMax_min) && (timeMax <= timeMax_max) && flag_recognized) { 
 					
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
@@ -1323,21 +1348,42 @@ void Window::clearAhdcData() {
 	}
 }
 
-int Window::getNumberOfWaveforms() {
-	int nb = 0;
-	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
-		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
-			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
-				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
-					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
-					if (wire->pulse.get_adcMax() > 0) {
-						nb++;
-					}
-				}
+bool Window::is_oscillating(std::vector<double> samples) {
+	int Npts = samples.size();
+	if (Npts < 1){ return false; }
+	// compute the derived function : df/dx
+	std::vector<double> dsamples(Npts, 0.0);
+	for (int i = 1; i < Npts; i++) {
+		double slope = samples[i] - samples[i-1]; // devided by 1
+		dsamples[i-1] = slope;
+	}
+	dsamples[Npts-1] = 0.0;
+	// find the number of zeros
+	int nzeros = 0;
+	bool flag_skip_next_itr = false;
+	for (int i = 2; i < Npts-1; i++) { // bin 0, 1 and Npts-1 are ignored
+		if (flag_skip_next_itr) { 
+			flag_skip_next_itr = false; 
+			continue;
+		}
+		if (dsamples[i]*dsamples[i-1] < 0) {
+			if (dsamples[i+1]*dsamples[i-2] < 0) { // strong condition
+				nzeros++;
 			}
 		}
+		else if (dsamples[i]*dsamples[i-1] == 0) {
+			if (dsamples[i+1]*dsamples[i-2] < 0) { // strong condition
+				nzeros++;
+			}
+			flag_skip_next_itr = true; // useful to do not count the same zero two times 
+		}
+		else {
+			// do nothing
+		}
 	}
-	return nb;
+	//printf("nzeros : %d\n", nzeros);
+	// output
+	return (nzeros  <= 1);
 }
 
 /** Main function */

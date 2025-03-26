@@ -27,6 +27,7 @@ fH1D::fH1D(std::string _title, int _nbins, double _xmin, double _xmax) : title(_
 	underflow = 0;
 	overflow = 0;
 	nEntries = 0;
+	sumw = 0;
 	sum = 0;
 	sum2 = 0;
 }
@@ -119,7 +120,8 @@ void fH1D::reset() {
         underflow = 0;
         overflow = 0;
         nEntries = 0;
-        sum = 0;
+        sumw = 0;
+	sum = 0;
         sum2 = 0;	
 }
 
@@ -187,7 +189,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(label_size);
 		char buffer[50];
-		sprintf(buffer, "%12s : %ld", "nEntries", nEntries);
+		sprintf(buffer, "%s : %ld", "nEntries", nEntries);
 		Cairo::TextExtents te;
 		cr->get_text_extents(buffer, te);
 		//cr->move_to(weff - te.width, 0.95*bottom_margin);
@@ -200,7 +202,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(label_size);
 		char buffer[50];
-		sprintf(buffer, "%12s : %d", "overflow", overflow);
+		sprintf(buffer, "%s : %d", "overflow", overflow);
 		Cairo::TextExtents te;
 		cr->get_text_extents(buffer, te);
 		//cr->move_to(weff - te.width, 0.95*bottom_margin);
@@ -213,7 +215,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(label_size);
 		char buffer[50];
-		sprintf(buffer, "%12s : %d", "underflow", underflow);
+		sprintf(buffer, "%s : %d", "underflow", underflow);
 		Cairo::TextExtents te;
 		cr->get_text_extents(buffer, te);
 		//cr->move_to(weff - te.width, 0.95*bottom_margin);
@@ -226,7 +228,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(label_size);
 		char buffer[50];
-		sprintf(buffer, "%12s : %lf", "mean", getMean());
+		sprintf(buffer, "%s : %lf", "mean", getMean());
 		Cairo::TextExtents te;
 		cr->get_text_extents(buffer, te);
 		//cr->move_to(weff - te.width, 0.95*bottom_margin);
@@ -239,7 +241,7 @@ void fH1D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(label_size);
 		char buffer[50];
-		sprintf(buffer, "%12s : %lf", "stdev", getStDev());
+		sprintf(buffer, "%s : %lf", "stdev", getStDev());
 		Cairo::TextExtents te;
 		cr->get_text_extents(buffer, te);
 		//cr->move_to(weff - te.width, 0.95*bottom_margin);
