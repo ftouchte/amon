@@ -68,7 +68,9 @@ protected :
 	Gtk::Scale Scale_leadingEdgeTime_min, Scale_leadingEdgeTime_max;
 	Gtk::Scale Scale_timeOverThreshold_min, Scale_timeOverThreshold_max;
 	Gtk::Scale Scale_timeMax_min, Scale_timeMax_max;
-	
+	Gtk::CheckButton CheckButton_shape_recognition;
+	Gtk::CheckButton CheckButton_active_layer51;
+	Gtk::CheckButton CheckButton_active_layer42;	
 	/**********************
 	 *  DATA
 	 * *******************/
@@ -88,6 +90,7 @@ protected :
 	double timeOverThreshold_max = 49;
 	double timeMax_min = 0;
 	double timeMax_max = 49;
+	bool flag_shape_recognition = false;
 	
 	// Histograms
 	bool is_paused = false;
@@ -110,6 +113,7 @@ public :
 	AhdcWire* getNearestAhdcWire(double x, double y, int & _layer, int & _component);
 	void clearAhdcData();
 	int getNumberOfWaveforms();
+	bool is_oscillating(std::vector<double> samples);
 	
 	// Signals
 	void on_button_settings_clicked();
