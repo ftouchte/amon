@@ -866,7 +866,7 @@ bool Window::dataEventAction() {
 				flag_recognized = is_oscillating(samples);
 			}
 			// fill histograms
-			double samplingTime = 44.0;
+			double samplingTime = 50.0;
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
                         double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
                         double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
@@ -899,7 +899,7 @@ bool Window::dataEventAction() {
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
 				}
-				double samplingTime = 44.0;
+				double samplingTime = 50.0;
 				double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
 				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
 				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
