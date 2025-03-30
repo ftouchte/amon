@@ -420,7 +420,8 @@ void Window::on_button_run_clicked(){
 	Glib::signal_timeout().connect([this] () -> bool {
 				if (is_paused || is_reset) {return false;}
 				if (this->dataEventAction()) {
-					return true && (hipo_nEvent < 10000); // continue the timeout
+					return true;
+					//return true && (hipo_nEvent < 10000); // continue the timeout
 				}
 				else {return false;} // stop the timeout
                         }, 20); // call every 10 ms
@@ -893,8 +894,12 @@ bool Window::dataEventAction() {
 				int sector = hipo_banklist[1].getInt("sector", col);	
 				int layer = hipo_banklist[1].getInt("layer", col);
 				int component = hipo_banklist[1].getInt("component", col);
+				int binOffset = hipo_banklist[1].getInt("time", col);
 				std::vector<double> samples;
-				for (int bin=0; bin < 50; bin++){
+				for (int bin=0; bin < binOffset; bin++){
+					samples.push_back(0.0);
+				}
+				for (int bin=0; bin < 50 - binOffset; bin++){
 					std::string binName = "s" + std::__cxx11::to_string(bin+1);
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
