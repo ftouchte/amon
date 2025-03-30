@@ -21,6 +21,7 @@ AhdcWire::AhdcWire(Point3D _top, Point3D _bot) : TGraph(1), top(_top), bot(_bot)
 	// for the moment show the top face in the (x,y) plan, i.e z == 0 
 	// to do, extension to the plane z != 0
 	// e.g Point3D pt = Line3D(top,bot).Intersection(Plan3D(Point3D(0,0,z),Vector3D(0,0,1))); // In that case Vector3D(0,0,1) is a normal vector // Line3D, Vector3D and Plane3D need to be determined !
+	set_z(0.0);
 	this->SetPoint(0,top.x,top.y); // we will be able to use the Draw method
 	this->SetMarkerStyle(8);
 	this->SetMarkerSize(2);
@@ -32,6 +33,7 @@ AhdcWire::AhdcWire(double x1, double y1, double z1, double x2, double y2, double
 //AhdcWire::AhdcWire(double x1, double y1, double z1, double x2, double y2, double z2) {
 	top = Point3D(x1,y1,z1); 
 	bot = Point3D(x2,y2,z2);
+	set_z(0.0);
 	// take account the comment in the other constructor
 	this->SetPoint(0,x1,y1); 
 }
@@ -41,10 +43,26 @@ AhdcWire & AhdcWire::operator=(const AhdcWire & obj) {
 		TGraph::operator=(obj);
 		top = obj.top;
 		bot = obj.bot;
+		x = obj.x;
+		y = obj.y;
+		z = obj.z;
 	}
 	return *this;
 }
 
+void AhdcWire::set_z(double _z) {
+	double ux = bot.x - top.x;
+	double uy = bot.y - top.y;
+	double uz = bot.z - top.z;
+	double rho = sqrt(ux*ux + uy*uy + uz*uz);
+	ux = ux/rho;
+	uy = uy/rho;
+	uz = uz/rho;
+	z = _z;
+	x = top.x + z*ux;
+	y = top.y + z*uy;
+	//printf("%lf %lf %lf\n", x, y, z);
+}
 
 /*******************************
  * AhdcLayer

@@ -45,6 +45,7 @@ Window::Window() :
 	Adjustment_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Adjustment_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
 	Adjustment_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_zpos(Gtk::Adjustment::create(0.0, 0.0, 300.0, 1.0, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	Scale_leadingEdgeTime_min(Adjustment_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
 	Scale_leadingEdgeTime_max(Adjustment_leadingEdgeTime_max, Gtk::Orientation::HORIZONTAL),
@@ -52,6 +53,8 @@ Window::Window() :
 	Scale_timeOverThreshold_max(Adjustment_timeOverThreshold_max, Gtk::Orientation::HORIZONTAL),
 	Scale_timeMax_min(Adjustment_timeMax_min, Gtk::Orientation::HORIZONTAL),
 	Scale_timeMax_max(Adjustment_timeMax_max, Gtk::Orientation::HORIZONTAL),
+	Scale_zpos(Adjustment_zpos, Gtk::Orientation::HORIZONTAL),
+	
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
         hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
@@ -167,6 +170,15 @@ Window::Window() :
 	HBox_run->append(*Gtk::make_managed<Gtk::Label>("run") );
 	Button_run.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_run_clicked) );
 
+	// zpos
+	HBox_footer.append(Button_zpos);
+	auto HBox_zpos = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
+	Button_zpos.set_child(*HBox_zpos);
+	img_zpos.set("../img/icon_zpos.png");
+	HBox_zpos->append(img_zpos);
+	HBox_zpos->append(*Gtk::make_managed<Gtk::Label>("zpos") );
+	Button_zpos.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_zpos_clicked) );
+	
 	// middle
 	HBox_footer.append(HBox_info);
 	HBox_info.set_hexpand(true);
@@ -427,6 +439,21 @@ void Window::on_button_run_clicked(){
                         }, 20); // call every 10 ms
 }
 
+void Window::on_button_zpos_clicked(){
+	auto Window_zpos = Gtk::make_managed<Gtk::Window>();
+	auto HBox_zpos = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	Window_zpos->set_title("zpos");
+	Window_zpos->set_default_size(500,30);
+	Window_zpos->set_child(*HBox_zpos);
+	HBox_zpos->append(*Gtk::make_managed<Gtk::Label>("zpos"));
+	HBox_zpos->append(Scale_zpos);
+	Scale_zpos.set_hexpand(true);
+	Scale_zpos.set_draw_value();
+	Scale_zpos.set_digits(0);
+	Adjustment_zpos->signal_value_changed().connect(sigc::mem_fun(*this, &Window::on_zpos_value_changed));
+	Window_zpos->show();
+}
+
 void Window::on_button_hipo4_clicked(){
 	std::cout << "Open file dialog ..." << std::endl;
 
@@ -676,15 +703,17 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					// if the previous reference point of the cairo context is not in the curve (when using cr->arc(...))
 					// a straight line is added from the previous point to the place where the arc is started
 					// solution : move_to the start place before setting the path
-					cr->move_to(x2w(wire->top.x) + marker_size, y2h(wire->top.y)); // correspond to angle == 0 
-					cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+					//printf("%lf %lf %lf\n", wire->x, wire->y, wire->z);
+					cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y)); // correspond to angle == 0 
+					cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 					cr->stroke();
-					if ((wire->top.x == 0) && (wire->top.y < 0)) {
+					//if ((wire->x == 0) && (wire->y < 0)) {
+					if (w == 0) {
 						// these wires have a component id == 1 (it is the start of the numerotation)
 						cr->set_line_width(0.002*seff);
-						cr->set_source_rgba(0.0, 1.0, 0.0, 0.5);
-						cr->move_to(x2w(wire->top.x) + marker_size, y2h(wire->top.y));
-						cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+						cr->set_source_rgba(0.0, 1.0, 0.0, 1.0);
+						cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y));
+						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->stroke();
 					}
 					// show activated wires
@@ -703,7 +732,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
 						}
 						double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
-						cr->arc(x2w(wire->top.x), y2h(wire->top.y) , marker_size, 0, 2*M_PI);
+						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->fill();
 					}
 				}
@@ -1295,8 +1324,8 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 	AhdcWire* wire = this->getNearestAhdcWire(ahdc_x, ahdc_y, layer, component);
 	if (wire != nullptr) {
 		printf("======     AhdcWire  ======\n");
-		printf("    x     : %lf\n", wire->top.x);
-		printf("    y     : %lf\n", wire->top.y);
+		printf("    x     : %lf\n", wire->x);
+		printf("    y     : %lf\n", wire->y);
 		printf("    layer : %d\n", layer);
 		printf("    comp  : %d\n", component);
 		// popup window
@@ -1325,8 +1354,8 @@ AhdcWire* Window::getNearestAhdcWire(double x, double y, int & _layer, int & _co
 			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
-					double dx = wire->top.x - x;
-					double dy = wire->top.y - y;
+					double dx = wire->x - x;
+					double dy = wire->y - y;
 					double dr = sqrt(dx*dx + dy*dy);
 					if (dr < 2) {
 						_layer = 10*(sl+1) + (l+1);
@@ -1389,6 +1418,22 @@ bool Window::is_oscillating(std::vector<double> samples) {
 	//printf("nzeros : %d\n", nzeros);
 	// output
 	return (nzeros  <= 1);
+}
+void Window::on_zpos_value_changed() {
+	const double val = this->Adjustment_zpos->get_value();
+	this->zpos = val;
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					wire->set_z(this->zpos);
+				}
+			}
+		}
+	}
+	printf("AHDC is now view in the plane z = %lf\n", zpos);
+	DrawingArea_event.queue_draw();
 }
 
 /** Main function */

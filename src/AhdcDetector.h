@@ -30,10 +30,12 @@ public :
 	Point3D top; ///< center point of the top the wire (z == -150 mm)
 	Point3D bot; ///< center point of the bottom the wire (z == +150 mm)
 	AhdcPulse pulse; ///< ahdc pulse
+	double z = 0.0, x = 0.0, y = 0.0; ///< x and y must change if z change (when z == 0, x = top.x and y = top.y)
 public :
 	AhdcWire(Point3D _top, Point3D _bot);
 	AhdcWire(double x1 = 0, double y1 = 0, double z1 = 0, double x2 = 0, double y2 = 0, double z2 = 0);
 	AhdcWire & operator=(const AhdcWire & obj);
+	void set_z(double _z);
 };
 
 
