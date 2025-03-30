@@ -48,8 +48,8 @@ protected :
 	
 	Gtk::Box HBox_footer;
 	//Gtk::Box HBox_prev, HBox_next, HBox_pause, HBox_run, HBox_info,  HBox_hipo4, HBox_reset;
-	Gtk::Button Button_settings, Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset;
-	Gtk::Image img_settings, img_prev, img_next, img_pause, img_run, img_hipo4, img_reset;
+	Gtk::Button Button_settings, Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset, Button_zpos;
+	Gtk::Image img_settings, img_prev, img_next, img_pause, img_run, img_hipo4, img_reset, img_zpos;
 	Gtk::Box HBox_info;
 	Gtk::Label Label_info;
 	Gtk::Label Label_header;
@@ -64,13 +64,16 @@ protected :
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_leadingEdgeTime_min, Adjustment_leadingEdgeTime_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeOverThreshold_min, Adjustment_timeOverThreshold_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeMax_min, Adjustment_timeMax_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_zpos; 
 	Gtk::Scale Scale_adcMax;
 	Gtk::Scale Scale_leadingEdgeTime_min, Scale_leadingEdgeTime_max;
 	Gtk::Scale Scale_timeOverThreshold_min, Scale_timeOverThreshold_max;
 	Gtk::Scale Scale_timeMax_min, Scale_timeMax_max;
+	Gtk::Scale Scale_zpos;
 	Gtk::CheckButton CheckButton_shape_recognition;
 	Gtk::CheckButton CheckButton_active_layer51;
-	Gtk::CheckButton CheckButton_active_layer42;	
+	Gtk::CheckButton CheckButton_active_layer42;
+		
 	/**********************
 	 *  DATA
 	 * *******************/
@@ -91,7 +94,8 @@ protected :
 	double timeMax_min = 0;
 	double timeMax_max = 49;
 	bool flag_shape_recognition = false;
-	
+	double zpos = 0.0; ///< define in which z we should look at for AHDC (x,y) view
+
 	// Histograms
 	bool is_paused = false;
 	bool is_reset = false;
@@ -128,6 +132,8 @@ public :
 	void on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_mouse_clicked(int n_press, double x, double y);
+	void on_zpos_value_changed();
+	void on_button_zpos_clicked();
 	void cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation);
 };
 
