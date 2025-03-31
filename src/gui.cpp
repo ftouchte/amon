@@ -32,19 +32,21 @@ Window::Window() :
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
-	//VBox_settings(Gtk::Orientation::VERTICAL,10),
-	//HBox_Scale_adcMax(Gtk::Orientation::HORIZONTAL,10),
-	//HBox_Scale_leadingEdgeTime_min(Gtk::Orientation::HORIZONTAL,10),
-	//HBox_Scale_leadingEdgeTime_max(Gtk::Orientation::HORIZONTAL,10),
-	
+	// Decoding parameters	
+	ADC_LIMIT(4095),
+	NumberOfBins(50),
+	samplingTime(50.0),
+	amplitudeFractionCFA(0.5),
+	binDelayCFD(5),
+	fractionCFD(0.3),
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, 4095, 10, 0.0, 0.0)),
-	Adjustment_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 49.0, 1, 0.0, 0.0)),
-	Adjustment_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 49.0, 1, 0.0, 0.0)),
+	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 10, 0.0, 0.0)),
+	Adjustment_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_zpos(Gtk::Adjustment::create(0.0, 0.0, 300.0, 1.0, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	Scale_leadingEdgeTime_min(Adjustment_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
@@ -54,13 +56,13 @@ Window::Window() :
 	Scale_timeMax_min(Adjustment_timeMax_min, Gtk::Orientation::HORIZONTAL),
 	Scale_timeMax_max(Adjustment_timeMax_max, Gtk::Orientation::HORIZONTAL),
 	Scale_zpos(Adjustment_zpos, Gtk::Orientation::HORIZONTAL),
-	
+	// histograms
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
-        hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 50.0),
-        hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 50.0),
-        hist1d_timeMax("timeMax", 100, 0.0, 50.0),
+        hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 1.0*NumberOfBins),
+        hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 1.0*NumberOfBins),
+        hist1d_timeMax("timeMax", 100, 0.0, 1.0*NumberOfBins),
 	hist1d_adcOffset("adcOffset (s1+s2+s3+s4+s5)/5", 100, 0.0, 1000),
-        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 50.0)
+        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 1.0*NumberOfBins)
 {
 	// Data
 	ahdc = new AhdcDetector();
@@ -781,13 +783,12 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	// Determine the min and the max of the data	
 	std::vector<double> vy = wire->pulse.get_samples();
 	std::vector<double> vx;
-	int Npts = vy.size();
-	for (int i = 0; i < Npts; i++){
+	for (int i = 0; i < NumberOfBins; i++){
 		vx.push_back(1.0*i);
 	}
 	double xmin = vx[0], xmax = vx[0];
 	double ymin = vy[0], ymax = vy[0];
-	for (int i = 0; i < Npts; i++){
+	for (int i = 0; i < NumberOfBins; i++){
 		xmin = (xmin < vx[i]) ? xmin : vx[i];
  		xmax = (xmax > vx[i]) ? xmax : vx[i];
 		ymin = (ymin < vy[i]) ? ymin : vy[i];
@@ -817,7 +818,7 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	cr->set_source_rgb(0.0, 0.0, 1.0);
 	cr->set_line_width(0.01*seff);
 	cr->move_to(x2w(vx[0]),y2h(vy[0]));
-	for (int i = 1; i < Npts; i++) {
+	for (int i = 1; i < NumberOfBins; i++) {
 		// draw a line between points i and i-1
 		cr->line_to(x2w(vx[i]),y2h(vy[i]));
 	}
@@ -887,7 +888,7 @@ bool Window::dataEventAction() {
 			//int layer = hipo_banklist[1].getInt("layer", col);
 			//int component = hipo_banklist[1].getInt("component", col);
 			std::vector<double> samples;
-			for (int bin=0; bin < 50; bin++){
+			for (int bin=0; bin < NumberOfBins; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
 				short value = hipo_banklist[1].getInt(binName.c_str(), col);
 				samples.push_back(value);
@@ -928,7 +929,7 @@ bool Window::dataEventAction() {
 				for (int bin=0; bin < binOffset; bin++){
 					samples.push_back(0.0);
 				}
-				for (int bin=0; bin < 50 - binOffset; bin++){
+				for (int bin=0; bin < NumberOfBins - binOffset; bin++){
 					std::string binName = "s" + std::__cxx11::to_string(bin+1);
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
@@ -983,7 +984,7 @@ void Window::drawWaveforms() {
 	int row = 0;
 	int col = 0;
 	std::vector<double> bins;
-	for (int i = 0; i < 50; i++) {
+	for (int i = 0; i < NumberOfBins; i++) {
 		bins.push_back(1.0*i);
 	}
 	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
@@ -1026,7 +1027,7 @@ void Window::drawWaveformsPerLayer() {
 					if (wire->pulse.get_adcMax() > 0) {
 						nhits++;
 						std::vector<double> samples = wire->pulse.get_samples();
-						for (int i = 0; i < 50; i++) {
+						for (int i = 0; i < NumberOfBins; i++) {
 							double value = samples[i];
 							sum_samples[i] = sum_samples[i] + value;
 							ymin = (ymin < value) ? ymin : value;
@@ -1036,17 +1037,16 @@ void Window::drawWaveformsPerLayer() {
 				}
 				// normalisation
 				if (nhits > 0) {
-					for (int i = 0; i < 50; i++) {
+					for (int i = 0; i < NumberOfBins; i++) {
 						sum_samples[i] = sum_samples[i]/nhits;
 					}
 				}
 				// Drawings
-				int Npts = 50;
 				auto button = Gtk::make_managed<Gtk::Button>();
 				auto area = Gtk::make_managed<Gtk::DrawingArea>();
-				auto draw_function = [this, sl, l, layer, Npts, ymin, ymax, sum_samples, nhits] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
+				auto draw_function = [this, sl, l, layer, ymin, ymax, sum_samples, nhits] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
 					// Define main canvas
-					fCanvas canvas(width, height, 0, Npts-1, ymin, ymax);
+					fCanvas canvas(width, height, 0, NumberOfBins-1, ymin, ymax);
 					canvas.define_coord_system(cr);
 					canvas.draw_title(cr, "");
 					canvas.draw_xtitle(cr, "bin");
@@ -1077,7 +1077,7 @@ void Window::drawWaveformsPerLayer() {
 							cr->set_source_rgb(r, g, b);
 							cr->set_line_width(0.005*seff);
 							cr->move_to(x2w(0),y2h(samples[0]));
-							for (int i = 1; i < Npts; i++) {
+							for (int i = 1; i < NumberOfBins; i++) {
 								// draw a line between points i and i-1
 								cr->line_to(x2w(i),y2h(samples[i]));
 							}
@@ -1089,7 +1089,7 @@ void Window::drawWaveformsPerLayer() {
 					cr->set_source_rgb(1.0, 0.0, 0.0);
 					cr->set_line_width(0.005*seff);
 					cr->move_to(x2w(0),y2h(sum_samples[0]));
-					for (int i = 1; i < Npts; i++) {
+					for (int i = 1; i < NumberOfBins; i++) {
 						// draw a line between points i and i-1
 						cr->line_to(x2w(i),y2h(sum_samples[i]));
 					}

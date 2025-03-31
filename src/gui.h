@@ -53,6 +53,14 @@ protected :
 	/******************  FOOTER/Settings button  ***************
 	 * *********************************************************/
 	
+	// Decoding variables (must be changed if changed in caotjava)	
+	const int ADC_LIMIT;
+	const int NumberOfBins;
+	const double samplingTime;
+	const double amplitudeFractionCFA;
+	const int binDelayCFD;
+	const double fractionCFD;
+
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax; 
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_leadingEdgeTime_min, Adjustment_leadingEdgeTime_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeOverThreshold_min, Adjustment_timeOverThreshold_max;
@@ -99,11 +107,6 @@ protected :
 	fH1D hist1d_adcOffset;
 	fH1D hist1d_constantFractionTime;
 
-	// Decoding variables (must be changed if changed in caotjava)	
-	const double samplingTime = 50.0;
-	const double amplitudeFractionCFA = 0.5;
-	const int binDelayCFD = 5;
-	const double fractionCFD = 0.3;
 public :
 	Window();
 	~Window();
