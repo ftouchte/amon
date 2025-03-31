@@ -776,104 +776,6 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 	cr->restore();
 }
 
-void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation){
-	// Determine the min and the max of the data	
-	int Npts = vx.size();
-	if (Npts != (int) vy.size()) {return ;}
-	double xmin = vx[0], xmax = vx[0];
-	double ymin = vy[0], ymax = vy[0];
-	for (int i = 0; i < Npts; i++){
-		xmin = (xmin < vx[i]) ? xmin : vx[i];
- 		xmax = (xmax > vx[i]) ? xmax : vx[i];
-		ymin = (ymin < vy[i]) ? ymin : vy[i];
-		ymax = (ymax > vy[i]) ? ymax : vy[i];
-	}
-	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
-	canvas.define_coord_system(cr);
-	canvas.draw_title(cr, "");
-	canvas.draw_xtitle(cr, "bin");
-	canvas.draw_ytitle(cr, "adc");
-	// x coord to width
-	auto x2w = [canvas] (double x) {
-		return canvas.x2w(x);
-	};
-	// y coord to height
-	auto y2h = [canvas] (double y) {
-		return canvas.y2h(y);
-	};
-
-	int seff = canvas.get_seff();
-	int heff = canvas.get_heff();
-	int weff = canvas.get_weff();	
-	// Draw points
-	cr->set_source_rgb(0.0, 0.0, 1.0);
-	cr->set_line_width(0.01*seff);
-	cr->move_to(x2w(vx[0]),y2h(vy[0]));
-	for (int i = 1; i < Npts; i++) {
-		// draw a line between points i and i-1
-		cr->line_to(x2w(vx[i]),y2h(vy[i]));
-	}
-	cr->stroke();
-	
-	// ___________________________
-	// Show decoded values
-	// ___________________________
-	std::vector<short> samples;
-	for (int i = 0; i < (int) vy.size(); i++) {
-		samples.push_back((short) vy[i]);
-	}
-	decoder.adcOffset = (short) (samples[0] + samples[1] + samples[2] + samples[3] + samples[4])/5;
-	std::map<std::string,double> output = decoder.extract(samples);
-	//double timeMax = output["timeMax"];
-	double leadingEdgeTime = output["leadingEdgeTime"];
-	double timeOverThreshold = output["timeOverThreshold"];
-	double constantFractionTime = output["constantFractionTime"];
-	double adcMax = output["adcMax"];
-	double adcOffset = output["adcOffset"];
-	
-	// Display leadingEdgeTime
-	cr->set_source_rgb(0.0, 1.0, 0.0); // green
-	cr->set_line_width(0.01*seff);
-	cr->move_to(x2w(leadingEdgeTime),0);
-	cr->line_to(x2w(leadingEdgeTime),-heff);
-	cr->stroke();
-
-	// Display constantFractionTime
-	cr->set_source_rgb(1.0, 0.0, 0.0); // red
-	cr->set_line_width(0.01*seff);
-	cr->move_to(x2w(constantFractionTime),0);
-	cr->line_to(x2w(constantFractionTime),-heff);
-	cr->stroke();
-
-	// Display timeOverThreshold
-	cr->set_source_rgb(0.016, 0.925, 1); // bleu ciel
-	cr->set_line_width(0.01*seff);
-	cr->move_to(x2w(leadingEdgeTime), y2h(adcOffset + adcMax*decoder.amplitudeFractionCFA));
-	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), y2h(adcOffset + adcMax*decoder.amplitudeFractionCFA));
-	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), 0);
-	//cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), -heff);
-	cr->stroke();
-
-	// Display adcMax
-	cr->set_source_rgb(1.0, 0.871, 0.016); // rose
-	cr->set_line_width(0.01*seff);
-	cr->move_to(0,y2h(adcOffset + adcMax));
-	cr->line_to(weff, y2h(adcOffset + adcMax));
-	//cr->line_to(x2w(timeMax), y2h(adcOffset + adcMax));
-	//cr->line_to(x2w(timeMax), 0);
-	cr->stroke();
-
-	// Display the layer ID
-	cr->set_source_rgb(1.0, 0.0, 0.0);
-	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
-	cr->set_font_size(seff*0.1);
-	cr->move_to(weff*0.7, -heff*0.8);
-	cr->show_text(annotation);
-	
-	// draw frame and axis
-	canvas.draw_frame(cr);
-}
-
 void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation){
 	// Determine the min and the max of the data	
 	std::vector<double> vy = wire->pulse.get_samples();
@@ -904,6 +806,9 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 		return canvas.y2h(y);
 	};
 
+	// draw frame and axis
+	canvas.draw_frame(cr); // can be placed here or at the end, the most important is to have defined `canvas.define_coord_system(cr);` before draw plots
+	
 	int seff = canvas.get_seff();
 	int heff = canvas.get_heff();
 	int weff = canvas.get_weff();	
@@ -920,8 +825,8 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	// ___________________________
 	// Show decoded values
 	// ___________________________
-	int binOffset = wire->pulse.get_binOffset();
-	double timeMax = wire->pulse.get_timeMax();
+	//int binOffset = wire->pulse.get_binOffset();
+	//double timeMax = wire->pulse.get_timeMax();
 	double leadingEdgeTime = wire->pulse.get_leadingEdgeTime();
 	double constantFractionTime = wire->pulse.get_constantFractionTime();
 	double timeOverThreshold = wire->pulse.get_timeOverThreshold();
@@ -967,8 +872,6 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	cr->move_to(weff*0.7, -heff*0.8);
 	cr->show_text(annotation);
 	
-	// draw frame and axis
-	canvas.draw_frame(cr);
 }
 
 bool Window::dataEventAction() {
@@ -979,9 +882,9 @@ bool Window::dataEventAction() {
 		ListOfAdc.clear();
 		bool doIshowWF = false;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
-			int sector = hipo_banklist[1].getInt("sector", col);	
-			int layer = hipo_banklist[1].getInt("layer", col);
-			int component = hipo_banklist[1].getInt("component", col);
+			//int sector = hipo_banklist[1].getInt("sector", col);	
+			//int layer = hipo_banklist[1].getInt("layer", col);
+			//int component = hipo_banklist[1].getInt("component", col);
 			std::vector<double> samples;
 			for (int bin=0; bin < 50; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
@@ -1101,9 +1004,6 @@ void Window::drawWaveforms() {
 						area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
 											cairo_plot_waveform(cr, width, height, wire, buffer);
 									      } );
-						/*area->set_draw_func([this, bins, samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-											cairo_plot_graph(cr, width, height, bins, samples, buffer);
-									      } );*/
 						Grid_waveforms.attach(*area, col, row);
 						num++;
 					}
@@ -1433,16 +1333,11 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		auto window = Gtk::make_managed<Gtk::Window>();
 		window->set_title("AHDC pulse");
 		window->set_default_size(1200,800);
-		std::vector<double> samples = wire->pulse.get_samples();
-		std::vector<double> bins;
-		for (int i = 0; i < 50; i++) {
-			bins.push_back(1.0*i);
-		}
 		char buffer[50];
 		sprintf(buffer, "L%d W%d", layer, component);
 		auto area = Gtk::make_managed<Gtk::DrawingArea>();
-		area->set_draw_func([this, bins,  samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_graph(cr, width, height, bins, samples, buffer);
+		area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+							cairo_plot_waveform(cr, width, height, wire, buffer);
 					      } );
 		window->set_child(*area);
 		window->show();
