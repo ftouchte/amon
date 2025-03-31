@@ -97,8 +97,13 @@ protected :
 	fH1D hist1d_timeOverThreshold;
 	fH1D hist1d_timeMax;
 	fH1D hist1d_adcOffset;
-	fH1D hist1d_constantFractionTime;	
+	fH1D hist1d_constantFractionTime;
 
+	// Decoding variables (must be changed if changed in caotjava)	
+	const double samplingTime = 50.0;
+	const double amplitudeFractionCFA = 0.5;
+	const int binDelayCFD = 5;
+	const double fractionCFD = 0.3;
 public :
 	Window();
 	~Window();
