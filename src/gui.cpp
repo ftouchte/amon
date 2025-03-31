@@ -64,7 +64,6 @@ Window::Window() :
 {
 	// Data
 	ahdc = new AhdcDetector();
-	decoder = *new AhdcExtractor(1.0, 0.5f, 5, 0.3f); // 1.0 samplingTime
 	// Widgets
 	set_title("ALERT monitoring");
 	set_default_size(1378,800);
