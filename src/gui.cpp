@@ -224,7 +224,7 @@ void Window::on_button_settings_clicked(){
 	std::cout << "Open settings tab ..." << std::endl;
 	// Initialization
 	auto Window_settings = Gtk::make_managed<Gtk::Window>();
-	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL,10);
+	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
 	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_leadingEdgeTime_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_leadingEdgeTime_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
@@ -242,7 +242,7 @@ void Window::on_button_settings_clicked(){
 	Label1->set_markup("<b> adcMax </b>");
 	VBox_settings->append(*Label1);
 	VBox_settings->append(*HBox_Scale_adcMax);
-	HBox_Scale_adcMax->set_margin(10);
+	HBox_Scale_adcMax->set_margin_start(10);
 	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("MIN"));
 	HBox_Scale_adcMax->append(Scale_adcMax);
 	Scale_adcMax.set_hexpand(true);
@@ -259,7 +259,7 @@ void Window::on_button_settings_clicked(){
 	Label2->set_markup("<b> leadingEdgeTime </b>");
 	VBox_settings->append(*Label2);
 	VBox_settings->append(*HBox_Scale_leadingEdgeTime_min);
-        HBox_Scale_leadingEdgeTime_min->set_margin(10);
+        HBox_Scale_leadingEdgeTime_min->set_margin_start(10);
         HBox_Scale_leadingEdgeTime_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
         HBox_Scale_leadingEdgeTime_min->append(Scale_leadingEdgeTime_min);	
 	Scale_leadingEdgeTime_min.set_hexpand(true);
@@ -271,7 +271,7 @@ void Window::on_button_settings_clicked(){
 			});
 	// Scale_leadingEdgeTime_max
 	VBox_settings->append(*HBox_Scale_leadingEdgeTime_max);
-        HBox_Scale_leadingEdgeTime_max->set_margin(10);
+        HBox_Scale_leadingEdgeTime_max->set_margin_start(10);
         HBox_Scale_leadingEdgeTime_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
         HBox_Scale_leadingEdgeTime_max->append(Scale_leadingEdgeTime_max);
 	Scale_leadingEdgeTime_max.set_hexpand(true);
@@ -288,7 +288,7 @@ void Window::on_button_settings_clicked(){
 	Label3->set_markup("<b> timeOverThreshold </b>");
         VBox_settings->append(*Label3);
 	VBox_settings->append(*HBox_Scale_timeOverThreshold_min);
-        HBox_Scale_timeOverThreshold_min->set_margin(10);
+        HBox_Scale_timeOverThreshold_min->set_margin_start(10);
         HBox_Scale_timeOverThreshold_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
         HBox_Scale_timeOverThreshold_min->append(Scale_timeOverThreshold_min);
 	Scale_timeOverThreshold_min.set_hexpand(true);
@@ -300,7 +300,7 @@ void Window::on_button_settings_clicked(){
 			});
 	// Scale_timeOverThreshold_max
 	VBox_settings->append(*HBox_Scale_timeOverThreshold_max);
-        HBox_Scale_timeOverThreshold_max->set_margin(10);
+        HBox_Scale_timeOverThreshold_max->set_margin_start(10);
         HBox_Scale_timeOverThreshold_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
         HBox_Scale_timeOverThreshold_max->append(Scale_timeOverThreshold_max);
 	Scale_timeOverThreshold_max.set_hexpand(true);
@@ -317,7 +317,7 @@ void Window::on_button_settings_clicked(){
 	Label4->set_markup("<b> timeMax </b>");
         VBox_settings->append(*Label4);
 	VBox_settings->append(*HBox_Scale_timeMax_min);
-        HBox_Scale_timeMax_min->set_margin(10);
+        HBox_Scale_timeMax_min->set_margin_start(10);
         HBox_Scale_timeMax_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
         HBox_Scale_timeMax_min->append(Scale_timeMax_min);
 	Scale_timeMax_min.set_hexpand(true);
@@ -329,7 +329,7 @@ void Window::on_button_settings_clicked(){
 			});
 	// Scale_timeMax_max
 	VBox_settings->append(*HBox_Scale_timeMax_max);
-        HBox_Scale_timeMax_max->set_margin(10);
+        HBox_Scale_timeMax_max->set_margin_start(10);
         HBox_Scale_timeMax_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
         HBox_Scale_timeMax_max->append(Scale_timeMax_max);
 	Scale_timeMax_max.set_hexpand(true);
@@ -343,7 +343,8 @@ void Window::on_button_settings_clicked(){
 	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator4);
 	VBox_settings->append(*HBox_CheckButtons);
-	HBox_CheckButtons->set_margin(10);
+	HBox_CheckButtons->set_margin_start(10);
+	HBox_CheckButtons->set_margin_bottom(10);
 	HBox_CheckButtons->append(*Gtk::make_managed<Gtk::Label>("Shape recognition"));
 	HBox_CheckButtons->append(CheckButton_shape_recognition);
 	CheckButton_shape_recognition.signal_toggled().connect([this] () -> void {
@@ -443,6 +444,7 @@ void Window::on_button_run_clicked(){
 void Window::on_button_zpos_clicked(){
 	auto Window_zpos = Gtk::make_managed<Gtk::Window>();
 	auto HBox_zpos = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	HBox_zpos->set_margin(10);
 	Window_zpos->set_title("zpos");
 	Window_zpos->set_default_size(500,30);
 	Window_zpos->set_child(*HBox_zpos);
@@ -1427,7 +1429,7 @@ void Window::on_zpos_value_changed() {
 			}
 		}
 	}
-	printf("AHDC is now view in the plane z = %lf\n", zpos);
+	//printf("AHDC is now view in the plane z = %lf\n", zpos);
 	DrawingArea_event.queue_draw();
 }
 
