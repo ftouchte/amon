@@ -849,8 +849,8 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	// Display timeOverThreshold
 	cr->set_source_rgb(0.016, 0.925, 1); // bleu ciel
 	cr->set_line_width(0.01*seff);
-	cr->move_to(x2w(leadingEdgeTime), y2h(adcOffset + adcMax*0.5));
-	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), y2h(adcOffset + adcMax*0.5));
+	cr->move_to(x2w(leadingEdgeTime), y2h(adcOffset + adcMax*amplitudeFractionCFA));
+	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), y2h(adcOffset + adcMax*amplitudeFractionCFA));
 	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), 0);
 	//cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), -heff);
 	cr->stroke();
@@ -895,7 +895,6 @@ bool Window::dataEventAction() {
 				flag_recognized = is_oscillating(samples);
 			}
 			// fill histograms
-			double samplingTime = 50.0;
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
                         double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
                         double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
@@ -932,7 +931,6 @@ bool Window::dataEventAction() {
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
 				}
-				double samplingTime = 50.0;
 				double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
 				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
 				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
