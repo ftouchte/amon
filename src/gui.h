@@ -135,6 +135,7 @@ public :
 	void on_zpos_value_changed();
 	void on_button_zpos_clicked();
 	void cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, std::vector<double> vx, std::vector<double> vy, std::string annotation);
+	void cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation);
 };
 
 #endif

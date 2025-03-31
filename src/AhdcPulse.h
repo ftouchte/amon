@@ -19,6 +19,7 @@ class AhdcPulse {
 	double leadingEdgeTime;
 	double timeOverThreshold;
 	double constantFractionTime;
+	int binOffset;
 public :
 	AhdcPulse();
 	void reset();
@@ -29,16 +30,18 @@ public :
 	void set_leadingEdgeTime(double _leadingEdgeTime);
 	void set_timeOverThreshold(double _timeOverThreshold);
 	void set_constantFractionTime(double _constantFractionTime);
+	void set_binOffset(int _binOffset);
 	void set_samples(std::vector<double> _samples);
-
-	double get_integral();
-	double get_adcMax();
-	double get_adcOffset();
-	double get_timeMax();
-	double get_leadingEdgeTime();
-	double get_timeOverThreshold();
-	double get_constantFractionTime();
-	std::vector<double> get_samples();
+	
+	double get_integral() const;
+	double get_adcMax() const;
+	double get_adcOffset() const;
+	double get_timeMax() const;
+	double get_leadingEdgeTime() const;
+	double get_timeOverThreshold() const;
+	double get_constantFractionTime() const;
+	int get_binOffset() const;
+	std::vector<double> get_samples() const;
 };
 
 #endif

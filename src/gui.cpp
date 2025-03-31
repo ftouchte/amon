@@ -874,6 +874,103 @@ void Window::cairo_plot_graph(const Cairo::RefPtr<Cairo::Context>& cr, int width
 	canvas.draw_frame(cr);
 }
 
+void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation){
+	// Determine the min and the max of the data	
+	std::vector<double> vy = wire->pulse.get_samples();
+	std::vector<double> vx;
+	int Npts = vy.size();
+	for (int i = 0; i < Npts; i++){
+		vx.push_back(1.0*i);
+	}
+	double xmin = vx[0], xmax = vx[0];
+	double ymin = vy[0], ymax = vy[0];
+	for (int i = 0; i < Npts; i++){
+		xmin = (xmin < vx[i]) ? xmin : vx[i];
+ 		xmax = (xmax > vx[i]) ? xmax : vx[i];
+		ymin = (ymin < vy[i]) ? ymin : vy[i];
+		ymax = (ymax > vy[i]) ? ymax : vy[i];
+	}
+	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
+	canvas.define_coord_system(cr);
+	canvas.draw_title(cr, "");
+	canvas.draw_xtitle(cr, "bin");
+	canvas.draw_ytitle(cr, "adc");
+	// x coord to width
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
+	};
+	// y coord to height
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
+	};
+
+	int seff = canvas.get_seff();
+	int heff = canvas.get_heff();
+	int weff = canvas.get_weff();	
+	// Draw points
+	cr->set_source_rgb(0.0, 0.0, 1.0);
+	cr->set_line_width(0.01*seff);
+	cr->move_to(x2w(vx[0]),y2h(vy[0]));
+	for (int i = 1; i < Npts; i++) {
+		// draw a line between points i and i-1
+		cr->line_to(x2w(vx[i]),y2h(vy[i]));
+	}
+	cr->stroke();
+	
+	// ___________________________
+	// Show decoded values
+	// ___________________________
+	int binOffset = wire->pulse.get_binOffset();
+	double timeMax = wire->pulse.get_timeMax();
+	double leadingEdgeTime = wire->pulse.get_leadingEdgeTime();
+	double constantFractionTime = wire->pulse.get_constantFractionTime();
+	double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+	double adcMax = wire->pulse.get_adcMax();
+	double adcOffset = wire->pulse.get_adcOffset();
+	
+	// Display leadingEdgeTime
+	cr->set_source_rgb(0.0, 1.0, 0.0); // green
+	cr->set_line_width(0.01*seff);
+	cr->move_to(x2w(leadingEdgeTime),0);
+	cr->line_to(x2w(leadingEdgeTime),-heff);
+	cr->stroke();
+
+	// Display constantFractionTime
+	cr->set_source_rgb(1.0, 0.0, 0.0); // red
+	cr->set_line_width(0.01*seff);
+	cr->move_to(x2w(constantFractionTime),0);
+	cr->line_to(x2w(constantFractionTime),-heff);
+	cr->stroke();
+
+	// Display timeOverThreshold
+	cr->set_source_rgb(0.016, 0.925, 1); // bleu ciel
+	cr->set_line_width(0.01*seff);
+	cr->move_to(x2w(leadingEdgeTime), y2h(adcOffset + adcMax*0.5));
+	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), y2h(adcOffset + adcMax*0.5));
+	cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), 0);
+	//cr->line_to(x2w(leadingEdgeTime + timeOverThreshold), -heff);
+	cr->stroke();
+
+	// Display adcMax
+	cr->set_source_rgb(1.0, 0.871, 0.016); // rose
+	cr->set_line_width(0.01*seff);
+	cr->move_to(0,y2h(adcOffset + adcMax));
+	cr->line_to(weff, y2h(adcOffset + adcMax));
+	//cr->line_to(x2w(timeMax), y2h(adcOffset + adcMax));
+	//cr->line_to(x2w(timeMax), 0);
+	cr->stroke();
+
+	// Display the layer ID
+	cr->set_source_rgb(1.0, 0.0, 0.0);
+	cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+	cr->set_font_size(seff*0.1);
+	cr->move_to(weff*0.7, -heff*0.8);
+	cr->show_text(annotation);
+	
+	// draw frame and axis
+	canvas.draw_frame(cr);
+}
+
 bool Window::dataEventAction() {
 	// hipo4
 	if (hipo_reader.next(hipo_banklist)) {
@@ -949,6 +1046,7 @@ bool Window::dataEventAction() {
 				wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
 				wire->pulse.set_timeOverThreshold(timeOverThreshold);
 				wire->pulse.set_constantFractionTime(constantFractionTime);
+				wire->pulse.set_binOffset(binOffset);
 				wire->pulse.set_samples(samples);
 				ListOfAdc.push_back(adcMax);
 			}
@@ -1000,9 +1098,12 @@ void Window::drawWaveforms() {
 						char buffer[50];
 						sprintf(buffer, "L%d W%d", 10*(sl+1) + (l+1), w+1);
 						auto area = Gtk::make_managed<Gtk::DrawingArea>();
-						area->set_draw_func([this, bins, samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-											cairo_plot_graph(cr, width, height, bins, samples, buffer);
+						area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+											cairo_plot_waveform(cr, width, height, wire, buffer);
 									      } );
+						/*area->set_draw_func([this, bins, samples, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+											cairo_plot_graph(cr, width, height, bins, samples, buffer);
+									      } );*/
 						Grid_waveforms.attach(*area, col, row);
 						num++;
 					}
