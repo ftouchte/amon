@@ -22,14 +22,11 @@ protected :
 	// Widgets
 	Gtk::Box VBox_main, VBox_header, VBox_body, VBox_footer;
 	
-	/******************
-         * HEADER
-         * ***************/
-
-
-	/******************
-         * BODY
-         * ***************/
+	/******************  HEADER  ***************
+	 * *****************************************/
+	
+	/******************  BODY  ***************
+	 * *****************************************/
 	
 	Gtk::Notebook Book;
 	// page 0
@@ -42,9 +39,8 @@ protected :
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
 	
-	/******************
-         * FOOTER
-         * ***************/
+	/******************  FOOTER  ***************
+	 * *****************************************/
 	
 	Gtk::Box HBox_footer;
 	//Gtk::Box HBox_prev, HBox_next, HBox_pause, HBox_run, HBox_info,  HBox_hipo4, HBox_reset;
@@ -54,12 +50,9 @@ protected :
 	Gtk::Label Label_info;
 	Gtk::Label Label_header;
 	
-	/**********************
-	 * Settings
-	 * *******************/
-	//Gtk::Window Window_settings;
-	//Gtk::Box VBox_settings;
-	//Gtk::Box HBox_Scale_adcMax, HBox_Scale_leadingEdgeTime_min, HBox_Scale_leadingEdgeTime_max;
+	/******************  FOOTER/Settings button  ***************
+	 * *********************************************************/
+	
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax; 
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_leadingEdgeTime_min, Adjustment_leadingEdgeTime_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeOverThreshold_min, Adjustment_timeOverThreshold_max;
@@ -74,9 +67,9 @@ protected :
 	Gtk::CheckButton CheckButton_active_layer51;
 	Gtk::CheckButton CheckButton_active_layer42;
 		
-	/**********************
-	 *  DATA
-	 * *******************/
+	/******************  DATA  *****************
+	 * *****************************************/
+	
 	std::string filename;
 	hipo::reader hipo_reader;
 	hipo::banklist hipo_banklist;
@@ -85,7 +78,7 @@ protected :
 	int nWF; ///< number of waveforms	
 	AhdcDetector *ahdc; ///< AHDC detector
 	std::vector<double> ListOfAdc;		///< List of adcMax
-	AhdcExtractor decoder;
+	// Define variable for cut
 	double adcCut = 0;
 	double leadingEdgeTime_min = 0;
 	double leadingEdgeTime_max = 49;
