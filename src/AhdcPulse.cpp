@@ -34,14 +34,16 @@ void AhdcPulse::set_timeMax(double _timeMax) { timeMax = _timeMax;}
 void AhdcPulse::set_leadingEdgeTime(double _leadingEdgeTime) { leadingEdgeTime = _leadingEdgeTime;}
 void AhdcPulse::set_timeOverThreshold(double _timeOverThreshold) { timeOverThreshold = _timeOverThreshold;}
 void AhdcPulse::set_constantFractionTime(double _constantFractionTime) { constantFractionTime = _constantFractionTime;}
+void AhdcPulse::set_binOffset(int _binOffset) { binOffset = _binOffset;}
 void AhdcPulse::set_samples(std::vector<double> _samples) { samples = _samples;}
 
-double AhdcPulse::get_integral() {return integral;}
-double AhdcPulse::get_adcMax() {return adcMax;}
-double AhdcPulse::get_adcOffset() {return adcOffset;}
-double AhdcPulse::get_timeMax() {return timeMax;}
-double AhdcPulse::get_leadingEdgeTime() {return leadingEdgeTime;}
-double AhdcPulse::get_timeOverThreshold() {return timeOverThreshold;}
-double AhdcPulse::get_constantFractionTime() {return constantFractionTime;}
-std::vector<double> AhdcPulse::get_samples() {return samples;}
+double AhdcPulse::get_integral() const {return integral;}
+double AhdcPulse::get_adcMax() const {return adcMax;}
+double AhdcPulse::get_adcOffset() const {return adcOffset;}
+double AhdcPulse::get_timeMax() const {return timeMax;}
+double AhdcPulse::get_leadingEdgeTime() const {return leadingEdgeTime;}
+double AhdcPulse::get_timeOverThreshold() const {return timeOverThreshold;}
+double AhdcPulse::get_constantFractionTime() const {return constantFractionTime;}
+int    AhdcPulse::get_binOffset() const {return binOffset;}
+std::vector<double> AhdcPulse::get_samples() const {return samples;}
 
