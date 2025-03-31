@@ -606,7 +606,9 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	canvas.set_y_end(80);
 	canvas.define_coord_system(cr);
 	canvas.do_not_draw_secondary_stick();
-	canvas.draw_title(cr, "face connected to the electronics");
+	char face_name[50];
+	sprintf(face_name, "(x,y) view in plane z = %.2lf mm", zpos);
+	canvas.draw_title(cr, face_name);
 	canvas.draw_xtitle(cr, "");
 	canvas.draw_ytitle(cr, "");
 	canvas.draw_frame(cr);
