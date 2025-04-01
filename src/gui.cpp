@@ -784,6 +784,9 @@ void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, in
 void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation){
 	// Determine the min and the max of the data	
 	std::vector<double> vy = wire->pulse.get_samples();
+	if (NumberOfBins != (int) vy.size()) {
+		return ;
+	}
 	std::vector<double> vx;
 	for (int i = 0; i < NumberOfBins; i++){
 		vx.push_back(1.0*i);
