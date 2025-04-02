@@ -434,8 +434,8 @@ void Window::on_button_run_clicked(){
 	Glib::signal_timeout().connect([this] () -> bool {
 				if (is_paused || is_reset) {return false;}
 				if (this->dataEventAction()) {
-					return true;
-					//return true && (hipo_nEvent < 10000); // continue the timeout
+					return true; // continue the timeout
+					//return true && (hipo_nEvent < 10000); 
 				}
 				else {return false;} // stop the timeout
                         }, 20); // call every 10 ms
@@ -577,6 +577,7 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 	switch (page_num) {
 		case 0 :
 			page_name = "Event Viewer";
+			DrawingArea_event.queue_draw();
 			break;
 		case 1 :
 			page_name = "Waveforms Per Layer";
@@ -888,6 +889,7 @@ bool Window::dataEventAction() {
 		clearAhdcData();
 		ListOfAdc.clear();
 		bool doIshowWF = false;
+		nWF = 0;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			//int sector = hipo_banklist[1].getInt("sector", col);	
 			//int layer = hipo_banklist[1].getInt("layer", col);
@@ -957,6 +959,7 @@ bool Window::dataEventAction() {
 				wire->pulse.set_binOffset(binOffset);
 				wire->pulse.set_samples(samples);
 				ListOfAdc.push_back(adcMax);
+				nWF++;
 			}
 		}
 
@@ -973,10 +976,24 @@ bool Window::dataEventAction() {
 			Grid_histograms.remove_column(1);
 		}
 		// Update drawings
-		DrawingArea_event.queue_draw();
+		int tab_number = Book.get_current_page();
+		if      (tab_number == 0) {
+			DrawingArea_event.queue_draw();
+			drawWaveforms();
+		}
+		else if (tab_number == 1) {
+			drawWaveformsPerLayer();
+		}
+		else if (tab_number == 2) {
+			drawHistograms();
+		}
+		else {
+			// do nothing
+		}
+		/*DrawingArea_event.queue_draw();
 		drawWaveforms();
 		drawWaveformsPerLayer();
-		drawHistograms();
+		drawHistograms();*/
 		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
 		hipo_nEvent++;
 		return true;
@@ -1016,7 +1033,7 @@ void Window::drawWaveforms() {
 			}
 		}
 	}
-	nWF = num;
+	//nWF = num;
 }
 
 void Window::drawWaveformsPerLayer() {
