@@ -11,6 +11,7 @@
 #include <gtkmm.h>
 #include <string>
 #include <vector>
+#include <cmath>
 #include "hipo4/reader.h"
 
 #include "AhdcDetector.h"
@@ -29,16 +30,26 @@ protected :
 	 * *****************************************/
 	
 	Gtk::Notebook Book;
-	// page 0
 	Gtk::Box HBox_eventViewer;
 	Gtk::Grid Grid_eventViewer, Grid_waveforms; // 2x1 and NxP 
 	Gtk::Grid Grid_waveformsPerLayer;
 	Gtk::DrawingArea DrawingArea_event;
 	Gtk::DrawingArea DrawingArea_test;
-	// page 1
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
 	
+	Gtk::Box HBox_3Dview;
+	Gtk::Box VBox_3Dview_settings;
+	Gtk::DrawingArea DrawingArea_3Dview;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_alpha; 
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_beta; 
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_gamma; 
+	Gtk::Scale Scale_alpha;
+	Gtk::Scale Scale_beta;
+	Gtk::Scale Scale_gamma;
+	double angle_alpha = 0.45*M_PI;
+	double angle_beta = 0.1*M_PI;
+	double angle_gamma = 0.1*M_PI;
 	/******************  FOOTER  ***************
 	 * *****************************************/
 	
@@ -136,6 +147,7 @@ public :
 	void on_zpos_value_changed();
 	void on_button_zpos_clicked();
 	void cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation);
+	void on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 };
 
 #endif
