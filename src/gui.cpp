@@ -9,7 +9,8 @@
 #include "fAxis.h"
 #include "fCanvas.h"
 #include "fColorPalette.h"
-#include "AhdcExtractor.h"
+#include "f3Dutils.h"
+
 #include <iostream>
 #include <string>
 #include <cmath>
@@ -30,6 +31,16 @@ Window::Window() :
 	VBox_footer(Gtk::Orientation::VERTICAL,10),
 	HBox_eventViewer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
+	HBox_3Dview(Gtk::Orientation::HORIZONTAL,10),
+	VBox_3Dview_settings(Gtk::Orientation::VERTICAL,10),
+	// 3D view settings
+	Adjustment_alpha(Gtk::Adjustment::create(0.45*M_PI, 0.0, 2*M_PI, 0.01, 0.0, 0.0)),
+	Adjustment_beta(Gtk::Adjustment::create(0.1*M_PI, 0.0, 2*M_PI, 0.01, 0.0, 0.0)),
+	Adjustment_gamma(Gtk::Adjustment::create(0.1*M_PI, 0.0, 2*M_PI, 0.01, 0.0, 0.0)),
+	Scale_alpha(Adjustment_alpha, Gtk::Orientation::HORIZONTAL),
+	Scale_beta(Adjustment_beta, Gtk::Orientation::HORIZONTAL),
+	Scale_gamma(Adjustment_gamma, Gtk::Orientation::HORIZONTAL),
+	// Footer
 	HBox_footer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	// Decoding parameters	
@@ -115,7 +126,65 @@ Window::Window() :
         hist1d_timeMax.set_xtitle("bin");
 	hist1d_adcOffset.set_xtitle("adc");
         hist1d_constantFractionTime.set_xtitle("bin");
-	// Page 3 (test)
+	// page 3
+	Book.append_page(HBox_3Dview, "3D view");
+	HBox_3Dview.append(VBox_3Dview_settings);
+	//VBox_3Dview_settings.set_size_request(300,-1);
+		// alpha
+	auto HBox_Scale_alpha = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	HBox_Scale_alpha->set_margin_start(10);
+	auto Label_alpha = Gtk::make_managed<Gtk::Label>();
+	Label_alpha->set_markup("<b> alpha </b>");
+	VBox_3Dview_settings.append(*HBox_Scale_alpha);
+	HBox_Scale_alpha->append(*Label_alpha);
+	HBox_Scale_alpha->append(Scale_alpha);
+	Scale_alpha.set_hexpand(true);
+	Scale_alpha.set_draw_value();
+	Scale_alpha.set_digits(2);
+	Adjustment_alpha->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_alpha->get_value();
+				this->angle_alpha = val;
+				DrawingArea_3Dview.queue_draw();
+			});
+		// beta
+	auto HBox_Scale_beta = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	HBox_Scale_beta->set_margin_start(10);
+	auto Label_beta = Gtk::make_managed<Gtk::Label>();
+	Label_beta->set_markup("<b> beta </b>");
+	VBox_3Dview_settings.append(*HBox_Scale_beta);
+	HBox_Scale_beta->append(*Label_beta);
+	HBox_Scale_beta->append(Scale_beta);
+	Scale_beta.set_hexpand(true);
+	Scale_beta.set_draw_value();
+	Scale_beta.set_digits(2);
+	Adjustment_beta->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_beta->get_value();
+				this->angle_beta = val;
+				DrawingArea_3Dview.queue_draw();
+			});
+		// gamma
+	auto HBox_Scale_gamma = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	HBox_Scale_gamma->set_margin_start(10);
+	auto Label_gamma = Gtk::make_managed<Gtk::Label>();
+	Label_gamma->set_markup("<b> gamma </b>");
+	VBox_3Dview_settings.append(*HBox_Scale_gamma);
+	HBox_Scale_gamma->append(*Label_gamma);
+	HBox_Scale_gamma->append(Scale_gamma);
+	Scale_gamma.set_hexpand(true);
+	Scale_gamma.set_draw_value();
+	Scale_gamma.set_digits(2);
+	Adjustment_gamma->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_gamma->get_value();
+				this->angle_gamma = val;
+				DrawingArea_3Dview.queue_draw();
+			});
+		// DrawingArea
+	auto Separator_3Dview = Gtk::make_managed<Gtk::Separator>(Gtk::Orientation::VERTICAL);
+	HBox_3Dview.append(*Separator_3Dview);
+	HBox_3Dview.append(DrawingArea_3Dview);
+	DrawingArea_3Dview.set_size_request(1400,-1);
+	DrawingArea_3Dview.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_3Dview) );
+	// Page 4 (test)
 	Book.append_page(DrawingArea_test, "Test");
 	DrawingArea_test.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_test) );
 
@@ -586,6 +655,9 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 		case 2 :
 			page_name = "Histograms";
 			drawHistograms();
+			break;
+		case 3 :
+			page_name = "3D view";
 			break;
 		default :
 			page_name = "Unknown process";
@@ -1452,6 +1524,19 @@ void Window::on_zpos_value_changed() {
 	//printf("AHDC is now view in the plane z = %lf\n", zpos);
 	DrawingArea_event.queue_draw();
 }
+
+void Window::on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+	//printf("w : %d, h : %d\n", width, height);
+	//cr->translate(0, height);
+	//cr->scale(1.0, -1.0);
+	//cr->move_to(50,50);
+	//cr->set_source_rgb(0.0, 0.0, 0.0);
+	//cr->set_line_width(10);
+	//cr->rectangle(80,20, 100, 100);
+	//cr->stroke();
+	Frame::test1(angle_alpha, angle_beta, angle_gamma, cr, width, height);	
+}
+
 
 /** Main function */
 int main (int argc, char * argv[]) {
