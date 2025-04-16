@@ -29,8 +29,8 @@ int main(int argc, char const *argv[]){
 	
 	std::vector<std::string> Data     = {"ADC", "ped", "leadingEdgeTime", "timeMax", "timeOverThreshold"};
 	std::vector<int>         NbBin    = {100, 100, 20, 20, 20};
-	std::vector<double>      Start    = {0.0, 0.0, 0.0, 0.0, 0.0};
-	std::vector<double>      End      = {4095.0, 1000.0, 20.0, 20.0, 20.0};
+	std::vector<double>      Start    = {0.0, 0.0, 0.0, 0.0, 4.0};
+	std::vector<double>      End      = {4000.0, 1000.0, 20.0, 20.0, 12.0};
 	std::vector<std::string> Title    = {"adcMax", "adcOffset", "leadingEdgeTime", "timeMax", "timeOverThreshold"};
 	double samplingTime = 50.0;
 	
@@ -70,9 +70,11 @@ int main(int argc, char const *argv[]){
                         double adcOffset = banklist[0].getInt("ped", col);
 			std::vector<double> value = {adcMax, adcOffset, leadingEdgeTime, timeMax, timeOverThreshold, constantFractionTime}; 
 			
-			for (int i = 0; i < n; i++) {
-				for (int j = 0; j < i; j++) {
-					corr[i][j]->Fill(value[i], value[j]);
+			if ((timeOverThreshold >= 7.0) && (timeOverThreshold <= 12.0) && (adcOffset >= 150) && (adcOffset <= 400) && (leadingEdgeTime >= 4) && (leadingEdgeTime <= 10)) {	
+				for (int i = 0; i < n; i++) {
+					for (int j = 0; j < i; j++) {
+						corr[i][j]->Fill(value[i], value[j]);
+					}
 				}
 			}
 		}
@@ -85,6 +87,7 @@ int main(int argc, char const *argv[]){
 	//canvas1->Divide(3, n_hits/3);
 	canvas1->Divide(3,3);
 	canvas1->Update();
+	TFile *f = new TFile("../output/correlation.root", "RECREATE");
 	int num = 0;	
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < i; j++) {
@@ -94,14 +97,19 @@ int main(int argc, char const *argv[]){
 			canvas1->cd(num);
 			corr[i][j]->Draw("COLZ");
 			canvas1->Update();
+			corr[i][j]->Write();
 		}
 	}
 	canvas1->Print("../output/correlation.pdf");
+	canvas1->Write();
+	f->Close();
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < i; j++) {
 			delete corr[i][j];
 		}
 	}
+
+	
 	printf("nEvent : %ld\n", nEvent);
 	delete canvas1;
 }
