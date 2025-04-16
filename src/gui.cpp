@@ -45,27 +45,31 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	// Decoding parameters	
 	ADC_LIMIT(4095),
-	NumberOfBins(50),
+	NumberOfBins(20),
 	samplingTime(50.0),
 	amplitudeFractionCFA(0.5),
 	binDelayCFD(5),
 	fractionCFD(0.3),
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 10, 0.0, 0.0)),
-	Adjustment_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_adcOffset_min(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
+	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
+	Adjustment_cut_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_zpos(Gtk::Adjustment::create(0.0, 0.0, 300.0, 1.0, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
-	Scale_leadingEdgeTime_min(Adjustment_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
-	Scale_leadingEdgeTime_max(Adjustment_leadingEdgeTime_max, Gtk::Orientation::HORIZONTAL),
-	Scale_timeOverThreshold_min(Adjustment_timeOverThreshold_min, Gtk::Orientation::HORIZONTAL),
-	Scale_timeOverThreshold_max(Adjustment_timeOverThreshold_max, Gtk::Orientation::HORIZONTAL),
-	Scale_timeMax_min(Adjustment_timeMax_min, Gtk::Orientation::HORIZONTAL),
-	Scale_timeMax_max(Adjustment_timeMax_max, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_adcOffset_min(Adjustment_cut_adcOffset_min, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_adcOffset_max(Adjustment_cut_adcOffset_max, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_leadingEdgeTime_min(Adjustment_cut_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_leadingEdgeTime_max(Adjustment_cut_leadingEdgeTime_max, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_timeOverThreshold_min(Adjustment_cut_timeOverThreshold_min, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_timeOverThreshold_max(Adjustment_cut_timeOverThreshold_max, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_timeMax_min(Adjustment_cut_timeMax_min, Gtk::Orientation::HORIZONTAL),
+	Scale_cut_timeMax_max(Adjustment_cut_timeMax_max, Gtk::Orientation::HORIZONTAL),
 	Scale_zpos(Adjustment_zpos, Gtk::Orientation::HORIZONTAL),
 	// histograms
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
@@ -295,21 +299,23 @@ void Window::on_button_settings_clicked(){
 	auto Window_settings = Gtk::make_managed<Gtk::Window>();
 	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
 	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_leadingEdgeTime_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_leadingEdgeTime_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_timeOverThreshold_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_Scale_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_adcOffset_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_adcOffset_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_leadingEdgeTime_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_leadingEdgeTime_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_timeOverThreshold_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_cut_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_CheckButtons = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	// Window for settings
 	Window_settings->set_title("Settings");
 	Window_settings->set_default_size(500,300);
 	Window_settings->set_child(*VBox_settings);
 	// Scale_adcMax
-	auto Label1 = Gtk::make_managed<Gtk::Label>();
-	Label1->set_markup("<b> adcMax </b>");
-	VBox_settings->append(*Label1);
+	auto Label0 = Gtk::make_managed<Gtk::Label>();
+	Label0->set_markup("<b> adcMax </b>");
+	VBox_settings->append(*Label0);
 	VBox_settings->append(*HBox_Scale_adcMax);
 	HBox_Scale_adcMax->set_margin_start(10);
 	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("MIN"));
@@ -321,92 +327,121 @@ void Window::on_button_settings_clicked(){
 				const double val = this->Adjustment_adcMax->get_value();
 				this->adcCut = val;
 			});
+	auto Separator0 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator0);	
+	// Scale_cut_adcOffset_min
+	auto Label1 = Gtk::make_managed<Gtk::Label>();
+	Label1->set_markup("<b> adcOffset </b>");
+	VBox_settings->append(*Label1);
+	VBox_settings->append(*HBox_Scale_cut_adcOffset_min);
+        HBox_Scale_cut_adcOffset_min->set_margin_start(10);
+        HBox_Scale_cut_adcOffset_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_cut_adcOffset_min->append(Scale_cut_adcOffset_min);	
+	Scale_cut_adcOffset_min.set_hexpand(true);
+	Scale_cut_adcOffset_min.set_draw_value();
+	Scale_cut_adcOffset_min.set_digits(0);
+	Adjustment_cut_adcOffset_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_adcOffset_min->get_value();
+				this->cut_adcOffset_min = val;
+			});
+	// Scale_cut_adcOffset_max
+	VBox_settings->append(*HBox_Scale_cut_adcOffset_max);
+        HBox_Scale_cut_adcOffset_max->set_margin_start(10);
+        HBox_Scale_cut_adcOffset_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_cut_adcOffset_max->append(Scale_cut_adcOffset_max);
+	Scale_cut_adcOffset_max.set_hexpand(true);
+	Scale_cut_adcOffset_max.set_draw_value();
+	Scale_cut_adcOffset_max.set_digits(0);
+	Adjustment_cut_adcOffset_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_adcOffset_max->get_value();
+				this->cut_adcOffset_max = val;
+			});
 	auto Separator1 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator1);	
-	// Scale_leadingEdgeTime_min
+	// Scale_cut_leadingEdgeTime_min
 	auto Label2 = Gtk::make_managed<Gtk::Label>();
 	Label2->set_markup("<b> leadingEdgeTime </b>");
 	VBox_settings->append(*Label2);
-	VBox_settings->append(*HBox_Scale_leadingEdgeTime_min);
-        HBox_Scale_leadingEdgeTime_min->set_margin_start(10);
-        HBox_Scale_leadingEdgeTime_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
-        HBox_Scale_leadingEdgeTime_min->append(Scale_leadingEdgeTime_min);	
-	Scale_leadingEdgeTime_min.set_hexpand(true);
-	Scale_leadingEdgeTime_min.set_draw_value();
-	Scale_leadingEdgeTime_min.set_digits(0);
-	Adjustment_leadingEdgeTime_min->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_leadingEdgeTime_min->get_value();
-				this->leadingEdgeTime_min = val;
+	VBox_settings->append(*HBox_Scale_cut_leadingEdgeTime_min);
+        HBox_Scale_cut_leadingEdgeTime_min->set_margin_start(10);
+        HBox_Scale_cut_leadingEdgeTime_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_cut_leadingEdgeTime_min->append(Scale_cut_leadingEdgeTime_min);	
+	Scale_cut_leadingEdgeTime_min.set_hexpand(true);
+	Scale_cut_leadingEdgeTime_min.set_draw_value();
+	Scale_cut_leadingEdgeTime_min.set_digits(0);
+	Adjustment_cut_leadingEdgeTime_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_leadingEdgeTime_min->get_value();
+				this->cut_leadingEdgeTime_min = val;
 			});
-	// Scale_leadingEdgeTime_max
-	VBox_settings->append(*HBox_Scale_leadingEdgeTime_max);
-        HBox_Scale_leadingEdgeTime_max->set_margin_start(10);
-        HBox_Scale_leadingEdgeTime_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
-        HBox_Scale_leadingEdgeTime_max->append(Scale_leadingEdgeTime_max);
-	Scale_leadingEdgeTime_max.set_hexpand(true);
-	Scale_leadingEdgeTime_max.set_draw_value();
-	Scale_leadingEdgeTime_max.set_digits(0);
-	Adjustment_leadingEdgeTime_max->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_leadingEdgeTime_max->get_value();
-				this->leadingEdgeTime_max = val;
+	// Scale_cut_leadingEdgeTime_max
+	VBox_settings->append(*HBox_Scale_cut_leadingEdgeTime_max);
+        HBox_Scale_cut_leadingEdgeTime_max->set_margin_start(10);
+        HBox_Scale_cut_leadingEdgeTime_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_cut_leadingEdgeTime_max->append(Scale_cut_leadingEdgeTime_max);
+	Scale_cut_leadingEdgeTime_max.set_hexpand(true);
+	Scale_cut_leadingEdgeTime_max.set_draw_value();
+	Scale_cut_leadingEdgeTime_max.set_digits(0);
+	Adjustment_cut_leadingEdgeTime_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_leadingEdgeTime_max->get_value();
+				this->cut_leadingEdgeTime_max = val;
 			});
 	auto Separator2 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator2);	
-	// Scale_timeOverThreshold_min
+	// Scale_cut_timeOverThreshold_min
 	auto Label3 = Gtk::make_managed<Gtk::Label>();
 	Label3->set_markup("<b> timeOverThreshold </b>");
         VBox_settings->append(*Label3);
-	VBox_settings->append(*HBox_Scale_timeOverThreshold_min);
-        HBox_Scale_timeOverThreshold_min->set_margin_start(10);
-        HBox_Scale_timeOverThreshold_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
-        HBox_Scale_timeOverThreshold_min->append(Scale_timeOverThreshold_min);
-	Scale_timeOverThreshold_min.set_hexpand(true);
-	Scale_timeOverThreshold_min.set_draw_value();
-	Scale_timeOverThreshold_min.set_digits(0);
-	Adjustment_timeOverThreshold_min->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_timeOverThreshold_min->get_value();
-				this->timeOverThreshold_min = val;
+	VBox_settings->append(*HBox_Scale_cut_timeOverThreshold_min);
+        HBox_Scale_cut_timeOverThreshold_min->set_margin_start(10);
+        HBox_Scale_cut_timeOverThreshold_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_cut_timeOverThreshold_min->append(Scale_cut_timeOverThreshold_min);
+	Scale_cut_timeOverThreshold_min.set_hexpand(true);
+	Scale_cut_timeOverThreshold_min.set_draw_value();
+	Scale_cut_timeOverThreshold_min.set_digits(0);
+	Adjustment_cut_timeOverThreshold_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_timeOverThreshold_min->get_value();
+				this->cut_timeOverThreshold_min = val;
 			});
-	// Scale_timeOverThreshold_max
-	VBox_settings->append(*HBox_Scale_timeOverThreshold_max);
-        HBox_Scale_timeOverThreshold_max->set_margin_start(10);
-        HBox_Scale_timeOverThreshold_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
-        HBox_Scale_timeOverThreshold_max->append(Scale_timeOverThreshold_max);
-	Scale_timeOverThreshold_max.set_hexpand(true);
-	Scale_timeOverThreshold_max.set_draw_value();
-	Scale_timeOverThreshold_max.set_digits(0);
-	Adjustment_timeOverThreshold_max->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_timeOverThreshold_max->get_value();
-				this->timeOverThreshold_max = val;
+	// Scale_cut_timeOverThreshold_max
+	VBox_settings->append(*HBox_Scale_cut_timeOverThreshold_max);
+        HBox_Scale_cut_timeOverThreshold_max->set_margin_start(10);
+        HBox_Scale_cut_timeOverThreshold_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_cut_timeOverThreshold_max->append(Scale_cut_timeOverThreshold_max);
+	Scale_cut_timeOverThreshold_max.set_hexpand(true);
+	Scale_cut_timeOverThreshold_max.set_draw_value();
+	Scale_cut_timeOverThreshold_max.set_digits(0);
+	Adjustment_cut_timeOverThreshold_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_timeOverThreshold_max->get_value();
+				this->cut_timeOverThreshold_max = val;
 			});
 	auto Separator3 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator3);	
-	// Scale_timeMax_min
+	// Scale_cut_timeMax_min
 	auto Label4 = Gtk::make_managed<Gtk::Label>();
 	Label4->set_markup("<b> timeMax </b>");
         VBox_settings->append(*Label4);
-	VBox_settings->append(*HBox_Scale_timeMax_min);
-        HBox_Scale_timeMax_min->set_margin_start(10);
-        HBox_Scale_timeMax_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
-        HBox_Scale_timeMax_min->append(Scale_timeMax_min);
-	Scale_timeMax_min.set_hexpand(true);
-	Scale_timeMax_min.set_draw_value();
-	Scale_timeMax_min.set_digits(0);
-	Adjustment_timeMax_min->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_timeMax_min->get_value();
-				this->timeMax_min = val;
+	VBox_settings->append(*HBox_Scale_cut_timeMax_min);
+        HBox_Scale_cut_timeMax_min->set_margin_start(10);
+        HBox_Scale_cut_timeMax_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+        HBox_Scale_cut_timeMax_min->append(Scale_cut_timeMax_min);
+	Scale_cut_timeMax_min.set_hexpand(true);
+	Scale_cut_timeMax_min.set_draw_value();
+	Scale_cut_timeMax_min.set_digits(0);
+	Adjustment_cut_timeMax_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_timeMax_min->get_value();
+				this->cut_timeMax_min = val;
 			});
-	// Scale_timeMax_max
-	VBox_settings->append(*HBox_Scale_timeMax_max);
-        HBox_Scale_timeMax_max->set_margin_start(10);
-        HBox_Scale_timeMax_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
-        HBox_Scale_timeMax_max->append(Scale_timeMax_max);
-	Scale_timeMax_max.set_hexpand(true);
-	Scale_timeMax_max.set_draw_value();
-	Scale_timeMax_max.set_digits(0);
-	Adjustment_timeMax_max->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_timeMax_max->get_value();
-				this->timeMax_max = val;
+	// Scale_cut_timeMax_max
+	VBox_settings->append(*HBox_Scale_cut_timeMax_max);
+        HBox_Scale_cut_timeMax_max->set_margin_start(10);
+        HBox_Scale_cut_timeMax_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+        HBox_Scale_cut_timeMax_max->append(Scale_cut_timeMax_max);
+	Scale_cut_timeMax_max.set_hexpand(true);
+	Scale_cut_timeMax_max.set_draw_value();
+	Scale_cut_timeMax_max.set_digits(0);
+	Adjustment_cut_timeMax_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_cut_timeMax_max->get_value();
+				this->cut_timeMax_max = val;
 			});
 	// A lot of CheckButton(s)
 	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
@@ -414,14 +449,16 @@ void Window::on_button_settings_clicked(){
 	VBox_settings->append(*HBox_CheckButtons);
 	HBox_CheckButtons->set_margin_start(10);
 	HBox_CheckButtons->set_margin_bottom(10);
-	HBox_CheckButtons->append(*Gtk::make_managed<Gtk::Label>("Shape recognition"));
-	HBox_CheckButtons->append(CheckButton_shape_recognition);
-	CheckButton_shape_recognition.signal_toggled().connect([this] () -> void {
-				flag_shape_recognition = this->CheckButton_shape_recognition.get_active();
-				if (flag_shape_recognition) {
-					printf("Flag shape recognition is activated\n");
+	HBox_CheckButtons->append(*Gtk::make_managed<Gtk::Label>("Mask wires"));
+	HBox_CheckButtons->append(CheckButton_mask_wires);
+	CheckButton_mask_wires.signal_toggled().connect([this] () -> void {
+				flag_mask_wires = this->CheckButton_mask_wires.get_active();
+				if (flag_mask_wires) {
+					printf("Flag_mask_wires is activated\n");
+					DrawingArea_event.queue_draw();
 				} else {
-					printf("Flag shape recognition is desactivated\n");
+					printf("Flag_mask_wires is desactivated\n");
+					DrawingArea_event.queue_draw();
 				}
 			});
 	Window_settings->show();
@@ -647,6 +684,7 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 		case 0 :
 			page_name = "Event Viewer";
 			DrawingArea_event.queue_draw();
+			drawWaveforms();
 			break;
 		case 1 :
 			page_name = "Waveforms Per Layer";
@@ -712,11 +750,14 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	if (ListOfAdc.size() > 0) {
 		zmin = ListOfAdc[0];
 		zmax = zmin;
+		printf("Not empty !\n");
 	}
+	else {printf("Enpty\n");}
 	for (double adc : ListOfAdc) {
 		zmin = (zmin < adc) ? zmin : adc;
 		zmax = (zmax > adc) ? zmax : adc;	
 	}
+	//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
 	fColorPalette Palette(5, 1);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
@@ -795,14 +836,32 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 						cr->stroke();
 					}
 					// show activated wires
-					double adcMax = wire->pulse.get_adcMax();
+					double adcMax            = wire->pulse.get_adcMax();
+					printf("0) adcMax : %lf\n", adcMax);
 					if (adcMax > 0) {
+						bool flag = true;
+						double adcOffset         = wire->pulse.get_adcOffset();
+						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
+						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+						double timeMax           = wire->pulse.get_timeMax();
+						if (flag_mask_wires) {
+							flag = (adcMax >= adcCut) &&
+								(adcOffset >= cut_adcOffset_min) && 
+								(adcOffset <= cut_adcOffset_max) && 
+								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+								(timeOverThreshold >= cut_timeOverThreshold_min) && 
+								(timeOverThreshold <= cut_timeOverThreshold_max) &&
+								(timeMax >= cut_timeMax_min) &&
+								(timeMax <= cut_timeMax_max); 
+						}
+						if (!flag) continue;
 						if (zmin != zmax) {
 							int ncolors = Palette.get_ncolors();
 							double slope = (1.0*(ncolors-1))/(zmax-zmin);
 							int color = floor(slope*(adcMax-zmin) + 0.0);
-							//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
-							//printf("color : %d\n", color);
+							printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
+							printf("color : %d\n", color);
 							fColor rgb = Palette.get_color(color);
 							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
 						} else {
@@ -972,21 +1031,26 @@ bool Window::dataEventAction() {
 				short value = hipo_banklist[1].getInt(binName.c_str(), col);
 				samples.push_back(value);
 			}
-			bool flag_recognized = true;
-			if (flag_shape_recognition) {
-				flag_recognized = is_oscillating(samples);
-			}
 			// fill histograms
 			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
                         double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
                         double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
+			printf("2) adcMax : %lf\n", adcMax);
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
                         //double integral = this->hipo_banklist[0].getInt("integral", col);
-                        
-			if ((leadingEdgeTime >= leadingEdgeTime_min) && (leadingEdgeTime <= leadingEdgeTime_max) && (adcMax >= adcCut) && (timeOverThreshold >= timeOverThreshold_min) && (timeOverThreshold <= timeOverThreshold_max) && (timeMax >= timeMax_min) && (timeMax <= timeMax_max) && flag_recognized) { 
-					
+			bool flag = (adcMax >= adcCut) &&
+				(adcOffset >= cut_adcOffset_min) && 
+				(adcOffset <= cut_adcOffset_max) && 
+				(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+				(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+				(timeOverThreshold >= cut_timeOverThreshold_min) && 
+				(timeOverThreshold <= cut_timeOverThreshold_max) &&
+				(timeMax >= cut_timeMax_min) &&
+				(timeMax <= cut_timeMax_max);
+                       	//bool flag = (adcMax >= adcCut) && (adcOffset >= cut_adcOffset_min) && (adcOffset <= cut_adcOffset_max) && (leadingEdgeTime >= cut_leadingEdgeTime_min) && (leadingEdgeTime <= cut_leadingEdgeTime_max) && (timeOverThreshold >= cut_timeOverThreshold_min) && (timeOverThreshold <= cut_timeOverThreshold_max) && (timeMax >= cut_timeMax_min) && (timeMax <= cut_timeMax_max); 
+			if (flag) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
 					hist1d_timeOverThreshold.fill(timeOverThreshold);
@@ -1020,6 +1084,7 @@ bool Window::dataEventAction() {
 				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
 				double adcOffset = this->hipo_banklist[0].getInt("ped", col);
 				double integral = this->hipo_banklist[0].getInt("integral", col);
+				printf("3) adcMax : %lf\n", adcMax);
 				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
 				wire->pulse.set_adcMax(adcMax);
 				wire->pulse.set_adcOffset(adcOffset);
@@ -1113,7 +1178,7 @@ void Window::drawWaveformsPerLayer() {
 		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
 			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
 				AhdcLayer* layer = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l);
-				std::vector<double> sum_samples(50, 0.0); // sum of signals per layer
+				std::vector<double> sum_samples(NumberOfBins, 0.0); // sum of signals per layer
 				double ymin = 0, ymax = 0;
 				int nhits = 0;
 				for (int w = 0; w < layer->GetNumberOfWires(); w++){
