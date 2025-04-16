@@ -72,17 +72,19 @@ protected :
 	const int binDelayCFD;
 	const double fractionCFD;
 
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax; 
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_leadingEdgeTime_min, Adjustment_leadingEdgeTime_max;
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeOverThreshold_min, Adjustment_timeOverThreshold_max;
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_timeMax_min, Adjustment_timeMax_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_adcOffset_min, Adjustment_cut_adcOffset_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_leadingEdgeTime_min, Adjustment_cut_leadingEdgeTime_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_timeOverThreshold_min, Adjustment_cut_timeOverThreshold_max;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_timeMax_min, Adjustment_cut_timeMax_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_zpos; 
 	Gtk::Scale Scale_adcMax;
-	Gtk::Scale Scale_leadingEdgeTime_min, Scale_leadingEdgeTime_max;
-	Gtk::Scale Scale_timeOverThreshold_min, Scale_timeOverThreshold_max;
-	Gtk::Scale Scale_timeMax_min, Scale_timeMax_max;
+	Gtk::Scale Scale_cut_adcOffset_min, Scale_cut_adcOffset_max;
+	Gtk::Scale Scale_cut_leadingEdgeTime_min, Scale_cut_leadingEdgeTime_max;
+	Gtk::Scale Scale_cut_timeOverThreshold_min, Scale_cut_timeOverThreshold_max;
+	Gtk::Scale Scale_cut_timeMax_min, Scale_cut_timeMax_max;
 	Gtk::Scale Scale_zpos;
-	Gtk::CheckButton CheckButton_shape_recognition;
+	Gtk::CheckButton CheckButton_mask_wires; // only show or not wires that satisfy all cuts
 	Gtk::CheckButton CheckButton_active_layer51;
 	Gtk::CheckButton CheckButton_active_layer42;
 		
@@ -99,13 +101,15 @@ protected :
 	std::vector<double> ListOfAdc;		///< List of adcMax
 	// Define variable for cut
 	double adcCut = 0;
-	double leadingEdgeTime_min = 0;
-	double leadingEdgeTime_max = 49;
-	double timeOverThreshold_min = 0;
-	double timeOverThreshold_max = 49;
-	double timeMax_min = 0;
-	double timeMax_max = 49;
-	bool flag_shape_recognition = false;
+	double cut_adcOffset_min = 0;
+	double cut_adcOffset_max = 4095;
+	double cut_leadingEdgeTime_min = 0;
+	double cut_leadingEdgeTime_max = 19;
+	double cut_timeOverThreshold_min = 0;
+	double cut_timeOverThreshold_max = 19;
+	double cut_timeMax_min = 0;
+	double cut_timeMax_max = 19;
+	bool flag_mask_wires = false;
 	double zpos = 0.0; ///< define in which z we should look at for AHDC (x,y) view
 
 	// Histograms
