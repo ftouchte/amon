@@ -750,9 +750,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	if (ListOfAdc.size() > 0) {
 		zmin = ListOfAdc[0];
 		zmax = zmin;
-		printf("Not empty !\n");
 	}
-	else {printf("Enpty\n");}
 	for (double adc : ListOfAdc) {
 		zmin = (zmin < adc) ? zmin : adc;
 		zmax = (zmax > adc) ? zmax : adc;	
@@ -837,7 +835,6 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					}
 					// show activated wires
 					double adcMax            = wire->pulse.get_adcMax();
-					printf("0) adcMax : %lf\n", adcMax);
 					if (adcMax > 0) {
 						bool flag = true;
 						double adcOffset         = wire->pulse.get_adcOffset();
@@ -860,8 +857,8 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 							int ncolors = Palette.get_ncolors();
 							double slope = (1.0*(ncolors-1))/(zmax-zmin);
 							int color = floor(slope*(adcMax-zmin) + 0.0);
-							printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
-							printf("color : %d\n", color);
+							//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
+							//printf("color : %d\n", color);
 							fColor rgb = Palette.get_color(color);
 							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
 						} else {
@@ -1037,7 +1034,6 @@ bool Window::dataEventAction() {
                         double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
                         double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
-			printf("2) adcMax : %lf\n", adcMax);
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
                         //double integral = this->hipo_banklist[0].getInt("integral", col);
 			bool flag = (adcMax >= adcCut) &&
@@ -1084,7 +1080,6 @@ bool Window::dataEventAction() {
 				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
 				double adcOffset = this->hipo_banklist[0].getInt("ped", col);
 				double integral = this->hipo_banklist[0].getInt("integral", col);
-				printf("3) adcMax : %lf\n", adcMax);
 				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
 				wire->pulse.set_adcMax(adcMax);
 				wire->pulse.set_adcOffset(adcOffset);
@@ -1151,8 +1146,26 @@ void Window::drawWaveforms() {
 			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
-					if (wire->pulse.get_adcMax() > 0) {
+					double adcMax            = wire->pulse.get_adcMax();
+					double adcOffset         = wire->pulse.get_adcOffset();
+					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
+					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+					double timeMax           = wire->pulse.get_timeMax();
+					bool flag = true;
+					if (adcMax > 0) {
 						if (num >= 10) {break;}
+						if (flag_mask_wires) {
+							flag = (adcMax >= adcCut) &&
+								(adcOffset >= cut_adcOffset_min) &&
+								(adcOffset <= cut_adcOffset_max) &&
+								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+								(timeOverThreshold >= cut_timeOverThreshold_min) &&
+								(timeOverThreshold <= cut_timeOverThreshold_max) &&
+								(timeMax >= cut_timeMax_min) &&
+								(timeMax <= cut_timeMax_max);
+							}
+						if (!flag) continue;
 						std::vector<double> samples = wire->pulse.get_samples();
 						// 0 or 1
 						col = (num % 2) + 1;
@@ -1183,7 +1196,25 @@ void Window::drawWaveformsPerLayer() {
 				int nhits = 0;
 				for (int w = 0; w < layer->GetNumberOfWires(); w++){
 					AhdcWire* wire = layer->GetWire(w);
-					if (wire->pulse.get_adcMax() > 0) {
+					double adcMax            = wire->pulse.get_adcMax();
+					double adcOffset         = wire->pulse.get_adcOffset();
+					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
+					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+					double timeMax           = wire->pulse.get_timeMax();
+					bool flag = true;
+					if (adcMax > 0) {
+						if (flag_mask_wires) {
+							flag = (adcMax >= adcCut) &&
+								(adcOffset >= cut_adcOffset_min) &&
+								(adcOffset <= cut_adcOffset_max) &&
+								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+								(timeOverThreshold >= cut_timeOverThreshold_min) &&
+								(timeOverThreshold <= cut_timeOverThreshold_max) &&
+								(timeMax >= cut_timeMax_min) &&
+								(timeMax <= cut_timeMax_max);
+							}
+						if (!flag) continue;
 						nhits++;
 						std::vector<double> samples = wire->pulse.get_samples();
 						for (int i = 0; i < NumberOfBins; i++) {
@@ -1225,7 +1256,25 @@ void Window::drawWaveformsPerLayer() {
 					int nth = 0;
 					for (int w = 0; w < layer->GetNumberOfWires(); w++){
 						AhdcWire* wire = layer->GetWire(w);
-						if (wire->pulse.get_adcMax() > 0) {
+						double adcMax            = wire->pulse.get_adcMax();
+						double adcOffset         = wire->pulse.get_adcOffset();
+						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
+						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+						double timeMax           = wire->pulse.get_timeMax();
+						bool flag = true;
+						if (adcMax > 0) {
+							if (flag_mask_wires) {
+								flag = (adcMax >= adcCut) &&
+									(adcOffset >= cut_adcOffset_min) &&
+									(adcOffset <= cut_adcOffset_max) &&
+									(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+									(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+									(timeOverThreshold >= cut_timeOverThreshold_min) &&
+									(timeOverThreshold <= cut_timeOverThreshold_max) &&
+									(timeMax >= cut_timeMax_min) &&
+									(timeMax <= cut_timeMax_max);
+								}
+							if (!flag) continue;
 							std::vector<double> samples = wire->pulse.get_samples();
 							double r1 = 0.0, g1 = 0.0, b1 = 1.0;
 							double r2 = 0.0, g2 = 1.0, b2 = 0.0;
