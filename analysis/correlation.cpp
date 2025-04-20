@@ -95,7 +95,8 @@ int main(int argc, char const *argv[]){
 	// loop over events
 	while( reader.next(banklist)){
 		//printf(" ======= EVENT %ld =========\n", nEvent);
-		if (nEvent >= 20000) { break;} // process only 20k events
+		//if (nEvent >= 20000) { break;} // process only 20k events
+		if (nEvent % 10000 == 0) { printf("Start event %ld ... \n", nEvent);}
 		for(int col = 0; col < banklist[0].getRows(); col++){ // loop over columns of the bankname
 			int layer   = banklist[0].getInt("layer", col);
 			int wire    = banklist[0].getInt("component", col);
