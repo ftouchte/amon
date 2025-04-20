@@ -77,7 +77,8 @@ Window::Window() :
         hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 1.0*NumberOfBins),
         hist1d_timeMax("timeMax", 100, 0.0, 1.0*NumberOfBins),
 	hist1d_adcOffset("adcOffset (s1+s2+s3+s4+s5)/5", 100, 0.0, 1000),
-        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 1.0*NumberOfBins)
+        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 1.0*NumberOfBins),
+        hist2d_occupancy("occupancy", 99, 1.0, 100.0, 8, 1.0, 9.0)
 {
 	// Data
 	ahdc = new AhdcDetector();
@@ -131,6 +132,11 @@ Window::Window() :
 	hist1d_adcOffset.set_xtitle("adc");
         hist1d_constantFractionTime.set_xtitle("bin");
 	// page 3
+	Book.append_page(Grid_occupancy, "Occupancy");
+	Grid_occupancy.set_expand(true);
+	Grid_occupancy.set_column_homogeneous(true);
+	Grid_occupancy.set_row_homogeneous(true);
+	// page 4
 	Book.append_page(HBox_3Dview, "3D view");
 	HBox_3Dview.append(VBox_3Dview_settings);
 	//VBox_3Dview_settings.set_size_request(300,-1);
@@ -651,15 +657,9 @@ void Window::on_button_reset_clicked(){
 	hipo_nEventMax = 1;
 	clearAhdcData();
 	ListOfAdc.clear();
-	// Clear drawing areas
+	// Reset eventViewer waveforms
 	DrawingArea_event.queue_draw();
-	Grid_waveforms.remove_column(2);
-	Grid_waveforms.remove_column(1);
 	drawWaveforms();
-	Grid_waveformsPerLayer.remove_column(4);
-	Grid_waveformsPerLayer.remove_column(3);
-	Grid_waveformsPerLayer.remove_column(2);
-	Grid_waveformsPerLayer.remove_column(1);
 	drawWaveformsPerLayer();
 	// Reset histograms
 	hist1d_adcMax.reset();
@@ -668,11 +668,10 @@ void Window::on_button_reset_clicked(){
 	hist1d_timeMax.reset();
 	hist1d_adcOffset.reset();
         hist1d_constantFractionTime.reset();
-	// Clear histograms
-	Grid_histograms.remove_column(3);
-	Grid_histograms.remove_column(2);
-	Grid_histograms.remove_column(1);
+	hist2d_occupancy.reset();
 	drawHistograms();
+	// Reset occupancy
+	drawOccupancy();
 	// Update Label
 	Label_info.set_text("No data"); Label_info.queue_draw();
 	Label_header.set_text("No file selected"); Label_header.queue_draw();
@@ -695,6 +694,10 @@ void Window::on_book_switch_page(Gtk::Widget * page, guint page_num) {
 			drawHistograms();
 			break;
 		case 3 :
+			page_name = "Occupancy";
+			drawOccupancy();
+			break;
+		case 4 :
 			page_name = "3D view";
 			break;
 		default :
@@ -1013,6 +1016,7 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 bool Window::dataEventAction() {
 	// hipo4
 	if (hipo_reader.next(hipo_banklist)) {
+		hipo_nEvent++;
 		// loop over hits
 		clearAhdcData();
 		ListOfAdc.clear();
@@ -1020,8 +1024,8 @@ bool Window::dataEventAction() {
 		nWF = 0;
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			//int sector = hipo_banklist[1].getInt("sector", col);	
-			//int layer = hipo_banklist[1].getInt("layer", col);
-			//int component = hipo_banklist[1].getInt("component", col);
+			int layer = hipo_banklist[1].getInt("layer", col);
+			int component = hipo_banklist[1].getInt("component", col);
 			std::vector<double> samples;
 			for (int bin=0; bin < NumberOfBins; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
@@ -1053,6 +1057,7 @@ bool Window::dataEventAction() {
 					hist1d_timeMax.fill(timeMax);
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
+					hist2d_occupancy.fill(component, layer2number(layer));
 					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
 					//doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
 			}
@@ -1090,22 +1095,10 @@ bool Window::dataEventAction() {
 				wire->pulse.set_constantFractionTime(constantFractionTime);
 				wire->pulse.set_binOffset(binOffset);
 				wire->pulse.set_samples(samples);
+				wire->occ += 1;
 				ListOfAdc.push_back(adcMax);
 				nWF++;
 			}
-		}
-
-		// Clean Grid_waveforms
-		if (hipo_nEvent != 0) {
-			Grid_waveforms.remove_column(2);
-			Grid_waveforms.remove_column(1);
-			Grid_waveformsPerLayer.remove_column(4);
-			Grid_waveformsPerLayer.remove_column(3);
-			Grid_waveformsPerLayer.remove_column(2);
-			Grid_waveformsPerLayer.remove_column(1);
-			Grid_histograms.remove_column(3);
-			Grid_histograms.remove_column(2);
-			Grid_histograms.remove_column(1);
 		}
 		// Update drawings
 		int tab_number = Book.get_current_page();
@@ -1119,21 +1112,21 @@ bool Window::dataEventAction() {
 		else if (tab_number == 2) {
 			drawHistograms();
 		}
+		else if (tab_number == 3) {
+			drawOccupancy();
+		}
 		else {
 			// do nothing
 		}
-		/*DrawingArea_event.queue_draw();
-		drawWaveforms();
-		drawWaveformsPerLayer();
-		drawHistograms();*/
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*(hipo_nEvent+1)/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
-		hipo_nEvent++;
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
 		return true;
 	}
 	else {return false;}
 }
 
 void Window::drawWaveforms() {
+	Grid_waveforms.remove_column(2);
+        Grid_waveforms.remove_column(1);
 	int num = 0;
 	int row = 0;
 	int col = 0;
@@ -1187,6 +1180,10 @@ void Window::drawWaveforms() {
 }
 
 void Window::drawWaveformsPerLayer() {
+	Grid_waveformsPerLayer.remove_column(4);
+	Grid_waveformsPerLayer.remove_column(3);
+	Grid_waveformsPerLayer.remove_column(2);
+	Grid_waveformsPerLayer.remove_column(1);
 	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
 		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
 			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
@@ -1368,6 +1365,9 @@ void Window::drawWaveformsPerLayer() {
 }
 
 void Window::drawHistograms() {
+	Grid_histograms.remove_column(3);
+	Grid_histograms.remove_column(2);
+	Grid_histograms.remove_column(1);
 	// area 1 : hist1d_adcMax
 	auto button1 = Gtk::make_managed<Gtk::Button>();
 	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
@@ -1579,10 +1579,38 @@ void Window::clearAhdcData() {
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
 					wire->pulse.reset();
+					if (is_reset) wire->occ = 0;
 				}
 			}
 		}
 	}
+}
+
+void Window::getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & MAX_OCC) {
+	AhdcWire* wire0 = ahdc->GetSector(0)->GetSuperLayer(0)->GetLayer(0)->GetWire(0);
+	double adc_min = wire0->pulse.get_adcMax();
+	double adc_max = adc_min;
+	int occ_min = wire0->occ;
+	int occ_max = occ_min;
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					double adc = wire->pulse.get_adcMax();
+					double occ = wire->occ;
+					if (adc < adc_min) adc_min = adc;
+					if (adc > adc_max) adc_max = adc;
+					if (occ < occ_min) occ_min = occ;
+					if (occ > occ_max) occ_max = occ;
+				}
+			}
+		}
+	}
+	MIN_ADC = adc_min;
+	MAX_ADC = adc_max;
+	MIN_OCC = occ_min;
+	MAX_OCC = occ_max;
 }
 
 bool Window::is_oscillating(std::vector<double> samples) {
@@ -1637,6 +1665,180 @@ void Window::on_zpos_value_changed() {
 	}
 	//printf("AHDC is now view in the plane z = %lf\n", zpos);
 	DrawingArea_event.queue_draw();
+	drawOccupancy();
+}
+
+void Window::drawOccupancy() {
+	Grid_occupancy.remove_column(2);
+	Grid_occupancy.remove_column(1);
+	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
+	area1->set_draw_func(sigc::mem_fun(*this, &Window::on_draw_occupancy) );
+	Grid_occupancy.attach(*area1, 1, 1, 1, 2);
+	// hsitogram 2D
+	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
+	auto draw_function2 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+		hist2d_occupancy.set_xtitle("wire");
+		hist2d_occupancy.set_ytitle("layer");
+		this->hist2d_occupancy.draw_with_cairo(cr, width, height);
+	};
+	area2->set_draw_func(draw_function2);
+	Grid_occupancy.attach(*area2, 2, 1, 1, 1); // left, top, width, height (width and height are used to defined the number during a fusion)
+}
+
+void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+	fCanvas canvas(width, height, -80, 80, -80, 80);
+	int window_size = std::min(width,height);
+	canvas.set_top_margin(0.05*window_size);
+	canvas.set_bottom_margin(0.05*window_size);
+	canvas.set_left_margin(0.05*window_size);
+	//canvas.set_right_margin(0.05*window_size);
+	canvas.set_right_margin(0.15*window_size);
+	canvas.set_frame_line_width(0.005);
+	canvas.set_stick_width(0.002);
+	canvas.set_label_size(0.5);
+	canvas.set_title_size(0.6);
+	canvas.set_x_start(-80);
+	canvas.set_x_end(80);
+	canvas.set_y_start(-80);
+	canvas.set_y_end(80);
+	canvas.define_coord_system(cr);
+	canvas.do_not_draw_secondary_stick();
+	char face_name[50];
+	sprintf(face_name, "(x,y) view in plane z = %.2lf mm", zpos);
+	canvas.draw_title(cr, face_name);
+	canvas.draw_xtitle(cr, "");
+	canvas.draw_ytitle(cr, "");
+	canvas.draw_frame(cr);
+	// x coord to width
+	auto x2w = [canvas] (double x) {
+		return canvas.x2w(x);
+	};
+	// y coord to height
+	auto y2h = [canvas] (double y) {
+		return canvas.y2h(y);
+	};
+
+	int seff = canvas.get_seff();
+	int heff = canvas.get_heff();
+	int weff = canvas.get_weff();
+	double x_start = canvas.get_x_start();
+	double x_end = canvas.get_x_end();
+	double y_start = canvas.get_y_start();
+	double y_end = canvas.get_y_end();
+	
+	// Draw color palette (zbar)
+	double adc_min, adc_max;
+	int i_occ_min, i_occ_max;
+	this->getStats(adc_min, adc_max, i_occ_min, i_occ_max);
+	double occ_min = (100.0*i_occ_min)/hipo_nEvent; // expressed in %
+	double occ_max = (100.0*i_occ_max)/hipo_nEvent;
+	//printf("adc_min : %lf, adc_max : %lf, occ_min : %d, occ_max : %d\n", adc_min, adc_max, occ_min, occ_max);
+	fColorPalette Palette(5, 1);
+	cr->set_source_rgb(0.0, 0.0, 0.0);
+	cr->set_line_width(0.005*seff);
+	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
+	cr->line_to(x2w(80) + 0.1*window_size, y2h(-80));
+	cr->line_to(x2w(80) + 0.1*window_size, y2h(80));
+	cr->stroke();
+	for (int i = 0; i < Palette.get_ncolors(); i++) {
+		int ncolors = Palette.get_ncolors();
+		fColor rgb = Palette.get_color(i);
+		double slope = 160.0/(ncolors); // == 80 - (-80)
+		double z = slope*(i-0.0) - 80.0;
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->move_to(x2w(80) + 0.01*window_size, y2h(z));
+		cr->line_to(x2w(80) +  0.1*window_size, y2h(z));
+		cr->line_to(x2w(80) +  0.1*window_size, y2h(z+1.0*slope));
+		cr->line_to(x2w(80) + 0.01*window_size, y2h(z+1.0*slope));
+		cr->close_path();
+		cr->fill();
+	}
+	{ // Draw occ_max
+		char buffer[50];
+		sprintf(buffer, "%.0lf %%", occ_max);
+		fColor rgb = Palette.get_color(Palette.get_ncolors()-1);
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		cr->move_to(x2w(80) + 0.05*window_size - 0.5*te.width, y2h(80) - 0.1*canvas.get_top_margin());
+		cr->show_text(buffer);
+	}
+	// Draw occ_min
+	{ 
+		char buffer[50];
+		sprintf(buffer, "%.0lf %%", occ_min);
+		fColor rgb = Palette.get_color(0);
+		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents(buffer, te);
+		cr->move_to(x2w(80) + 0.05*window_size - 0.5*te.width, y2h(-80) + 0.1*canvas.get_top_margin() + te.height);
+		cr->show_text(buffer);
+	}	
+	// Draw AHDC geometry	
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+					// max radius == 68 cm
+					// the distance between to wires of the last layer (radius == 68 cm) is
+					// d = | exp((n+1)*theta) - exp(n*theta) | * radius
+					// theta == 360°/99; 99 is the number of wires of this layer
+					// so d = radius*sqrt( (cos(theta) -1)^2 + sin(theta)^2) 
+					// so d = 4.315
+					// marker radius should be < d/2, we take 2.0
+					double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
+					cr->set_line_width(0.002*seff);
+					cr->set_source_rgba(0.0, 0.0, 0.0,0.5);
+					// if the previous reference point of the cairo context is not in the curve (when using cr->arc(...))
+					// a straight line is added from the previous point to the place where the arc is started
+					// solution : move_to the start place before setting the path
+					//printf("%lf %lf %lf\n", wire->x, wire->y, wire->z);
+					cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y)); // correspond to angle == 0 
+					cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
+					cr->stroke();
+					//if ((wire->x == 0) && (wire->y < 0)) {
+					if (w == 0) {
+						// these wires have a component id == 1 (it is the start of the numerotation)
+						cr->set_line_width(0.002*seff);
+						cr->set_source_rgba(0.0, 1.0, 0.0, 1.0);
+						cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y));
+						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
+						cr->stroke();
+					}
+					// show activated wires
+					double occ = wire->occ;
+					if (occ > 0) {
+						if (occ_min != occ_max) {
+							int ncolors = Palette.get_ncolors();
+							double occ_percent = (100.0*occ)/hipo_nEvent;
+							double slope = (1.0*(ncolors-1))/(occ_max - 0.0);
+							int color = floor(slope*(occ_percent-0.0) + 0.0);
+							//printf("occ_min : %.0lf, occ_max : %.0lf\n", occ_min, occ_max);
+							//printf("color : %d\n", color);
+							fColor rgb = Palette.get_color(color);
+							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+						} else {
+							fColor rgb = Palette.get_color(0);
+							cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
+						}
+						double marker_size = std::min(2.0*weff/(x_end-x_start), 2.0*heff/(y_end-y_start));
+						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
+						cr->fill();
+					}
+				}
+			}
+		}
+	}
+	// TEST
+	/*TCanvas* canvas1 = new TCanvas("all","all hist 2d",1800, 990);
+	hist2d_occupancy.get_root_histo()->Draw("COLZ");
+	canvas1->Print("../output/test_fh2d.pdf");
+	delete canvas1;	*/
 }
 
 void Window::on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
@@ -1651,6 +1853,34 @@ void Window::on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, 
 	Frame::test1(angle_alpha, angle_beta, angle_gamma, cr, width, height);	
 }
 
+int Window::layer2number(int digit) {
+	if      (digit == 11) {
+		return 1;
+	} 
+	else if (digit == 21) {
+		return 2;
+	} 
+	else if (digit == 22) {
+		return 3;
+	} 
+	else if (digit == 31) {
+		return 4;
+	} 
+	else if (digit == 32) {
+		return 5;
+	} 
+	else if (digit == 41) {
+		return 6;
+	} 
+	else if (digit == 42) {
+		return 7;
+	} 
+	else if (digit == 51) {
+		return 8;
+	} else {
+		return -1; // not a layer
+	}
+}
 
 /** Main function */
 int main (int argc, char * argv[]) {

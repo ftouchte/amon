@@ -46,6 +46,7 @@ AhdcWire & AhdcWire::operator=(const AhdcWire & obj) {
 		x = obj.x;
 		y = obj.y;
 		z = obj.z;
+		occ = obj.occ;
 	}
 	return *this;
 }
