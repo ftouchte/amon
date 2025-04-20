@@ -17,6 +17,7 @@
 #include "AhdcDetector.h"
 #include "AhdcExtractor.h"
 #include "fH1D.h"
+#include "fH2D.h"
 
 class Window : public Gtk::Window {
 protected :
@@ -37,6 +38,7 @@ protected :
 	Gtk::DrawingArea DrawingArea_test;
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
+	Gtk::Grid Grid_occupancy;
 	
 	Gtk::Box HBox_3Dview;
 	Gtk::Box VBox_3Dview_settings;
@@ -121,6 +123,7 @@ protected :
 	fH1D hist1d_timeMax;
 	fH1D hist1d_adcOffset;
 	fH1D hist1d_constantFractionTime;
+	fH2D hist2d_occupancy;
 
 public :
 	Window();
@@ -130,11 +133,12 @@ public :
 	void drawWaveforms();
 	void drawWaveformsPerLayer();
 	void drawHistograms();
+	void drawOccupancy();
 	AhdcWire* getNearestAhdcWire(double x, double y, int & _layer, int & _component);
 	void clearAhdcData();
 	int getNumberOfWaveforms();
 	bool is_oscillating(std::vector<double> samples);
-	
+	void getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & MAX_OCC);
 	// Signals
 	void on_button_settings_clicked();
 	void on_button_prev_clicked();
@@ -146,12 +150,14 @@ public :
 	void on_book_switch_page(Gtk::Widget * _page, guint page_num); // le template est imposé ! page_num == Pages.get_current_page()
 	void on_file_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result, const Glib::RefPtr<Gtk::FileDialog>& dialog); // used in on_button_hipo4_clicked()
 	void on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
+	void on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_mouse_clicked(int n_press, double x, double y);
 	void on_zpos_value_changed();
 	void on_button_zpos_clicked();
 	void cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation);
 	void on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
+	int layer2number(int digit);
 };
 
 #endif

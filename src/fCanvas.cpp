@@ -257,25 +257,25 @@ void fCanvas::set_right_margin(int margin) {
 void fCanvas::set_x_start(double value) { 
 	x_start = value;
 	// update
-	ax = fAxis(x_start, x_end, 10, 0);
+	ax = fAxis(x_start, x_end, 10, 5, 0);
 }
 
 void fCanvas::set_x_end(double value) {
 	x_end = value;
 	// update
-	ax = fAxis(x_start, x_end, 10, 0);
+	ax = fAxis(x_start, x_end, 10, 5, 0);
 }
 
 void fCanvas::set_y_start(double value) { 
 	y_start = value;
 	// update
-	ay = fAxis(y_start, y_end, 10, 0);
+	ay = fAxis(y_start, y_end, 10, 5, 0);
 }
 
 void fCanvas::set_y_end(double value) { 
 	y_end = value;
 	// update
-	ay = fAxis(y_start, y_end, 10, 0);
+	ay = fAxis(y_start, y_end, 10, 5, 0);
 }
 
 void fCanvas::set_x_axis(fAxis _ax) {
