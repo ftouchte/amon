@@ -25,7 +25,7 @@ namespace futils {
  * its two end points : top and bot (bottom)
  */
 class AhdcWire {
-//class AhdcWire {
+	int id;
 public : 
 	Point3D top; ///< center point of the top the wire (z == -150 mm)
 	Point3D bot; ///< center point of the bottom the wire (z == +150 mm)
@@ -33,8 +33,8 @@ public :
 	double z = 0.0, x = 0.0, y = 0.0; ///< x and y must change if z change (when z == 0, x = top.x and y = top.y)
 	int occ = 0; ///< occupancy
 public :
-	AhdcWire(Point3D _top, Point3D _bot);
-	AhdcWire(double x1 = 0, double y1 = 0, double z1 = 0, double x2 = 0, double y2 = 0, double z2 = 0);
+	AhdcWire(int _id = -1, Point3D _top = Point3D(0,0,0), Point3D _bot = Point3D(0,0,0));
+	//AhdcWire(int _id = -1, double x1 = 0, double y1 = 0, double z1 = 0, double x2 = 0, double y2 = 0, double z2 = 0);
 	AhdcWire & operator=(const AhdcWire & obj);
 	void set_z(double _z);
 };
@@ -49,13 +49,13 @@ public :
  * - a stereo angle (those of the wires) 
  */
 class AhdcLayer {
-//class AhdcLayer {
+	int id;
 	int nwires; ///< number of wires
 	double rlayer; ///< radius of this layer
 	double stereoangle; ///< stereo angle of the wires of this layer by comparaison to one of another (super)layer (can be -20° or +20°)
 	AhdcWire * ptrWires = nullptr; ///< list of wires
 public :
-	AhdcLayer(int _nwires = 0, double _rlayer = 0, double _stereoangle = 0);
+	AhdcLayer(int _id = -1, int _nwires = 0, double _rlayer = 0, double _stereoangle = 0);
 	AhdcLayer(const AhdcLayer & obj);
 	AhdcLayer & operator=(const AhdcLayer & obj);
 	~AhdcLayer();
@@ -70,14 +70,14 @@ public :
  * Contains 1 or 2 layer
  */
 class AhdcSuperLayer {
-//class AhdcSuperLayer {
-        int nlayers; ///< number of layer
+        int id;
+	int nlayers; ///< number of layer
 	int nwires;  ///< number of wires, it is the one of each of its layers
 	double rsuperlayer; ///< radius of this superlayer (corresponds to the radius of the 1st layer of this superlayer)
 	int orientation; ///< can be -1 or +1; define the sign of the stereo angle of the wires, its parity
 	AhdcLayer * ptrLayers = nullptr; ///< list of layers
 public:
-	AhdcSuperLayer(int _nlayers = 0, int _nwires = 0, double _rsuperlayer = 0, int _orientation = 0);
+	AhdcSuperLayer(int _id = -1, int _nlayers = 0, int _nwires = 0, double _rsuperlayer = 0, int _orientation = 0);
 	AhdcSuperLayer(const AhdcSuperLayer & obj);
 	AhdcSuperLayer & operator=(const AhdcSuperLayer & obj);
 	~AhdcSuperLayer();

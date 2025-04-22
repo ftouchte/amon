@@ -16,19 +16,20 @@ double futils::toRadian(double degree) { return M_PI*degree/180;}
  * ****************************/
 
 /** Constructor */
-AhdcWire::AhdcWire(Point3D _top, Point3D _bot) : top(_top), bot(_bot) {
+AhdcWire::AhdcWire(int _id, Point3D _top, Point3D _bot) : id(_id), top(_top), bot(_bot) {
 	set_z(0.0);
 }
 
 /** (Default) Constructor */
-AhdcWire::AhdcWire(double x1, double y1, double z1, double x2, double y2, double z2) { 
+/*AhdcWire::AhdcWire(int _id, double x1, double y1, double z1, double x2, double y2, double z2) : id(_id) { 
 	top = Point3D(x1,y1,z1); 
 	bot = Point3D(x2,y2,z2);
 	set_z(0.0);
-}
+}*/
 
 AhdcWire & AhdcWire::operator=(const AhdcWire & obj) {
 	if (this != &obj) {
+		id = obj.id;
 		top = obj.top;
 		bot = obj.bot;
 		x = obj.x;
@@ -58,7 +59,7 @@ void AhdcWire::set_z(double _z) {
  * ****************************/
 
 /** (Default) Constructor */
-AhdcLayer::AhdcLayer(int _nwires, double _rlayer, double _stereoangle) : nwires(_nwires), rlayer(_rlayer), stereoangle(_stereoangle) {
+AhdcLayer::AhdcLayer(int _id, int _nwires, double _rlayer, double _stereoangle) : id(_id), nwires(_nwires), rlayer(_rlayer), stereoangle(_stereoangle) {
 	if (nwires > 0) {
 		ptrWires = new AhdcWire[nwires];
 		for (int i = 0; i < nwires; i++){
@@ -71,13 +72,14 @@ AhdcLayer::AhdcLayer(int _nwires, double _rlayer, double _stereoangle) : nwires(
 			bot.x = -rlayer*sin(alpha*i + futils::toRadian(stereoangle));
 			bot.y = -rlayer*cos(alpha*i + futils::toRadian(stereoangle));
 			bot.z = 300; // sometimes set to +150
-			ptrWires[i] = AhdcWire(top,bot);
+			ptrWires[i] = AhdcWire(i+1,top,bot);
 		}
 	}
 }
 
 /** Copy constructor */
 AhdcLayer::AhdcLayer(const AhdcLayer & obj){
+	id = obj.id;
 	nwires = obj.nwires;
 	rlayer = obj.rlayer;
 	stereoangle = obj.stereoangle;
@@ -91,6 +93,7 @@ AhdcLayer::AhdcLayer(const AhdcLayer & obj){
 /** Affectation operator */
 AhdcLayer & AhdcLayer::operator=(const AhdcLayer & obj){
 	if (this != &obj) {
+		id = obj.id;
 		nwires = obj.nwires;
 		rlayer = obj.rlayer;
 		stereoangle = obj.stereoangle;
@@ -124,18 +127,19 @@ int AhdcLayer::GetNumberOfWires() {return nwires;}
  * ****************************/
 
 /** (Default) Constructor */
-AhdcSuperLayer::AhdcSuperLayer(int _nlayers, int _nwires, double _rsuperlayer, int _orientation) : nlayers(_nlayers), nwires(_nwires), rsuperlayer(_rsuperlayer), orientation(_orientation) {
+AhdcSuperLayer::AhdcSuperLayer(int _id, int _nlayers, int _nwires, double _rsuperlayer, int _orientation) : id(_id), nlayers(_nlayers), nwires(_nwires), rsuperlayer(_rsuperlayer), orientation(_orientation) {
 	if (nlayers > 0) {
 		ptrLayers = new AhdcLayer[nlayers];
 		for (int i = 0; i < nlayers; i++){
 			std::cout << "BUILD LAYER " << i + 1 << std::endl;
-			ptrLayers[i] = AhdcLayer(nwires,rsuperlayer + 4.0*i,orientation*20); // 4.0 is the distance between two layer of a superlayer in AHDC
+			ptrLayers[i] = AhdcLayer(i+1,nwires,rsuperlayer + 4.0*i,orientation*20); // 4.0 is the distance between two layer of a superlayer in AHDC
 		}
 	}
 }
 
 /** Copy constructor */
 AhdcSuperLayer::AhdcSuperLayer(const AhdcSuperLayer & obj){
+	id = obj.id;
 	nlayers = obj.nlayers;
 	nwires = obj.nwires;
 	rsuperlayer = obj.rsuperlayer;
@@ -149,6 +153,7 @@ AhdcSuperLayer::AhdcSuperLayer(const AhdcSuperLayer & obj){
 /** Affectation operator */
 AhdcSuperLayer & AhdcSuperLayer::operator=(const AhdcSuperLayer & obj){
 	if (this != &obj) {
+		id = obj.id;
 		nlayers = obj.nlayers;
 		nwires = obj.nwires;
 		rsuperlayer = obj.rsuperlayer;
@@ -212,7 +217,7 @@ AhdcSector::AhdcSector(int _nsuperlayers) : nsuperlayers(_nsuperlayers) {
 				nwires      = 99;
 				rsuperlayer = 68;
 			}
-			ptrSuperLayers[i] = AhdcSuperLayer(nlayers,nwires,rsuperlayer,orientation);
+			ptrSuperLayers[i] = AhdcSuperLayer(i+1,nlayers,nwires,rsuperlayer,orientation);
 		}
 	}
 }
