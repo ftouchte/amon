@@ -17,7 +17,7 @@ double futils::toRadian(double degree) { return M_PI*degree/180;}
 
 /** Constructor */
 AhdcWire::AhdcWire(int _id, Point3D _top, Point3D _bot) : id(_id), top(_top), bot(_bot) {
-	set_z(0.0);
+	set_z(-150.0);
 }
 
 /** (Default) Constructor */
@@ -49,8 +49,8 @@ void AhdcWire::set_z(double _z) {
 	uy = uy/rho;
 	uz = uz/rho;
 	z = _z;
-	x = top.x + z*ux;
-	y = top.y + z*uy;
+	x = top.x + (z+150)*ux;
+	y = top.y + (z+150)*uy;
 	//printf("%lf %lf %lf\n", x, y, z);
 }
 
@@ -64,14 +64,21 @@ AhdcLayer::AhdcLayer(int _id, int _nwires, double _rlayer, double _stereoangle) 
 		ptrWires = new AhdcWire[nwires];
 		for (int i = 0; i < nwires; i++){
 			// All distance is in mm !
+			// From coatjava
+			// start at phi=0
+                        // in each layer the first wire is the first at phi>=0, i.e.
+                        // 0.5 0 0.5 0 0.5 0.5 0 0.5 for layer 1 to 8
+			// geometry from April 22, 2025
+                        double wirePhiIndex = i + 0.5*(nwires%2) + 0.5*(id-1)*(1-2*(nwires%2)); // here layer id starts at 1
+			//printf("layer id : %d\n", id);
 			Point3D top, bot;
 			double alpha = futils::toRadian(360.0/nwires);
-			top.x = -rlayer*sin(alpha*i); 
-			top.y = -rlayer*cos(alpha*i);
-			top.z = 0; // sometimes set to -150
-			bot.x = -rlayer*sin(alpha*i + futils::toRadian(stereoangle));
-			bot.y = -rlayer*cos(alpha*i + futils::toRadian(stereoangle));
-			bot.z = 300; // sometimes set to +150
+			top.x = rlayer*cos(alpha*wirePhiIndex); 
+			top.y = rlayer*sin(alpha*wirePhiIndex);
+			top.z = -150; // sometimes set to -150
+			bot.x = rlayer*cos(alpha*wirePhiIndex + futils::toRadian(stereoangle));
+			bot.y = rlayer*sin(alpha*wirePhiIndex + futils::toRadian(stereoangle));
+			bot.z = 150; // sometimes set to +150
 			ptrWires[i] = AhdcWire(i+1,top,bot);
 		}
 	}
@@ -132,7 +139,7 @@ AhdcSuperLayer::AhdcSuperLayer(int _id, int _nlayers, int _nwires, double _rsupe
 		ptrLayers = new AhdcLayer[nlayers];
 		for (int i = 0; i < nlayers; i++){
 			std::cout << "BUILD LAYER " << i + 1 << std::endl;
-			ptrLayers[i] = AhdcLayer(i+1,nwires,rsuperlayer + 4.0*i,orientation*20); // 4.0 is the distance between two layer of a superlayer in AHDC
+			ptrLayers[i] = AhdcLayer(i+1,nwires,rsuperlayer + 4.0*i,orientation*(-20)); // 4.0 is the distance between two layer of a given superlayer in AHDC
 		}
 	}
 }
