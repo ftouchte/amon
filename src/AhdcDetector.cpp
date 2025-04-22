@@ -61,17 +61,17 @@ void AhdcWire::set_z(double _z) {
 AhdcLayer::AhdcLayer(int _nwires, double _rlayer, double _stereoangle) : nwires(_nwires), rlayer(_rlayer), stereoangle(_stereoangle) {
 	if (nwires > 0) {
 		ptrWires = new AhdcWire[nwires];
-		for (int id = 0; id < nwires; id++){
+		for (int i = 0; i < nwires; i++){
 			// All distance is in mm !
 			Point3D top, bot;
 			double alpha = futils::toRadian(360.0/nwires);
-			top.x = -rlayer*sin(alpha*id); 
-			top.y = -rlayer*cos(alpha*id);
+			top.x = -rlayer*sin(alpha*i); 
+			top.y = -rlayer*cos(alpha*i);
 			top.z = 0; // sometimes set to -150
-			bot.x = -rlayer*sin(alpha*id + futils::toRadian(stereoangle));
-			bot.y = -rlayer*cos(alpha*id + futils::toRadian(stereoangle));
+			bot.x = -rlayer*sin(alpha*i + futils::toRadian(stereoangle));
+			bot.y = -rlayer*cos(alpha*i + futils::toRadian(stereoangle));
 			bot.z = 300; // sometimes set to +150
-			ptrWires[id] = AhdcWire(top,bot);
+			ptrWires[i] = AhdcWire(top,bot);
 		}
 	}
 }
@@ -82,8 +82,8 @@ AhdcLayer::AhdcLayer(const AhdcLayer & obj){
 	rlayer = obj.rlayer;
 	stereoangle = obj.stereoangle;
 	ptrWires = new AhdcWire[nwires];
-	for (int id = 0; id < nwires; id++){
-		ptrWires[id] = obj.ptrWires[id];
+	for (int i = 0; i < nwires; i++){
+		ptrWires[i] = obj.ptrWires[i];
 	}
 }
 
@@ -97,8 +97,8 @@ AhdcLayer & AhdcLayer::operator=(const AhdcLayer & obj){
 		if (ptrWires != nullptr)
 			delete[] ptrWires;
 		ptrWires = new AhdcWire[nwires];
-		for (int id = 0; id < nwires; id++){
-			ptrWires[id] = obj.ptrWires[id];
+		for (int i = 0; i < nwires; i++){
+			ptrWires[i] = obj.ptrWires[i];
 		}
 	}
 	return *this;
@@ -110,10 +110,10 @@ AhdcLayer::~AhdcLayer(){
 		delete[] ptrWires;
 }
 
-/** Return a pointer to the wire number id 
+/** Return a pointer to the wire number i 
  * @class assuming the numerotation starts at 0 !
  */
-AhdcWire* AhdcLayer::GetWire(int id) {return ptrWires + id;} // arithmétiques des pointeurs !
+AhdcWire* AhdcLayer::GetWire(int i) {return ptrWires + i;} // arithmétiques des pointeurs !
 
 /** Return the number of wires */
 int AhdcLayer::GetNumberOfWires() {return nwires;}
@@ -127,9 +127,9 @@ int AhdcLayer::GetNumberOfWires() {return nwires;}
 AhdcSuperLayer::AhdcSuperLayer(int _nlayers, int _nwires, double _rsuperlayer, int _orientation) : nlayers(_nlayers), nwires(_nwires), rsuperlayer(_rsuperlayer), orientation(_orientation) {
 	if (nlayers > 0) {
 		ptrLayers = new AhdcLayer[nlayers];
-		for (int id = 0; id < nlayers; id++){
-			std::cout << "BUILD LAYER " << id + 1 << std::endl;
-			ptrLayers[id] = AhdcLayer(nwires,rsuperlayer + 4.0*id,orientation*20); // 4.0 is the distance between two layer of a superlayer in AHDC
+		for (int i = 0; i < nlayers; i++){
+			std::cout << "BUILD LAYER " << i + 1 << std::endl;
+			ptrLayers[i] = AhdcLayer(nwires,rsuperlayer + 4.0*i,orientation*20); // 4.0 is the distance between two layer of a superlayer in AHDC
 		}
 	}
 }
@@ -141,8 +141,8 @@ AhdcSuperLayer::AhdcSuperLayer(const AhdcSuperLayer & obj){
 	rsuperlayer = obj.rsuperlayer;
 	orientation = obj.orientation;
 	ptrLayers = new AhdcLayer[nlayers];
-	for (int id = 0; id < nlayers; id++){
-		ptrLayers[id] = obj.ptrLayers[id];
+	for (int i = 0; i < nlayers; i++){
+		ptrLayers[i] = obj.ptrLayers[i];
 	}
 }
 
@@ -156,8 +156,8 @@ AhdcSuperLayer & AhdcSuperLayer::operator=(const AhdcSuperLayer & obj){
 		if (ptrLayers != nullptr) 
 			delete[] ptrLayers;
 		ptrLayers = new AhdcLayer[nlayers];
-		for (int id = 0; id < nlayers; id++){
-			ptrLayers[id] = obj.ptrLayers[id];
+		for (int i = 0; i < nlayers; i++){
+			ptrLayers[i] = obj.ptrLayers[i];
 		}
 	}
 	return *this;
@@ -168,10 +168,10 @@ AhdcSuperLayer::~AhdcSuperLayer(){
 		delete[] ptrLayers;
 }
 
-/** Return a pointer to the layer number id 
+/** Return a pointer to the layer number i 
  * @class assuming the numerotation starts at 0 !
  */
-AhdcLayer* AhdcSuperLayer::GetLayer(int id) {return ptrLayers + id;}
+AhdcLayer* AhdcSuperLayer::GetLayer(int i) {return ptrLayers + i;}
 
 /** Return the number of layer */
 int AhdcSuperLayer::GetNumberOfLayers(){ return nlayers;}
@@ -185,34 +185,34 @@ int AhdcSuperLayer::GetNumberOfLayers(){ return nlayers;}
 AhdcSector::AhdcSector(int _nsuperlayers) : nsuperlayers(_nsuperlayers) {
 	if (nsuperlayers > 0) {
 		ptrSuperLayers = new AhdcSuperLayer[nsuperlayers];
-		for (int id = 0; id < nsuperlayers; id++) {
-			std::cout << "BUILD SUPERLAYER " << id + 1 << std::endl;
+		for (int i = 0; i < nsuperlayers; i++) {
+			std::cout << "BUILD SUPERLAYER " << i + 1 << std::endl;
 			int nlayers; 
 			int nwires;
 			double rsuperlayer;
-			int orientation = pow(-1.0,id);
-			if (id == 0) {
+			int orientation = pow(-1.0,i);
+			if (i == 0) {
 				nlayers     = 1;
 				nwires      = 47;
 				rsuperlayer = 32.0;
-			} else if (id == 1) {
+			} else if (i == 1) {
 				nlayers     = 2;
 				nwires      = 56;
 				rsuperlayer = 38.0;
-			} else if (id == 2) {
+			} else if (i == 2) {
 				nlayers     = 2;
 				nwires      = 72;
 				rsuperlayer = 48;
-			} else if (id == 3) {
+			} else if (i == 3) {
 				nlayers     = 2;
 				nwires      = 87;
 				rsuperlayer = 58.0;
-			} else { // (id == 4)
+			} else { // (i == 4)
 				nlayers     = 1;
 				nwires      = 99;
 				rsuperlayer = 68;
 			}
-			ptrSuperLayers[id] = AhdcSuperLayer(nlayers,nwires,rsuperlayer,orientation);
+			ptrSuperLayers[i] = AhdcSuperLayer(nlayers,nwires,rsuperlayer,orientation);
 		}
 	}
 }
@@ -221,8 +221,8 @@ AhdcSector::AhdcSector(int _nsuperlayers) : nsuperlayers(_nsuperlayers) {
 AhdcSector::AhdcSector(const AhdcSector & obj){
 	nsuperlayers = obj.nsuperlayers;
 	ptrSuperLayers = new AhdcSuperLayer[nsuperlayers];
-	for (int id = 0; id < nsuperlayers; id++){
-		ptrSuperLayers[id] = obj.ptrSuperLayers[id];
+	for (int i = 0; i < nsuperlayers; i++){
+		ptrSuperLayers[i] = obj.ptrSuperLayers[i];
 	}
 }
 
@@ -233,8 +233,8 @@ AhdcSector & AhdcSector::operator=(const AhdcSector & obj){
 		if (ptrSuperLayers != nullptr)
 			delete[] ptrSuperLayers;
 		ptrSuperLayers = new AhdcSuperLayer[nsuperlayers];
-		for (int id = 0; id < nsuperlayers; id++){
-			ptrSuperLayers[id] = obj.ptrSuperLayers[id];
+		for (int i = 0; i < nsuperlayers; i++){
+			ptrSuperLayers[i] = obj.ptrSuperLayers[i];
 		}
 	}
 	return *this;
@@ -246,10 +246,10 @@ AhdcSector::~AhdcSector(){
 		delete[] ptrSuperLayers;
 }
 
-/** Return a pointer to the super layer number id 
+/** Return a pointer to the super layer number i 
  * @class assuming the numerotation starts at 0 !
  */
-AhdcSuperLayer* AhdcSector::GetSuperLayer(int id){return ptrSuperLayers + id;}
+AhdcSuperLayer* AhdcSector::GetSuperLayer(int i){return ptrSuperLayers + i;}
 
 /** Return the number of super layer */
 int AhdcSector::GetNumberOfSuperLayers() {return nsuperlayers;}
@@ -265,9 +265,9 @@ AhdcDetector::AhdcDetector() : nsectors(1) {
 	if (nsectors > 0) {
 		std::cout << "BUILD DETECTOR : AHDC" << std::endl;
 		ptrSectors = new AhdcSector[nsectors];
-		for (int id = 0; id < nsectors; id++) {
-			std::cout << "BUILD SECTOR " << id + 1 << std::endl;
-			ptrSectors[id] = AhdcSector(5);
+		for (int i = 0; i < nsectors; i++) {
+			std::cout << "BUILD SECTOR " << i + 1 << std::endl;
+			ptrSectors[i] = AhdcSector(5);
 		}
 	}
 }
@@ -276,8 +276,8 @@ AhdcDetector::AhdcDetector() : nsectors(1) {
 AhdcDetector::AhdcDetector(const AhdcDetector & obj){
 	nsectors = obj.nsectors;
 	ptrSectors = new AhdcSector[nsectors];
-	for (int id = 0; id < nsectors; id++) {
-		ptrSectors[id] = obj.ptrSectors[id];
+	for (int i = 0; i < nsectors; i++) {
+		ptrSectors[i] = obj.ptrSectors[i];
 	}
 }
 
@@ -288,8 +288,8 @@ AhdcDetector & AhdcDetector::operator=(const AhdcDetector & obj){
 		if (ptrSectors != nullptr)
 			delete[] ptrSectors;
 		ptrSectors = new AhdcSector[nsectors];
-		for (int id = 0; id < nsectors; id++) {
-			ptrSectors[id] = obj.ptrSectors[id];
+		for (int i = 0; i < nsectors; i++) {
+			ptrSectors[i] = obj.ptrSectors[i];
 		}
 	}
 	return *this;
@@ -301,10 +301,10 @@ AhdcDetector::~AhdcDetector() {
 		delete[] ptrSectors;
 }
 
-/** Return a pointer to the super layer number id 
+/** Return a pointer to the super layer number i 
  * @class assuming the numerotation starts at 0 !
  */
-AhdcSector * AhdcDetector::GetSector(int id) {return ptrSectors + id;}
+AhdcSector * AhdcDetector::GetSector(int i) {return ptrSectors + i;}
 
 /** Return the number of super layer */
 int AhdcDetector::GetNumberOfSectors() {return nsectors;}
