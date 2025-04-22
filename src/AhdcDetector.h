@@ -24,7 +24,7 @@ namespace futils {
  * Is typically a segment characterised by 
  * its two end points : top and bot (bottom)
  */
-class AhdcWire : public TGraph {
+class AhdcWire {
 //class AhdcWire {
 public : 
 	Point3D top; ///< center point of the top the wire (z == -150 mm)
@@ -48,7 +48,7 @@ public :
  * - a radius
  * - a stereo angle (those of the wires) 
  */
-class AhdcLayer : public TGraph {
+class AhdcLayer {
 //class AhdcLayer {
 	int nwires; ///< number of wires
 	double rlayer; ///< radius of this layer
@@ -69,7 +69,7 @@ public :
  * Modelise an AHDC super layer
  * Contains 1 or 2 layer
  */
-class AhdcSuperLayer : public TGraph {
+class AhdcSuperLayer {
 //class AhdcSuperLayer {
         int nlayers; ///< number of layer
 	int nwires;  ///< number of wires, it is the one of each of its layers
@@ -91,7 +91,7 @@ public:
  * Modelise an AHDC sector (the unique one)
  * Contains 5 superlayer
  */
-class AhdcSector : public TGraph {
+class AhdcSector {
 //class AhdcSector {
 	int nsuperlayers; ///< number of superlayer 
 	AhdcSuperLayer * ptrSuperLayers = nullptr; ///< list of superlayer
@@ -114,7 +114,7 @@ class AhdcSector : public TGraph {
  * - each superlayer is composed of 1 or 2 layer (1 for sl = 1 et 5, 2 for sl = 2,3,4)
  * - each layer of the same superlayer is composed of a constant number of components (in that case : wires)
  */
-class AhdcDetector : public TGraph {
+class AhdcDetector {
 //class AhdcDetector {
 	int nsectors; ///< number of sector
 	AhdcSector * ptrSectors = nullptr; ///< list of sector
