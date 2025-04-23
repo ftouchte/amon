@@ -137,6 +137,7 @@ Window::Window() :
 	Grid_occupancy.set_expand(true);
 	Grid_occupancy.set_column_homogeneous(true);
 	Grid_occupancy.set_row_homogeneous(true);
+	TextBuffer_occupancy = Gtk::TextBuffer::create();
 	// page 4
 	Book.append_page(HBox_3Dview, "3D view");
 	HBox_3Dview.append(VBox_3Dview_settings);
@@ -816,7 +817,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		zmax = (zmax > adc) ? zmax : adc;	
 	}
 	//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
-	fColorPalette Palette(5, 1);
+	fColorPalette Palette(5, 2);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
 	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
@@ -888,7 +889,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					if (w == 0) {
 						// these wires have a component id == 1 (it is the start of the numerotation)
 						cr->set_line_width(0.002*seff);
-						cr->set_source_rgba(0.0, 1.0, 0.0, 1.0);
+						cr->set_source_rgba(1.0, 0.0, 0.0, 1.0);
 						cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y));
 						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->stroke();
@@ -937,7 +938,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 
 void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
 	cr->save();
-	fColorPalette Palette(5, 1);	
+	fColorPalette Palette(5, 2);	
 	int ncolors = Palette.get_ncolors();
 	fCanvas canvas(width, height, 0.0, 1.0*ncolors, 0.0, 1.0);
 	canvas.define_coord_system(cr);
@@ -1599,21 +1600,71 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		printf("    slot  : %d\n", slot);
 		printf("    chan  : %d\n", channel);
 		printf("    HV_SECTOR : %d\n", channel/64 + 1);
-		// popup window
-		/*auto window = Gtk::make_managed<Gtk::Window>();
-		window->set_title("AHDC pulse");
-		window->set_default_size(1200,800);
-		char buffer[50];
-		sprintf(buffer, "L%d W%d", layer, component);
-		auto area = Gtk::make_managed<Gtk::DrawingArea>();
-		area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-							cairo_plot_waveform(cr, width, height, wire, buffer);
-					      } );
-		window->set_child(*area);
-		window->show();*/
+		int tab_number = Book.get_current_page();
+		if (tab_number == 0) {
+			// popup window
+			auto window = Gtk::make_managed<Gtk::Window>();
+			window->set_title("AHDC pulse");
+			window->set_default_size(1200,800);
+			char buffer[50];
+			sprintf(buffer, "L%d W%d", layer, component);
+			auto area = Gtk::make_managed<Gtk::DrawingArea>();
+			area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+								cairo_plot_waveform(cr, width, height, wire, buffer);
+						      } );
+			window->set_child(*area);
+			window->show();
+		}
 		/*char buffer[100];
 		sprintf(buffer, "../ressources/get_hv %d %d %d", layer/10, layer % 10, component);
 		system(buffer);*/
+		TextBuffer_occupancy->set_text("");
+		auto iter = TextBuffer_occupancy->end();
+		iter = TextBuffer_occupancy->insert(iter, "-----------------------------------\n");
+		iter = TextBuffer_occupancy->insert(iter, "|             Output               |\n");
+		iter = TextBuffer_occupancy->insert(iter, "-----------------------------------\n");
+		iter = TextBuffer_occupancy->insert(iter, "\n");
+		{ // x
+			char buffer[50];
+			sprintf(buffer, "x        :   %lf\n", wire->x);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // y
+			char buffer[50];
+			sprintf(buffer, "y        :   %lf\n", wire->y);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // layer
+			char buffer[50];
+			sprintf(buffer, "layer    :   %d\n", layer);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // comp
+			char buffer[50];
+			sprintf(buffer, "comp     :   %d\n", component);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // crate
+			char buffer[50];
+			sprintf(buffer, "crate    :   %d\n", crate);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // slot
+			char buffer[50];
+			sprintf(buffer, "slot     :   %d\n", slot);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // chan
+			char buffer[50];
+			sprintf(buffer, "channel   :   %d\n", channel);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // HV sector
+			char buffer[50];
+			sprintf(buffer, "HV Sector :   %d\n", channel/64 + 1);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		TextView_occupancy.set_buffer(TextBuffer_occupancy);
 	}
 }
 
@@ -1758,7 +1809,16 @@ void Window::drawOccupancy() {
 	Grid_occupancy.attach(*VBox_control, 2,2);
 	auto HBox_sectors = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL);
 	HBox_sectors->set_margin(10);
+	HBox_sectors->set_margin_start(20);
 	VBox_control->append(*HBox_sectors);
+	// Clear
+	auto Button_clear = Gtk::make_managed<Gtk::Button>("Clear");
+	HBox_sectors->append(*Button_clear);
+	Button_clear->set_hexpand();
+	Button_clear->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = -1;
+		printf("Clear HV SECTOR hightlight ...\n");
+	});
 	// S1
 	auto Button_S1 = Gtk::make_managed<Gtk::Button>("S1");
 	HBox_sectors->append(*Button_S1);
@@ -1831,6 +1891,16 @@ void Window::drawOccupancy() {
 		this->HV_SECTOR = 9;
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
+	// TextView
+	VBox_control->append(TextView_occupancy);
+	TextView_occupancy.set_margin_start(20);
+	TextBuffer_occupancy->set_text("\n");
+	auto iter = TextBuffer_occupancy->end();
+	iter = TextBuffer_occupancy->insert(iter, "-----------------------------------\n");
+	iter = TextBuffer_occupancy->insert(iter, "|             Output               |\n");
+	iter = TextBuffer_occupancy->insert(iter, "-----------------------------------\n");
+	iter = TextBuffer_occupancy->insert(iter, "\n");
+	TextView_occupancy.set_buffer(TextBuffer_occupancy);
 }
 
 void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
@@ -1937,7 +2007,7 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 	double occ_min = (100.0*i_occ_min)/hipo_nEvent; // expressed in %
 	double occ_max = (100.0*i_occ_max)/hipo_nEvent;
 	//printf("adc_min : %lf, adc_max : %lf, occ_min : %d, occ_max : %d\n", adc_min, adc_max, occ_min, occ_max);
-	fColorPalette Palette(5, 1);
+	fColorPalette Palette(5, 2);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
 	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
@@ -2009,7 +2079,7 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 					if (w == 0) {
 						// these wires have a component id == 1 (it is the start of the numerotation)
 						cr->set_line_width(0.002*seff);
-						cr->set_source_rgba(0.0, 1.0, 0.0, 1.0);
+						cr->set_source_rgba(1.0, 0.0, 0.0, 1.0);
 						cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y));
 						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->stroke();
