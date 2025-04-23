@@ -2193,7 +2193,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 		hv = (channel-1)/64 + 1;
 		if (hv % 2 == 0) { hv--;}
 		else {hv++;}
-		int tmp = (channel-1)%64;
+		int tmp = (channel-1)%64 + 1;
 		if ((tmp >= 1) && (tmp <= 23)) {
 			sub_hv = 3;
 		}
