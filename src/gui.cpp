@@ -60,7 +60,7 @@ Window::Window() :
 	Adjustment_cut_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_zpos(Gtk::Adjustment::create(0.0, 0.0, 300.0, 1.0, 0.0, 0.0)),
+	Adjustment_zpos(Gtk::Adjustment::create(-150, -150.0, 150.0, 1.0, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_min(Adjustment_cut_adcOffset_min, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_max(Adjustment_cut_adcOffset_max, Gtk::Orientation::HORIZONTAL),
@@ -746,7 +746,63 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	double x_end = canvas.get_x_end();
 	double y_start = canvas.get_y_start();
 	double y_end = canvas.get_y_end();
-	
+	// Draw axis orientation
+	cr->set_source_rgb(0.0, 0.0, 0.0);
+	cr->set_line_width(0.003*seff);
+		// x axis
+	cr->move_to(x2w(-70), y2h(-70));
+	cr->line_to(x2w(-70+20), y2h(-70));
+	cr->stroke();
+	cr->move_to(x2w(-70+20), y2h(-70));
+	cr->line_to(x2w(-70+20) + 20*cos(M_PI-0.25*M_PI), y2h(-70) + 10*sin(M_PI-0.25*M_PI));
+	cr->line_to(x2w(-70+20) + 20*cos(M_PI+0.25*M_PI), y2h(-70) + 10*sin(M_PI+0.25*M_PI));
+	cr->close_path();
+	cr->fill();
+	{ // x axis label
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.2*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("x", te);
+		cr->move_to(x2w(-70+20)+3, y2h(-70)+3);
+		cr->show_text("x");
+	}
+		// y axis
+	cr->move_to(x2w(-70), y2h(-70));
+	cr->line_to(x2w(-70), y2h(-70+20));
+	cr->stroke();
+	cr->move_to(x2w(-70), y2h(-70+20));
+	cr->line_to(x2w(-70) + 10*cos(M_PI+0.25*M_PI), y2h(-70+20) - 20*sin(M_PI+0.25*M_PI)); // minus because of the orientation :-(
+	cr->line_to(x2w(-70) + 10*cos(-0.25*M_PI), y2h(-70+20) - 20*sin(-0.25*M_PI));
+	cr->close_path();
+	cr->fill();
+	{ // y axis label
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.2*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("y", te);
+		cr->move_to(x2w(-70)-3-te.width, y2h(-70+20)+3);
+		cr->show_text("y");
+	}
+		// z axis
+	cr->set_source_rgb(1.0, 0.0, 0.0);
+	cr->move_to(x2w(-70)+10, y2h(-70));
+	cr->arc(x2w(-70),y2h(-70), 10, 0, 2*M_PI);
+	cr->stroke();
+	cr->move_to(x2w(-70)+3, y2h(-70));
+	cr->arc(x2w(-70),y2h(-70), 3, 0, 2*M_PI);
+	cr->fill();
+	{ // z axis label
+		cr->set_source_rgb(1.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.5*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("z", te);
+		cr->move_to(x2w(-70) + 13, y2h(-70) + 13 + te.height);
+		cr->show_text("z");
+	}
+		
 	// Draw color palette
 	double zmin = 0.0;
 	double zmax = 4095.0;
@@ -1537,7 +1593,7 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		printf("    layer : %d\n", layer);
 		printf("    comp  : %d\n", component);
 		// popup window
-		auto window = Gtk::make_managed<Gtk::Window>();
+		/*auto window = Gtk::make_managed<Gtk::Window>();
 		window->set_title("AHDC pulse");
 		window->set_default_size(1200,800);
 		char buffer[50];
@@ -1547,7 +1603,10 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 							cairo_plot_waveform(cr, width, height, wire, buffer);
 					      } );
 		window->set_child(*area);
-		window->show();
+		window->show();*/
+		char buffer[100];
+		sprintf(buffer, "../ressources/get_hv %d %d %d", layer/10, layer % 10, component);
+		system(buffer);
 	}
 }
 
@@ -1674,6 +1733,10 @@ void Window::drawOccupancy() {
 	auto area1 = Gtk::make_managed<Gtk::DrawingArea>();
 	area1->set_draw_func(sigc::mem_fun(*this, &Window::on_draw_occupancy) );
 	Grid_occupancy.attach(*area1, 1, 1, 1, 2);
+	// ...
+	auto mouse_click = Gtk::GestureClick::create();
+	mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
+	area1->add_controller(mouse_click);
 	// hsitogram 2D
 	auto area2 = Gtk::make_managed<Gtk::DrawingArea>();
 	auto draw_function2 = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
@@ -1725,6 +1788,62 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 	double x_end = canvas.get_x_end();
 	double y_start = canvas.get_y_start();
 	double y_end = canvas.get_y_end();
+	// Draw axis orientation
+	cr->set_source_rgb(0.0, 0.0, 0.0);
+	cr->set_line_width(0.003*seff);
+		// x axis
+	cr->move_to(x2w(-70), y2h(-70));
+	cr->line_to(x2w(-70+20), y2h(-70));
+	cr->stroke();
+	cr->move_to(x2w(-70+20), y2h(-70));
+	cr->line_to(x2w(-70+20) + 20*cos(M_PI-0.25*M_PI), y2h(-70) + 10*sin(M_PI-0.25*M_PI));
+	cr->line_to(x2w(-70+20) + 20*cos(M_PI+0.25*M_PI), y2h(-70) + 10*sin(M_PI+0.25*M_PI));
+	cr->close_path();
+	cr->fill();
+	{ // x axis label
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.2*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("x", te);
+		cr->move_to(x2w(-70+20)+3, y2h(-70)+3);
+		cr->show_text("x");
+	}
+		// y axis
+	cr->move_to(x2w(-70), y2h(-70));
+	cr->line_to(x2w(-70), y2h(-70+20));
+	cr->stroke();
+	cr->move_to(x2w(-70), y2h(-70+20));
+	cr->line_to(x2w(-70) + 10*cos(M_PI+0.25*M_PI), y2h(-70+20) - 20*sin(M_PI+0.25*M_PI)); // minus because of the orientation :-(
+	cr->line_to(x2w(-70) + 10*cos(-0.25*M_PI), y2h(-70+20) - 20*sin(-0.25*M_PI));
+	cr->close_path();
+	cr->fill();
+	{ // y axis label
+		cr->set_source_rgb(0.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.2*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("y", te);
+		cr->move_to(x2w(-70)-3-te.width, y2h(-70+20)+3);
+		cr->show_text("y");
+	}
+		// z axis
+	cr->set_source_rgb(1.0, 0.0, 0.0);
+	cr->move_to(x2w(-70)+10, y2h(-70));
+	cr->arc(x2w(-70),y2h(-70), 10, 0, 2*M_PI);
+	cr->stroke();
+	cr->move_to(x2w(-70)+3, y2h(-70));
+	cr->arc(x2w(-70),y2h(-70), 3, 0, 2*M_PI);
+	cr->fill();
+	{ // z axis label
+		cr->set_source_rgb(1.0, 0.0, 0.0);
+		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+		cr->set_font_size(1.5*canvas.get_label_size());
+		Cairo::TextExtents te;
+		cr->get_text_extents("z", te);
+		cr->move_to(x2w(-70) + 13, y2h(-70) + 13 + te.height);
+		cr->show_text("z");
+	}
 	
 	// Draw color palette (zbar)
 	double adc_min, adc_max;
