@@ -2190,7 +2190,9 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 	hv = -1111;
 	sub_hv = -2222;
 	if (slot == 1) {
-		hv = (channel-1)/64 + 1 + 1;
+		hv = (channel-1)/64 + 1;
+		if (hv % 2 == 0) { hv--;}
+		else {hv++;}
 		int tmp = (channel-1)%64;
 		if ((tmp >= 1) && (tmp <= 23)) {
 			sub_hv = 3;
@@ -2203,7 +2205,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 		}
 	}
 	if (slot == 4) {
-		hv = 1;
+		hv = 9;
 		int tmp = (channel-1)%64 + 1;
 		if ((tmp >= 1) && (tmp <= 23)) {
 			sub_hv = 3;
