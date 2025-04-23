@@ -1594,12 +1594,12 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		printf("    y     : %lf\n", wire->y);
 		printf("    layer : %d\n", layer);
 		printf("    comp  : %d\n", component);
-		int crate, slot, channel;
-		AhdcMapping::GetDreamChannel(1, layer, component, crate, slot, channel);
+		int crate, slot, channel, hv, sub_hv;
+		Get_HV_sector(1, layer, component, crate, slot, channel, hv, sub_hv);
 		printf("    crate : %d\n", crate);
 		printf("    slot  : %d\n", slot);
 		printf("    chan  : %d\n", channel);
-		printf("    HV_SECTOR : %d\n", channel/64 + 1);
+		printf("    HV_SECTOR : %d-%d\n", hv, sub_hv);
 		int tab_number = Book.get_current_page();
 		if (tab_number == 0) {
 			// popup window
@@ -1661,7 +1661,7 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		}
 		{ // HV sector
 			char buffer[50];
-			sprintf(buffer, "HV Sector :   %d\n", channel/64 + 1);
+			sprintf(buffer, "HV Sector :   %d-%d\n", hv, sub_hv);
 			iter = TextBuffer_occupancy->insert(iter, buffer);
 		}
 		TextView_occupancy.set_buffer(TextBuffer_occupancy);
@@ -1817,6 +1817,7 @@ void Window::drawOccupancy() {
 	Button_clear->set_hexpand();
 	Button_clear->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = -1;
+		drawOccupancy();
 		printf("Clear HV SECTOR hightlight ...\n");
 	});
 	// S1
@@ -1825,6 +1826,7 @@ void Window::drawOccupancy() {
 	Button_S1->set_hexpand();
 	Button_S1->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 1;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S2
@@ -1833,6 +1835,7 @@ void Window::drawOccupancy() {
 	Button_S2->set_hexpand();
 	Button_S2->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 2;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S3
@@ -1841,6 +1844,7 @@ void Window::drawOccupancy() {
 	Button_S3->set_hexpand();
 	Button_S3->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 3;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S4
@@ -1849,6 +1853,7 @@ void Window::drawOccupancy() {
 	Button_S4->set_hexpand();
 	Button_S4->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 4;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S5
@@ -1857,6 +1862,7 @@ void Window::drawOccupancy() {
 	Button_S5->set_hexpand();
 	Button_S5->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 5;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S6
@@ -1865,6 +1871,7 @@ void Window::drawOccupancy() {
 	Button_S6->set_hexpand();
 	Button_S6->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 6;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S7
@@ -1873,6 +1880,7 @@ void Window::drawOccupancy() {
 	Button_S7->set_hexpand();
 	Button_S7->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 7;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S8
@@ -1881,6 +1889,7 @@ void Window::drawOccupancy() {
 	Button_S8->set_hexpand();
 	Button_S8->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 8;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// S9
@@ -1889,6 +1898,7 @@ void Window::drawOccupancy() {
 	Button_S9->set_hexpand();
 	Button_S9->signal_clicked().connect([this] () -> void {
 		this->HV_SECTOR = 9;
+		drawOccupancy();
 		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
 	});
 	// TextView
@@ -2104,6 +2114,17 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->fill();
 					}
+					// highlight HV_SECTOR
+					int layer = 10*(sl+1) + (l+1);
+					int component = w+1;
+					int crate, slot, channel, hv, sub_hv;
+					Get_HV_sector(1, layer, component, crate, slot, channel, hv, sub_hv);
+					if (HV_SECTOR == hv) {
+						cr->set_source_rgba(1.0, 0.0, 0.945, sub_hv*0.3);
+						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
+						cr->fill();
+					}
+				
 				}
 			}
 		}
@@ -2153,6 +2174,38 @@ int Window::layer2number(int digit) {
 		return 8;
 	} else {
 		return -1; // not a layer
+	}
+}
+
+void Window::Get_HV_sector(int sector, int layer, int component, int & crate, int & slot, int & channel, int & hv, int & sub_hv) {
+	AhdcMapping::GetDreamChannel(1, layer, component, crate, slot, channel);
+	hv = -1111;
+	sub_hv = -2222;
+	if (slot == 1) {
+		hv = (channel-1)/64 + 1 + 1;
+		int tmp = (channel-1)%64;
+		if ((tmp >= 1) && (tmp <= 23)) {
+			sub_hv = 3;
+		}
+		else if ((tmp >= 24) && (tmp <= 45)) {
+			sub_hv = 2;
+		}
+		else if ((tmp >= 46) && (tmp <= 64)) {
+			sub_hv = 1;
+		}
+	}
+	if (slot == 4) {
+		hv = 1;
+		int tmp = (channel-1)%64;
+		if ((tmp >= 1) && (tmp <= 23)) {
+			sub_hv = 3;
+		}
+		else if ((tmp >= 24) && (tmp <= 45)) {
+			sub_hv = 2;
+		}
+		else if ((tmp >= 46) && (tmp <= 64)) {
+			sub_hv = 1;
+		}
 	}
 }
 

@@ -160,6 +160,7 @@ public :
 	void cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation);
 	void on_draw_3Dview(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	int layer2number(int digit);
+	void Get_HV_sector(int sector, int layer, int component, int & crate, int & slot, int & channel, int & hv, int & sub_hv);
 };
 
 #endif
