@@ -85,7 +85,7 @@ Window::Window() :
 	ahdc = new AhdcDetector();
 	// Widgets
 	set_title("ALERT monitoring");
-	set_default_size(1378,800);
+	set_default_size(1600,990);
 	set_child(VBox_main);
 	
 	/********************
@@ -2120,7 +2120,15 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 					int crate, slot, channel, hv, sub_hv;
 					Get_HV_sector(1, layer, component, crate, slot, channel, hv, sub_hv);
 					if (HV_SECTOR == hv) {
-						cr->set_source_rgba(1.0, 0.0, 0.945, sub_hv*0.3);
+						if 	(sub_hv == 1) {
+							cr->set_source_rgba(127/255.0, 0/255.0, 255/255.0, 1.0);
+						}
+						else if (sub_hv == 2) {
+							cr->set_source_rgba(1.0, 0.0, 0.945, 1.0);
+						}
+						else if (sub_hv == 3) {
+							cr->set_source_rgba( 1.0, 0.0, 0.0, 1.0);
+						}
 						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->fill();
 					}
@@ -2196,7 +2204,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 	}
 	if (slot == 4) {
 		hv = 1;
-		int tmp = (channel-1)%64;
+		int tmp = (channel-1)%64 + 1;
 		if ((tmp >= 1) && (tmp <= 23)) {
 			sub_hv = 3;
 		}
