@@ -75,7 +75,7 @@ void fH2D::draw_with_cairo(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		}
 	}
 	// Draw each (x,y) bins
-	fColorPalette Palette(5, 1);
+	fColorPalette Palette(5, 2);
 	int ncolors = Palette.get_ncolors();
 	double wx = (xmax-xmin)/nx;
 	double wy = (ymax-ymin)/ny;
