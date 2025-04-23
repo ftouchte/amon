@@ -112,7 +112,7 @@ protected :
 	double cut_timeMax_min = 0;
 	double cut_timeMax_max = 19;
 	bool flag_mask_wires = false;
-	double zpos = 0.0; ///< define in which z we should look at for AHDC (x,y) view
+	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
 
 	// Histograms
 	bool is_paused = false;
