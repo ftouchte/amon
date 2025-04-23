@@ -2189,7 +2189,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 	AhdcMapping::GetDreamChannel(1, layer, component, crate, slot, channel);
 	hv = -1111;
 	sub_hv = -2222;
-	if (slot == 1) {
+	if (slot == 1) { // hv from 1 to 8, then switch 1 <-> 2, 3 <-> 4, 5 <-> 6, 7 <-> 8
 		hv = (channel-1)/64 + 1;
 		if (hv % 2 == 0) { hv--;}
 		else {hv++;}
@@ -2204,7 +2204,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 			sub_hv = 1;
 		}
 	}
-	if (slot == 4) {
+	if (slot == 4) { // hv only 9
 		hv = 9;
 		int tmp = (channel-1)%64 + 1;
 		if ((tmp >= 1) && (tmp <= 23)) {
