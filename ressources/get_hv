@@ -1,0 +1,13 @@
+#!/bin/bash
+
+sl=$(($1 - 1))
+l=$(($2 - 1))
+w=$(($3 - 1))
+pattern="$sl,$l,$w"
+echo "pattern : $pattern"
+
+if [ $# -ge 1 ]; then 
+	awk -F "," -v var="$pattern" 'match($0, var) {print "    " $1 " " $2 " " $3 " \033[31m" $4 "\033[0m"}' "/home/touchte-codjo/Desktop/amon/ressources/ahdc_mapping.csv"
+fi
+
+

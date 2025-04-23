@@ -49,17 +49,10 @@ LDFLAGS   :=
 #all:  showFile histo plot benchmark simu
 all: gui  
 
+mapping: mapping.o 
+	$(CXX) -o mapping.exe $^
 
-histAhdcAdc: histAhdcAdc.o AhdcExtractor.o 
-	$(CXX) -o histAhdcAdc.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) 
-
-test_fH1D: test_fH1D.o fAxis.o fH1D.o fCanvas.o fH2D.o
-	$(CXX) -o test_fH1D.exe $^ $(CAIROLIBS)
-
-test_fAxis: test_fAxis.o fAxis.o 
-	$(CXX) -o test_fAxis.exe $^
-
-gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fH2D.o fColorPalette.o AhdcPulse.o f3Dutils.o
+gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fH2D.o fColorPalette.o AhdcPulse.o AhdcMapping.o f3Dutils.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
 

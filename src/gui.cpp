@@ -9,6 +9,7 @@
 #include "fAxis.h"
 #include "fCanvas.h"
 #include "fColorPalette.h"
+#include "AhdcMapping.h"
 #include "f3Dutils.h"
 
 #include <iostream>
@@ -1592,6 +1593,11 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		printf("    y     : %lf\n", wire->y);
 		printf("    layer : %d\n", layer);
 		printf("    comp  : %d\n", component);
+		int crate, slot, channel;
+		AhdcMapping::GetDreamChannel(1, layer, component, crate, slot, channel);
+		printf("    crate : %d\n", crate);
+		printf("    slot  : %d\n", slot);
+		printf("    chan  : %d\n", channel);
 		// popup window
 		/*auto window = Gtk::make_managed<Gtk::Window>();
 		window->set_title("AHDC pulse");
@@ -1604,9 +1610,9 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 					      } );
 		window->set_child(*area);
 		window->show();*/
-		char buffer[100];
+		/*char buffer[100];
 		sprintf(buffer, "../ressources/get_hv %d %d %d", layer/10, layer % 10, component);
-		system(buffer);
+		system(buffer);*/
 	}
 }
 
