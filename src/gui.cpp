@@ -1598,6 +1598,7 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		printf("    crate : %d\n", crate);
 		printf("    slot  : %d\n", slot);
 		printf("    chan  : %d\n", channel);
+		printf("    HV_SECTOR : %d\n", channel/64 + 1);
 		// popup window
 		/*auto window = Gtk::make_managed<Gtk::Window>();
 		window->set_title("AHDC pulse");
@@ -1752,6 +1753,84 @@ void Window::drawOccupancy() {
 	};
 	area2->set_draw_func(draw_function2);
 	Grid_occupancy.attach(*area2, 2, 1, 1, 1); // left, top, width, height (width and height are used to defined the number during a fusion)
+	// Contral
+	auto VBox_control = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL, 10);
+	Grid_occupancy.attach(*VBox_control, 2,2);
+	auto HBox_sectors = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL);
+	HBox_sectors->set_margin(10);
+	VBox_control->append(*HBox_sectors);
+	// S1
+	auto Button_S1 = Gtk::make_managed<Gtk::Button>("S1");
+	HBox_sectors->append(*Button_S1);
+	Button_S1->set_hexpand();
+	Button_S1->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 1;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S2
+	auto Button_S2 = Gtk::make_managed<Gtk::Button>("S2");
+	HBox_sectors->append(*Button_S2);
+	Button_S2->set_hexpand();
+	Button_S2->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 2;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S3
+	auto Button_S3 = Gtk::make_managed<Gtk::Button>("S3");
+	HBox_sectors->append(*Button_S3);
+	Button_S3->set_hexpand();
+	Button_S3->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 3;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S4
+	auto Button_S4 = Gtk::make_managed<Gtk::Button>("S4");
+	HBox_sectors->append(*Button_S4);
+	Button_S4->set_hexpand();
+	Button_S4->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 4;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S5
+	auto Button_S5 = Gtk::make_managed<Gtk::Button>("S5");
+	HBox_sectors->append(*Button_S5);
+	Button_S5->set_hexpand();
+	Button_S5->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 5;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S6
+	auto Button_S6 = Gtk::make_managed<Gtk::Button>("S6");
+	HBox_sectors->append(*Button_S6);
+	Button_S6->set_hexpand();
+	Button_S6->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 6;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S7
+	auto Button_S7 = Gtk::make_managed<Gtk::Button>("S7");
+	HBox_sectors->append(*Button_S7);
+	Button_S7->set_hexpand();
+	Button_S7->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 7;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S8
+	auto Button_S8 = Gtk::make_managed<Gtk::Button>("S8");
+	HBox_sectors->append(*Button_S8);
+	Button_S8->set_hexpand();
+	Button_S8->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 8;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
+	// S9
+	auto Button_S9 = Gtk::make_managed<Gtk::Button>("S9");
+	HBox_sectors->append(*Button_S9);
+	Button_S9->set_hexpand();
+	Button_S9->signal_clicked().connect([this] () -> void {
+		this->HV_SECTOR = 9;
+		printf("Hightlight HV_SECTOR %d ...\n", this->HV_SECTOR);
+	});
 }
 
 void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
