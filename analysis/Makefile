@@ -44,10 +44,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: hist1d correlation 
+all: hist1d raw_hit_cuts 
 
-correlation: correlation.o
-	$(CXX) -o correlation.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+raw_hit_cuts: raw_hit_cuts.o
+	$(CXX) -o raw_hit_cuts.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 recon_histo: recon_histo.o futils.o
 	$(CXX) -o recon_histo.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)

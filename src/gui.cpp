@@ -52,7 +52,7 @@ Window::Window() :
 	binDelayCFD(5),
 	fractionCFD(0.3),
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 10, 0.0, 0.0)),
+	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
 	Adjustment_cut_adcOffset_min(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
 	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
 	Adjustment_cut_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
