@@ -106,11 +106,11 @@ protected :
 	double cut_adcOffset_min = 0;
 	double cut_adcOffset_max = 4095;
 	double cut_leadingEdgeTime_min = 0;
-	double cut_leadingEdgeTime_max = 19;
+	double cut_leadingEdgeTime_max = 950;
 	double cut_timeOverThreshold_min = 0;
-	double cut_timeOverThreshold_max = 19;
+	double cut_timeOverThreshold_max = 950;
 	double cut_timeMax_min = 0;
-	double cut_timeMax_max = 19;
+	double cut_timeMax_max = 950;
 	bool flag_mask_wires = false;
 	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
 	int HV_SECTOR = -1;
