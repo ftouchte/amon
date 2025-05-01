@@ -47,20 +47,20 @@ Window::Window() :
 	// Decoding parameters	
 	ADC_LIMIT(4095),
 	NumberOfBins(20),
-	samplingTime(50.0),
+	samplingTime(50.0), // set at 50.0 if you want use measure in terms of bins
 	amplitudeFractionCFA(0.5),
 	binDelayCFD(5),
 	fractionCFD(0.3),
 	// Value, lower, upper, step_increment, page_increment, page_size
 	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
-	Adjustment_cut_adcOffset_min(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
-	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
-	Adjustment_cut_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_cut_leadingEdgeTime_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_cut_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_cut_timeOverThreshold_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(49.0, 0.0, 1.0*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_adcOffset_min(Gtk::Adjustment::create(0.0, 0.0, 1000, 1, 0.0, 0.0)),
+	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, 1000, 1, 0.0, 0.0)),
+	Adjustment_cut_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_leadingEdgeTime_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeOverThreshold_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
+	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_zpos(Gtk::Adjustment::create(-150, -150.0, 150.0, 1.0, 0.0, 0.0)),
 	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_min(Adjustment_cut_adcOffset_min, Gtk::Orientation::HORIZONTAL),
@@ -74,15 +74,24 @@ Window::Window() :
 	Scale_zpos(Adjustment_zpos, Gtk::Orientation::HORIZONTAL),
 	// histograms
 	hist1d_adcMax("adcMax", 200, 0.0, 4095.0),
-        hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, 1.0*NumberOfBins),
-        hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, 1.0*NumberOfBins),
-        hist1d_timeMax("timeMax", 100, 0.0, 1.0*NumberOfBins),
+        hist1d_leadingEdgeTime("leadingEdgeTime", 100, 0.0, samplingTime*(NumberOfBins-1)),
+        hist1d_timeOverThreshold("timeOverThreshold", 100, 0.0, samplingTime*(NumberOfBins-1)),
+        hist1d_timeMax("timeMax", 100, 0.0, samplingTime*(NumberOfBins-1)),
 	hist1d_adcOffset("adcOffset (s1+s2+s3+s4+s5)/5", 100, 0.0, 1000),
-        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, 1.0*NumberOfBins),
+        hist1d_constantFractionTime("constantFractionTime", 100, 0.0, samplingTime*(NumberOfBins-1)),
         hist2d_occupancy("occupancy", 99, 1.0, 100.0, 8, 1.0, 9.0)
 {
 	// Data
 	ahdc = new AhdcDetector();
+	adcCut = 0;
+        cut_adcOffset_min = 0;
+        cut_adcOffset_max = 4095;
+        cut_leadingEdgeTime_min = 0;
+        cut_leadingEdgeTime_max = 950;
+        cut_timeOverThreshold_min = 0;
+        cut_timeOverThreshold_max = 950;
+        cut_timeMax_min = 0;
+        cut_timeMax_max = 950;
 	// Widgets
 	set_title("ALERT monitoring");
 	set_default_size(1600,990);
@@ -127,11 +136,11 @@ Window::Window() :
         Grid_histograms.set_column_homogeneous(true);
         Grid_histograms.set_row_homogeneous(true);
 	hist1d_adcMax.set_xtitle("adc");
-        hist1d_leadingEdgeTime.set_xtitle("bin");
-        hist1d_timeOverThreshold.set_xtitle("bin");
-        hist1d_timeMax.set_xtitle("bin");
+        hist1d_leadingEdgeTime.set_xtitle("time (ns)");
+        hist1d_timeOverThreshold.set_xtitle("time (ns)");
+        hist1d_timeMax.set_xtitle("time (ns)");
 	hist1d_adcOffset.set_xtitle("adc");
-        hist1d_constantFractionTime.set_xtitle("bin");
+        hist1d_constantFractionTime.set_xtitle("time (ns)");
 	// page 3
 	Book.append_page(Grid_occupancy, "Occupancy");
 	Grid_occupancy.set_expand(true);
@@ -979,7 +988,7 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	}
 	std::vector<double> vx;
 	for (int i = 0; i < NumberOfBins; i++){
-		vx.push_back(1.0*i);
+		vx.push_back(samplingTime*i);
 	}
 	double xmin = vx[0], xmax = vx[0];
 	double ymin = vy[0], ymax = vy[0];
@@ -992,7 +1001,7 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	fCanvas canvas(width, height, xmin, xmax, ymin, ymax);
 	canvas.define_coord_system(cr);
 	canvas.draw_title(cr, "");
-	canvas.draw_xtitle(cr, "bin");
+	canvas.draw_xtitle(cr, "time (ns)");
 	canvas.draw_ytitle(cr, "adc");
 	// x coord to width
 	auto x2w = [canvas] (double x) {
@@ -1091,10 +1100,11 @@ bool Window::dataEventAction() {
 				samples.push_back(value);
 			}
 			// fill histograms
-			double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
-                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
-                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
-                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
+			double factor = 1.0; // if == samplingTime, (the unit in bin number)
+			double timeMax = this->hipo_banklist[0].getFloat("time", col)/factor;
+                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/factor;
+                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/factor;
+                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/factor;
                         double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
                         double adcOffset = this->hipo_banklist[0].getInt("ped", col);
                         //double integral = this->hipo_banklist[0].getInt("integral", col);
@@ -1136,10 +1146,11 @@ bool Window::dataEventAction() {
 					short value = hipo_banklist[1].getInt(binName.c_str(), col);
 					samples.push_back(value);
 				}
-				double timeMax = this->hipo_banklist[0].getFloat("time", col)/samplingTime;
-				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/samplingTime;
-				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/samplingTime;
-				double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/samplingTime;
+				double factor = 1.0; // if == samplingTime, (the unit in bin number)
+				double timeMax = this->hipo_banklist[0].getFloat("time", col)/factor;
+				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/factor;
+				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/factor;
+				double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/factor;
 				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
 				double adcOffset = this->hipo_banklist[0].getInt("ped", col);
 				double integral = this->hipo_banklist[0].getInt("integral", col);
@@ -1291,10 +1302,10 @@ void Window::drawWaveformsPerLayer() {
 				auto area = Gtk::make_managed<Gtk::DrawingArea>();
 				auto draw_function = [this, sl, l, layer, ymin, ymax, sum_samples, nhits] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
 					// Define main canvas
-					fCanvas canvas(width, height, 0, NumberOfBins-1, ymin, ymax);
+					fCanvas canvas(width, height, 0, samplingTime*(NumberOfBins-1), ymin, ymax);
 					canvas.define_coord_system(cr);
 					canvas.draw_title(cr, "");
-					canvas.draw_xtitle(cr, "bin");
+					canvas.draw_xtitle(cr, "time (ns)");
 					canvas.draw_ytitle(cr, "adc");
 					// x coord to width
 					auto x2w = [canvas] (double x) {
@@ -1342,7 +1353,7 @@ void Window::drawWaveformsPerLayer() {
 							cr->move_to(x2w(0),y2h(samples[0]));
 							for (int i = 1; i < NumberOfBins; i++) {
 								// draw a line between points i and i-1
-								cr->line_to(x2w(i),y2h(samples[i]));
+								cr->line_to(x2w(samplingTime*i),y2h(samples[i]));
 							}
 							cr->stroke();
 							nth++;
@@ -1354,7 +1365,7 @@ void Window::drawWaveformsPerLayer() {
 					cr->move_to(x2w(0),y2h(sum_samples[0]));
 					for (int i = 1; i < NumberOfBins; i++) {
 						// draw a line between points i and i-1
-						cr->line_to(x2w(i),y2h(sum_samples[i]));
+						cr->line_to(x2w(samplingTime*i),y2h(sum_samples[i]));
 					}
 					cr->stroke();
 					// draw frame and axis
