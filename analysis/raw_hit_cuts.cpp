@@ -56,9 +56,9 @@ int main(int argc, char const *argv[]){
 	}
 	
 	std::vector<std::string> Data     = {"leadingEdgeTime", "timeOverThreshold", "ADC", "ped"};
-	std::vector<int>         NbBin    = {20, 20, 100, 100};
+	std::vector<int>         NbBin    = {50, 50, 100, 100};
 	std::vector<double>      Start    = {0, 0, 0, 0};
-	std::vector<double>      End      = {1000, 1000, 4000, 1000};
+	std::vector<double>      End      = {1500, 1500, 4000, 1000};
 	std::vector<std::string> Title    = {"time", "tot", "adc", "ped"};
 	double samplingTime = 1.0;
 	
@@ -106,7 +106,7 @@ int main(int argc, char const *argv[]){
                         double ped  = banklist[0].getInt("ped", col); // adcOffset
 			std::vector<double> value = {time, tot, adc, ped}; 
 			
-			if ((time >= 200) && (time <= 500) && (tot >= 350) && (tot <= 600) && (adc >= 0) && (adc <= 4095)&& (ped >= 180) && (ped <= 360) ) {	
+			if ((time >= 200) && (time <= 500) && (tot >= 300) && (tot <= 600) && (adc >= 0) && (adc <= 4095)&& (ped >= 200) && (ped <= 360) ) {	
 				occ->Fill(wire, layer2number(layer));
 				for (int i = 0; i < n; i++) {
 					for (int j = 0; j < i; j++) {
@@ -124,12 +124,22 @@ int main(int argc, char const *argv[]){
 	occ2.GetXaxis()->SetTitleSize(0.05);
 	occ2.GetYaxis()->SetTitle("layer number");
 	occ2.GetYaxis()->SetTitleSize(0.05);
-	TCanvas* canvas1 = new TCanvas("all","all hist 2d",1800, 990);
+	TCanvas* canvas1 = new TCanvas("2D_all","all hist 2d",1800, 990);
 	//gStyle->SetOptStat("nemruo");
 	gStyle->SetOptStat("");
 	canvas1->Divide(3,3);
 	canvas1->Update();
-	TFile *f = new TFile("../output/correlation.root", "RECREATE");
+	char buffer[50];
+	if (argc > 2) {
+		sprintf(buffer, "%s", argv[2]);
+	}
+	else {
+		sprintf(buffer, "%s", "correlation");
+	}
+	printf("argc : %d, output name : %s\n", argc, buffer);
+	// open t file
+	TFile *f = new TFile(TString::Format("../output/%s.root", buffer).Data(), "RECREATE");
+	// 2D 
 	int num = 0;	
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < i; j++) {
@@ -139,15 +149,28 @@ int main(int argc, char const *argv[]){
 			canvas1->Update();
 			corr[i][j]->Write(TString::Format("%s_%s", Title[i].c_str(), Title[j].c_str()).Data());
 		}
-		hist1d[i]->Write();
+		//hist1d[i]->Write();
 	}
 	canvas1->cd(7);
 	occ2.Draw("COLZ");
 	canvas1->Update();
-	canvas1->Print("../output/correlation.pdf");
+	canvas1->Print(TString::Format("../output/2D_%s.pdf", buffer).Data());
 	canvas1->Write();
 	occ->Write("occupancy");
 	occ2.Write("occupancy normalized");
+	// 1D
+	TCanvas* canvas2 = new TCanvas("1D_all","all hist 2d",1800, 990);
+	canvas2->Divide(2,2);
+	canvas2->Update();
+	for (int i = 0; i < n; i++) {
+		canvas2->cd(i+1);
+		hist1d[i]->Write();
+		hist1d[i]->Draw();
+		canvas2->Update();
+	}
+	canvas2->Print(TString::Format("../output/1D_%s.pdf", buffer).Data());
+	canvas2->Write();
+	// close t file
 	f->Close();
 	for (int i = 0; i < n; i++) {
 		for (int j = 0; j < i; j++) {
