@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Script : build_ahdc_mapping
+
+# Usage : 
+# - download the translation table in txt format from https://clasweb.jlab.org/cgi-bin/ccdb/versions?table=/daq/tt/ahdc
+# - name it ahdc_tt.txt
+# - copy/paste it in the same directory as this script
+# - opent the file, remove the comments. Typically the file should contained 576 lines and file something like (not necessary the same value)
+#         79 1 65 1 51 47 0
+#         79 1 66 1 51 44 0
+# - run ./build_ahdc_mapping
+
 TABLE="./ahdc_tt.txt"
 OUTPUT_H="./AhdcMapping.h"
 OUTPUT_CPP="./AhdcMapping.cpp"
@@ -32,6 +43,7 @@ echo "};" >> $OUTPUT_H
 echo "" >> $OUTPUT_H
 echo "#endif" >> $OUTPUT_H
 
+echo "File created : AhdcMapping.h   --  $(date)"
 
 ##################################
 # FILE .CPP
@@ -108,3 +120,4 @@ echo "        }" >> $OUTPUT_CPP
 echo "}" >> $OUTPUT_CPP
 echo "" >> $OUTPUT_CPP
 
+echo "File created : AhdcMapping.cpp   --  $(date)"
