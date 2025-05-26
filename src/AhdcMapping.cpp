@@ -3,7 +3,7 @@
 * mapping.cpp
 *
 * @author Felix Touchte Codjo
-* @date April 22, 2025  22:17:46
+* @date May 26, 2025  08:00:37
 * *******************************************/
 
 
@@ -974,322 +974,322 @@ void AhdcMapping::GetDreamChannel(int sector, int layer, int component, int &cra
         }
         else if ((sector == 1) && (layer == 51) && (component == 15)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 129;
         }
         else if ((sector == 1) && (layer == 51) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 130;
         }
         else if ((sector == 1) && (layer == 51) && (component == 16)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 131;
         }
         else if ((sector == 1) && (layer == 51) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 132;
         }
         else if ((sector == 1) && (layer == 42) && (component == 14)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 133;
         }
         else if ((sector == 1) && (layer == 51) && (component == 14)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 134;
         }
         else if ((sector == 1) && (layer == 42) && (component == 15)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 135;
         }
         else if ((sector == 1) && (layer == 42) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 136;
         }
         else if ((sector == 1) && (layer == 41) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 137;
         }
         else if ((sector == 1) && (layer == 42) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 138;
         }
         else if ((sector == 1) && (layer == 41) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 139;
         }
         else if ((sector == 1) && (layer == 42) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 140;
         }
         else if ((sector == 1) && (layer == 41) && (component == 14)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 141;
         }
         else if ((sector == 1) && (layer == 41) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 142;
         }
         else if ((sector == 1) && (layer == 32) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 143;
         }
         else if ((sector == 1) && (layer == 41) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 144;
         }
         else if ((sector == 1) && (layer == 32) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 145;
         }
         else if ((sector == 1) && (layer == 32) && (component == 9)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 146;
         }
         else if ((sector == 1) && (layer == 31) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 147;
         }
         else if ((sector == 1) && (layer == 32) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 148;
         }
         else if ((sector == 1) && (layer == 31) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 149;
         }
         else if ((sector == 1) && (layer == 31) && (component == 9)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 150;
         }
         else if ((sector == 1) && (layer == 22) && (component == 9)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 151;
         }
         else if ((sector == 1) && (layer == 31) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 152;
         }
         else if ((sector == 1) && (layer == 21) && (component == 9)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 153;
         }
         else if ((sector == 1) && (layer == 22) && (component == 7)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 154;
         }
         else if ((sector == 1) && (layer == 21) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 155;
         }
         else if ((sector == 1) && (layer == 22) && (component == 8)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 156;
         }
         else if ((sector == 1) && (layer == 11) && (component == 7)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 157;
         }
         else if ((sector == 1) && (layer == 21) && (component == 8)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 158;
         }
         else if ((sector == 1) && (layer == 11) && (component == 8)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 159;
         }
         else if ((sector == 1) && (layer == 11) && (component == 6)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 160;
         }
         else if ((sector == 1) && (layer == 51) && (component == 17)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 161;
         }
         else if ((sector == 1) && (layer == 51) && (component == 20)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 162;
         }
         else if ((sector == 1) && (layer == 51) && (component == 18)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 163;
         }
         else if ((sector == 1) && (layer == 51) && (component == 21)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 164;
         }
         else if ((sector == 1) && (layer == 51) && (component == 19)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 165;
         }
         else if ((sector == 1) && (layer == 42) && (component == 19)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 166;
         }
         else if ((sector == 1) && (layer == 42) && (component == 16)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 167;
         }
         else if ((sector == 1) && (layer == 42) && (component == 20)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 168;
         }
         else if ((sector == 1) && (layer == 42) && (component == 17)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 169;
         }
         else if ((sector == 1) && (layer == 41) && (component == 17)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 170;
         }
         else if ((sector == 1) && (layer == 42) && (component == 18)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 171;
         }
         else if ((sector == 1) && (layer == 41) && (component == 18)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 172;
         }
         else if ((sector == 1) && (layer == 41) && (component == 15)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 173;
         }
         else if ((sector == 1) && (layer == 41) && (component == 19)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 174;
         }
         else if ((sector == 1) && (layer == 41) && (component == 16)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 175;
         }
         else if ((sector == 1) && (layer == 32) && (component == 15)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 176;
         }
         else if ((sector == 1) && (layer == 32) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 177;
         }
         else if ((sector == 1) && (layer == 32) && (component == 16)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 178;
         }
         else if ((sector == 1) && (layer == 32) && (component == 14)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 179;
         }
         else if ((sector == 1) && (layer == 31) && (component == 15)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 180;
         }
         else if ((sector == 1) && (layer == 31) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 181;
         }
         else if ((sector == 1) && (layer == 31) && (component == 16)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 182;
         }
         else if ((sector == 1) && (layer == 31) && (component == 14)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 183;
         }
         else if ((sector == 1) && (layer == 22) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 184;
         }
         else if ((sector == 1) && (layer == 22) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 185;
         }
         else if ((sector == 1) && (layer == 22) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 186;
         }
         else if ((sector == 1) && (layer == 22) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 187;
         }
         else if ((sector == 1) && (layer == 21) && (component == 12)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 188;
         }
         else if ((sector == 1) && (layer == 21) && (component == 11)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 189;
         }
         else if ((sector == 1) && (layer == 21) && (component == 13)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 190;
         }
         else if ((sector == 1) && (layer == 11) && (component == 9)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 191;
         }
         else if ((sector == 1) && (layer == 11) && (component == 10)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 192;
         }
         else if ((sector == 1) && (layer == 51) && (component == 3)) {
@@ -1614,322 +1614,322 @@ void AhdcMapping::GetDreamChannel(int sector, int layer, int component, int &cra
         }
         else if ((sector == 1) && (layer == 51) && (component == 91)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 257;
         }
         else if ((sector == 1) && (layer == 51) && (component == 88)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 258;
         }
         else if ((sector == 1) && (layer == 51) && (component == 92)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 259;
         }
         else if ((sector == 1) && (layer == 51) && (component == 89)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 260;
         }
         else if ((sector == 1) && (layer == 42) && (component == 81)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 261;
         }
         else if ((sector == 1) && (layer == 51) && (component == 90)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 262;
         }
         else if ((sector == 1) && (layer == 42) && (component == 82)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 263;
         }
         else if ((sector == 1) && (layer == 42) && (component == 78)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 264;
         }
         else if ((sector == 1) && (layer == 41) && (component == 80)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 265;
         }
         else if ((sector == 1) && (layer == 42) && (component == 79)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 266;
         }
         else if ((sector == 1) && (layer == 41) && (component == 81)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 267;
         }
         else if ((sector == 1) && (layer == 42) && (component == 80)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 268;
         }
         else if ((sector == 1) && (layer == 41) && (component == 82)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 269;
         }
         else if ((sector == 1) && (layer == 41) && (component == 78)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 270;
         }
         else if ((sector == 1) && (layer == 32) && (component == 67)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 271;
         }
         else if ((sector == 1) && (layer == 41) && (component == 79)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 272;
         }
         else if ((sector == 1) && (layer == 31) && (component == 68)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 273;
         }
         else if ((sector == 1) && (layer == 32) && (component == 65)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 274;
         }
         else if ((sector == 1) && (layer == 31) && (component == 67)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 275;
         }
         else if ((sector == 1) && (layer == 32) && (component == 66)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 276;
         }
         else if ((sector == 1) && (layer == 32) && (component == 68)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 277;
         }
         else if ((sector == 1) && (layer == 31) && (component == 65)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 278;
         }
         else if ((sector == 1) && (layer == 22) && (component == 53)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 279;
         }
         else if ((sector == 1) && (layer == 31) && (component == 66)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 280;
         }
         else if ((sector == 1) && (layer == 21) && (component == 53)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 281;
         }
         else if ((sector == 1) && (layer == 22) && (component == 51)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 282;
         }
         else if ((sector == 1) && (layer == 21) && (component == 54)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 283;
         }
         else if ((sector == 1) && (layer == 22) && (component == 52)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 284;
         }
         else if ((sector == 1) && (layer == 11) && (component == 44)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 285;
         }
         else if ((sector == 1) && (layer == 21) && (component == 52)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 286;
         }
         else if ((sector == 1) && (layer == 11) && (component == 45)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 287;
         }
         else if ((sector == 1) && (layer == 11) && (component == 43)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 288;
         }
         else if ((sector == 1) && (layer == 51) && (component == 93)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 289;
         }
         else if ((sector == 1) && (layer == 51) && (component == 96)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 290;
         }
         else if ((sector == 1) && (layer == 51) && (component == 94)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 291;
         }
         else if ((sector == 1) && (layer == 51) && (component == 97)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 292;
         }
         else if ((sector == 1) && (layer == 51) && (component == 95)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 293;
         }
         else if ((sector == 1) && (layer == 51) && (component == 98)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 294;
         }
         else if ((sector == 1) && (layer == 42) && (component == 83)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 295;
         }
         else if ((sector == 1) && (layer == 42) && (component == 86)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 296;
         }
         else if ((sector == 1) && (layer == 42) && (component == 84)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 297;
         }
         else if ((sector == 1) && (layer == 42) && (component == 87)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 298;
         }
         else if ((sector == 1) && (layer == 42) && (component == 85)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 299;
         }
         else if ((sector == 1) && (layer == 41) && (component == 85)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 300;
         }
         else if ((sector == 1) && (layer == 41) && (component == 83)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 301;
         }
         else if ((sector == 1) && (layer == 41) && (component == 86)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 302;
         }
         else if ((sector == 1) && (layer == 41) && (component == 84)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 303;
         }
         else if ((sector == 1) && (layer == 41) && (component == 87)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 304;
         }
         else if ((sector == 1) && (layer == 32) && (component == 69)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 305;
         }
         else if ((sector == 1) && (layer == 32) && (component == 71)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 306;
         }
         else if ((sector == 1) && (layer == 32) && (component == 70)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 307;
         }
         else if ((sector == 1) && (layer == 32) && (component == 72)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 308;
         }
         else if ((sector == 1) && (layer == 31) && (component == 69)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 309;
         }
         else if ((sector == 1) && (layer == 31) && (component == 71)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 310;
         }
         else if ((sector == 1) && (layer == 31) && (component == 70)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 311;
         }
         else if ((sector == 1) && (layer == 31) && (component == 72)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 312;
         }
         else if ((sector == 1) && (layer == 22) && (component == 54)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 313;
         }
         else if ((sector == 1) && (layer == 22) && (component == 56)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 314;
         }
         else if ((sector == 1) && (layer == 22) && (component == 55)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 315;
         }
         else if ((sector == 1) && (layer == 21) && (component == 56)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 316;
         }
         else if ((sector == 1) && (layer == 21) && (component == 55)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 317;
         }
         else if ((sector == 1) && (layer == 21) && (component == 1)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 318;
         }
         else if ((sector == 1) && (layer == 11) && (component == 46)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 319;
         }
         else if ((sector == 1) && (layer == 11) && (component == 47)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 320;
         }
         else if ((sector == 1) && (layer == 51) && (component == 80)) {
@@ -2254,322 +2254,322 @@ void AhdcMapping::GetDreamChannel(int sector, int layer, int component, int &cra
         }
         else if ((sector == 1) && (layer == 51) && (component == 70)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 385;
         }
         else if ((sector == 1) && (layer == 51) && (component == 67)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 386;
         }
         else if ((sector == 1) && (layer == 51) && (component == 71)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 387;
         }
         else if ((sector == 1) && (layer == 51) && (component == 68)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 388;
         }
         else if ((sector == 1) && (layer == 42) && (component == 62)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 389;
         }
         else if ((sector == 1) && (layer == 51) && (component == 69)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 390;
         }
         else if ((sector == 1) && (layer == 42) && (component == 63)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 391;
         }
         else if ((sector == 1) && (layer == 42) && (component == 59)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 392;
         }
         else if ((sector == 1) && (layer == 41) && (component == 61)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 393;
         }
         else if ((sector == 1) && (layer == 42) && (component == 60)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 394;
         }
         else if ((sector == 1) && (layer == 41) && (component == 62)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 395;
         }
         else if ((sector == 1) && (layer == 42) && (component == 61)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 396;
         }
         else if ((sector == 1) && (layer == 32) && (component == 51)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 397;
         }
         else if ((sector == 1) && (layer == 41) && (component == 59)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 398;
         }
         else if ((sector == 1) && (layer == 32) && (component == 52)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 399;
         }
         else if ((sector == 1) && (layer == 41) && (component == 60)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 400;
         }
         else if ((sector == 1) && (layer == 31) && (component == 51)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 401;
         }
         else if ((sector == 1) && (layer == 32) && (component == 49)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 402;
         }
         else if ((sector == 1) && (layer == 31) && (component == 52)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 403;
         }
         else if ((sector == 1) && (layer == 32) && (component == 50)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 404;
         }
         else if ((sector == 1) && (layer == 22) && (component == 40)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 405;
         }
         else if ((sector == 1) && (layer == 31) && (component == 49)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 406;
         }
         else if ((sector == 1) && (layer == 21) && (component == 40)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 407;
         }
         else if ((sector == 1) && (layer == 31) && (component == 50)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 408;
         }
         else if ((sector == 1) && (layer == 21) && (component == 41)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 409;
         }
         else if ((sector == 1) && (layer == 22) && (component == 38)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 410;
         }
         else if ((sector == 1) && (layer == 11) && (component == 33)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 411;
         }
         else if ((sector == 1) && (layer == 22) && (component == 39)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 412;
         }
         else if ((sector == 1) && (layer == 11) && (component == 34)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 413;
         }
         else if ((sector == 1) && (layer == 21) && (component == 39)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 414;
         }
         else if ((sector == 1) && (layer == 11) && (component == 35)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 415;
         }
         else if ((sector == 1) && (layer == 11) && (component == 32)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 416;
         }
         else if ((sector == 1) && (layer == 51) && (component == 72)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 417;
         }
         else if ((sector == 1) && (layer == 51) && (component == 75)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 418;
         }
         else if ((sector == 1) && (layer == 51) && (component == 73)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 419;
         }
         else if ((sector == 1) && (layer == 51) && (component == 76)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 420;
         }
         else if ((sector == 1) && (layer == 51) && (component == 74)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 421;
         }
         else if ((sector == 1) && (layer == 42) && (component == 67)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 422;
         }
         else if ((sector == 1) && (layer == 42) && (component == 64)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 423;
         }
         else if ((sector == 1) && (layer == 42) && (component == 68)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 424;
         }
         else if ((sector == 1) && (layer == 42) && (component == 65)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 425;
         }
         else if ((sector == 1) && (layer == 41) && (component == 65)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 426;
         }
         else if ((sector == 1) && (layer == 42) && (component == 66)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 427;
         }
         else if ((sector == 1) && (layer == 41) && (component == 66)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 428;
         }
         else if ((sector == 1) && (layer == 41) && (component == 63)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 429;
         }
         else if ((sector == 1) && (layer == 41) && (component == 67)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 430;
         }
         else if ((sector == 1) && (layer == 41) && (component == 64)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 431;
         }
         else if ((sector == 1) && (layer == 32) && (component == 55)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 432;
         }
         else if ((sector == 1) && (layer == 32) && (component == 53)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 433;
         }
         else if ((sector == 1) && (layer == 32) && (component == 56)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 434;
         }
         else if ((sector == 1) && (layer == 32) && (component == 54)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 435;
         }
         else if ((sector == 1) && (layer == 31) && (component == 55)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 436;
         }
         else if ((sector == 1) && (layer == 31) && (component == 53)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 437;
         }
         else if ((sector == 1) && (layer == 31) && (component == 56)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 438;
         }
         else if ((sector == 1) && (layer == 31) && (component == 54)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 439;
         }
         else if ((sector == 1) && (layer == 22) && (component == 42)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 440;
         }
         else if ((sector == 1) && (layer == 22) && (component == 41)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 441;
         }
         else if ((sector == 1) && (layer == 22) && (component == 44)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 442;
         }
         else if ((sector == 1) && (layer == 22) && (component == 43)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 443;
         }
         else if ((sector == 1) && (layer == 21) && (component == 43)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 444;
         }
         else if ((sector == 1) && (layer == 21) && (component == 42)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 445;
         }
         else if ((sector == 1) && (layer == 21) && (component == 44)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 446;
         }
         else if ((sector == 1) && (layer == 11) && (component == 36)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 447;
         }
         else if ((sector == 1) && (layer == 11) && (component == 37)) {
                 crate   = 79;
-                slot    = 1;
+                slot    = 4;
                 channel = 448;
         }
         else if ((sector == 1) && (layer == 51) && (component == 59)) {
