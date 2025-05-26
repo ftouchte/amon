@@ -22,7 +22,7 @@
 #include "TGraph.h"
 #include "TStyle.h"
 
-const double Ee = 10.6; // incident energy if the electron
+const double Ee = 2.23; // incident energy if the electron
 const double me = 0.511e-3; // energy mass of electron
 const double Mp = 938.272e-3; // energy mass of proton
 const double M_He = 3.73; // energy mass of Helium-4
