@@ -45,7 +45,7 @@ int main(int argc, char const *argv[]){
 			if (nEvent > 20000) { break;} // process only 20k events
 			for(int col = 0; col < banklist[0].getRows(); col++){ // loop over columns of the bankname
 				if (std::string(type) == "-f") {
-					double value = banklist[0].getFloat(attribut_name, col)/50.0;
+					double value = banklist[0].getFloat(attribut_name, col);
 					hist1d->Fill(value);
 				}
 				else if (std::string(type) == "-i") {
@@ -75,7 +75,7 @@ int main(int argc, char const *argv[]){
 		printf("Please, all fields are mandatory...\n");
 		printf("Usage :\n");
 		printf("   ./hist1d filename bankname attribut type Nbins lower_value upper_value\n");
-		printf("   e.g /hist1d file.hipo AHDC::adc time -f 100 0.0 100.0\n");
+		printf("   e.g ./hist1d file.hipo AHDC::adc time -f 100 0.0 1000.0\n");
 		return 0;
 	}
 }
