@@ -44,7 +44,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: hist1d raw_hit_cuts track 
+all: hist1d raw_hit_cuts track empty_hv_sector 
+
+empty_hv_sector: empty_hv_sector.o futils.o AhdcMapping.o
+	$(CXX) -o empty_hv_sector.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 track: track.o futils.o
 	$(CXX) -o track.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
