@@ -2198,33 +2198,40 @@ int Window::layer2number(int digit) {
 
 void Window::Get_HV_sector(int sector, int layer, int component, int & crate, int & slot, int & channel, int & hv, int & sub_hv) {
 	AhdcMapping::GetDreamChannel(1, layer, component, crate, slot, channel);
-	hv = -1111;
-	sub_hv = -2222;
-	if (slot == 1) { // hv from 1 to 8, then switch 1 <-> 2, 3 <-> 4, 5 <-> 6, 7 <-> 8
+	hv = -1;
+	sub_hv = -11;
+	// read hv_notes.txt
+	if (slot == 1) { 
 		hv = (channel-1)/64 + 1;
-		if (hv % 2 == 0) { hv--;}
-		else {hv++;}
-		int tmp = (channel-1)%64 + 1;
-		if ((tmp >= 1) && (tmp <= 23)) {
+		if (hv % 2 == 0) hv--;
+		else hv++;
+		int num = (channel-1)%64 + 1;
+		if ((num >= 1) && (num <= 23)) {
 			sub_hv = 3;
 		}
-		else if ((tmp >= 24) && (tmp <= 45)) {
+		else if ((num >= 24) && (num <= 45)) {
 			sub_hv = 2;
 		}
-		else if ((tmp >= 46) && (tmp <= 64)) {
+		else if ((num >= 46) && (num <= 64)) {
 			sub_hv = 1;
 		}
 	}
-	if (slot == 4) { // hv only 9
-		hv = 9;
-		int tmp = (channel-1)%64 + 1;
-		if ((tmp >= 1) && (tmp <= 23)) {
+	else if (slot == 4) { // hv only 9
+		// read hv_notes.txt
+		hv = (channel-1)/64 + 1;
+		if (hv == 2) { hv = 9;}
+		if (hv != 9) {
+			if (hv % 2 == 0) hv--;
+			else hv++;
+		}
+		int num = (channel-1)%64 + 1;
+		if ((num >= 1) && (num <= 23)) {
 			sub_hv = 3;
 		}
-		else if ((tmp >= 24) && (tmp <= 45)) {
+		else if ((num >= 24) && (num <= 45)) {
 			sub_hv = 2;
 		}
-		else if ((tmp >= 46) && (tmp <= 64)) {
+		else if ((num >= 46) && (num <= 64)) {
 			sub_hv = 1;
 		}
 	}
