@@ -1,0 +1,38 @@
+#----------------------------------------------------------------------------------------------------------------------
+# Notations
+# start-end : where start and end are channel number for a given slot (dream FEU)
+# (num) : connector number; read this entry to understand the logic https://logbooks.jlab.org/entry/4375219
+#----------------------------------------------------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------------------------------------------------
+## Before https://clasweb.jlab.org/cgi-bin/ccdb/show_request?request=/daq/tt/ahdc:0:default:2025-04-16_15-03-50
+#----------------------------------------------------------------------------------------------------------------------
+
+slot 1 : 65-128 (2); 1-64 (1); 193-256 (4); 129-192 (3); 321-384 (6); 257-320 (5); 449-512 (8); 385-448 (7)
+slot 4 : 65-128 (2)
+
+--> algorithm to determine the HV sectors: 
+--> slot 1 --> HV = (channel % 64) + 1
+--> slot 1 --> then swap 1 <-> 2, 3 <-> 4, 5 <-> 6, 7 <-> 8
+--> slot 4 --> HV = 9
+--> Each HV sector contains 64 channels: from 1-23 (sub_hv 1); from 24-45 (sub hv 2); from 46-64 (sub_hv 3)
+
+#----------------------------------------------------------------------------------------------------------------------
+## Starting  https://clasweb.jlab.org/cgi-bin/ccdb/show_request?request=/daq/tt/ahdc:21808:default:2025-05-14_16-32-05
+#----------------------------------------------------------------------------------------------------------------------
+
+#  Three flat cables we reconnected from the first Dream readout board to the second one to have more even load distribution: https://logbooks.jlab.org/entry/4375219
+#    	board 1 connector 3 ---> board 2 connector 3
+#    	board 1 connector 5 ---> board 2 connector 5
+#    	board 1 connector 7 ---> board 2 connector 7
+
+slot 1 : 65-128 (2); 1-64 (1); 193-256 (4); 321-384 (6); 449-512 (8)
+slot 4 : 129-192 (3); 257-320 (5); 385-448 (7); 65-128 (2)
+
+--> algorithm to determine the HV sectors: 
+--> slot 1 --> HV = (channel % 64) + 1
+--> slot 1 --> then swap 1 <-> 2, 3 <-> 4, 5 <-> 6, 7 <-> 8
+--> slot 4 --> HV = (channel % 64) + 1
+--> slot 4 --> if HV = 2 (i.e we have 65-128), set HV = 9
+--> slot 4 --> then swap 1 <-> 2, 3 <-> 4, 5 <-> 6, 7 <-> 8
