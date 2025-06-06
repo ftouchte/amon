@@ -29,6 +29,7 @@ inline const std::vector<fColor> PALETTE1 = {
 
 
 // kBird from CERN ROOT Project
+// https://github.com/root-project/root/blob/9bb2f5076762c4171bfa71f44da3ee74fbd27b5b/core/base/src/TColor.cxx#L3055
 inline const std::vector<fColor> PALETTE2 = {
 	// {r, g, b}
 	{0.2082, 0.1664, 0.5293},
