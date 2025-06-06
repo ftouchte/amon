@@ -45,6 +45,7 @@ int main(int argc, char const *argv[]) {
 		TH2D* H2_time      = new TH2D("time", "time", 99, 1, 100, 8, 1, 9); 
 		TH2D* H2_tot       = new TH2D("tot", "tot", 99, 1, 100, 8, 1, 9); 
 		TH1D* H1_avg_wf    = new TH1D("wf_all", "wf_all", 20, 0, 20);
+		TH1D* H1_avg_wf0    = new TH1D("wf_0", "wf_0", 20, 0, 20); // for a given wire
 		std::vector<TH1D*> VectorH1_avg_wf(27, nullptr); // one per hv sector
 		for (int hv = 0; hv < 9; hv++) {
 			for (int shv = 0; shv < 3; shv++) {
@@ -83,6 +84,9 @@ int main(int argc, char const *argv[]) {
 					int index = 3*(hv-1) + sub_hv - 1; // here number start at 1
 					VectorH1_avg_wf[index]->Fill(s, value); // per hv-sub_hv sector
 					H1_avg_wf->Fill(s, value); // global
+					if ((layer == 11) && (comp == 4)) {
+						H1_avg_wf0->Fill(s, value);
+					}
 				}
 			}
 		}
@@ -94,7 +98,11 @@ int main(int argc, char const *argv[]) {
 		H2_adcMax->Write("H2_adcMax");
 		H2_time->Write("H2_time");
 		H2_tot->Write("H2_tot");
+		(*H2_adcMax/(*H2_occupancy)).Write("H2_adcMax_avg");
+		(*H2_time/(*H2_occupancy)).Write("H2_time_avg");
+		(*H2_tot/(*H2_occupancy)).Write("H2_tot_avg");
 		H1_avg_wf->Write("H1_avg_wf");
+		H1_avg_wf0->Write("H1_avg_wf0");
 		for (int hv = 0; hv < 9; hv++) {
 			for (int shv = 0; shv < 3; shv++) {
 				int index = 3*hv + shv;
