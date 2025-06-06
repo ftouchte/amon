@@ -826,7 +826,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 		zmax = (zmax > adc) ? zmax : adc;	
 	}
 	//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
-	fColorPalette Palette(5, 2);
+	fColorPalette Palette(5, 1);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
 	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
@@ -849,7 +849,8 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	{ // Draw zmax
 		char buffer[50];
 		sprintf(buffer, "%.0lf", zmax);
-		fColor rgb = Palette.get_color(Palette.get_ncolors()-1);
+		//fColor rgb = Palette.get_color(Palette.get_ncolors()-1);
+		fColor rgb({0.0,0.0,0.0});
 		cr->set_source_rgb(rgb.r, rgb.g, rgb.b);
 		cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 		cr->set_font_size(canvas.get_label_size());
@@ -898,7 +899,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					if (w == 0) {
 						// these wires have a component id == 1 (it is the start of the numerotation)
 						cr->set_line_width(0.002*seff);
-						cr->set_source_rgba(1.0, 0.0, 0.0, 1.0);
+						cr->set_source_rgba(0.0, 0.0, 0.2, 1.0);
 						cr->move_to(x2w(wire->x) + marker_size, y2h(wire->y));
 						cr->arc(x2w(wire->x), y2h(wire->y) , marker_size, 0, 2*M_PI);
 						cr->stroke();
@@ -1609,6 +1610,7 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		Get_HV_sector(1, layer, component, crate, slot, channel, hv, sub_hv);
 		printf("    crate : %d\n", crate);
 		printf("    slot  : %d\n", slot);
+		printf("    conn  : %d\n", channel/64 + 1);
 		printf("    chan  : %d\n", channel);
 		printf("    HV_SECTOR : %d-%d\n", hv, sub_hv);
 		int tab_number = Book.get_current_page();
@@ -1663,6 +1665,11 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 		{ // slot
 			char buffer[50];
 			sprintf(buffer, "slot     :   %d\n", slot);
+			iter = TextBuffer_occupancy->insert(iter, buffer);
+		}
+		{ // connector
+			char buffer[50];
+			sprintf(buffer, "connector:   %d\n", channel/64 + 1);
 			iter = TextBuffer_occupancy->insert(iter, buffer);
 		}
 		{ // chan
