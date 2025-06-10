@@ -508,7 +508,7 @@ void Window::on_button_next_clicked(){
 	}
 	if (hipo_nEvent == 0) {
 		hipo_reader.open(filename.c_str());
-		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf", "AHDC::track"});
 		hipo_nEventMax = hipo_reader.getEntries();
 	}
 	Glib::signal_timeout().connect([this] () -> bool {
@@ -551,7 +551,7 @@ void Window::on_button_run_clicked(){
         }
         if (hipo_nEvent == 0) {
                 hipo_reader.open(filename.c_str());
-                hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+                hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf", "AHDC::track"});
 		hipo_nEventMax = hipo_reader.getEntries();
         }
 	Glib::signal_timeout().connect([this] () -> bool {
@@ -1090,6 +1090,7 @@ bool Window::dataEventAction() {
 		ListOfAdc.clear();
 		bool doIshowWF = false;
 		nWF = 0;
+		if (hipo_banklist[2].getRows() > 1) { //
 		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
 			//int sector = hipo_banklist[1].getInt("sector", col);	
 			int layer = hipo_banklist[1].getInt("layer", col);
@@ -1169,6 +1170,7 @@ bool Window::dataEventAction() {
 				ListOfAdc.push_back(adcMax);
 				nWF++;
 			}
+		}
 		}
 		// Update drawings
 		int tab_number = Book.get_current_page();
