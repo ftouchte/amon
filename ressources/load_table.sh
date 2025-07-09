@@ -1,4 +1,13 @@
 #!/bin/bash
+#
+# @author ftouchte
+# @date July 9, 2025
+#--------------------------
+
+if [[ "$1" == "-h" || -z $1 ]]; then
+    echo "Usage : $0 table_file class_name"
+    exit 1
+fi
 
 TABLE=$1
 # Requires a table
