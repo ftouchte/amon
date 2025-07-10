@@ -1,4 +1,4 @@
 test*
 *.h
 *.cpp
-*.txt
+txt/*
