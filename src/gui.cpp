@@ -1100,7 +1100,6 @@ bool Window::dataEventAction() {
 		ListOfAdc.clear();
 		bool doIshowWF = false;
 		nWF = 0;
-		printf("trackBank, nentries : %d\n", trackBank.getRows());
 		for (int col = 0; col < wfBank.getRows(); col++){
 			//int sector = wfBank.getInt("sector", col);	
 			int layer = wfBank.getInt("layer", col);
@@ -1199,7 +1198,7 @@ bool Window::dataEventAction() {
 		else {
 			// do nothing
 		}
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut).Data());
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf, ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut, trackBank.getRows()).Data());
 		return true;
 	}
 	else {return false;}
