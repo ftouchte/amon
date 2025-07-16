@@ -44,7 +44,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: hist1d raw_hit_cuts track empty_hv_sector 
+all: hist1d empty_hv_sector 
+
+test_load_ccdb: test_load_ccdb.o
+	$(CXX) -o test_load_ccdb.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 empty_hv_sector: empty_hv_sector.o futils.o AhdcMapping.o
 	$(CXX) -o empty_hv_sector.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
@@ -67,7 +70,7 @@ hist1d: hist1d.o
 
 clean:
 	@echo 'Removing all build files'
-	@rm -rf *.o *~ *.exe example*hipo ../output/*.pdf
+	@rm -rf *.o *~ *.exe example*hipo ./output/*.pdf
 
 %.o: %.cpp
 	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) 
