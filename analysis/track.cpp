@@ -22,24 +22,22 @@
 #include "TGraph.h"
 #include "TStyle.h"
 
-const double Ee = 2.23; // incident energy if the electron
-const double me = 0.511e-3; // energy mass of electron
-const double Mp = 938.272e-3; // energy mass of proton
-const double M_He = 3.73; // energy mass of Helium-4
-const double Mt = Mp; // target rest mass : choose Mp or M_He
+const double Ee = 10.6; // incident energy if the electron, GeV
+const double me = 0.511e-3; // energy mass of electron, GeV
+const double Mp = 938.272e-3; // energy mass of proton, GeV
+const double M_He = 3.73; // energy mass of Helium-4, GeV
+const double Mt = M_He; // target rest mass : choose Mp or M_He, GeV
 
 int main(int argc, char const *argv[]) {
 	if (argc > 1){
 		hipo::reader  reader(argv[1]);
 		hipo::dictionary factory;
 		reader.readDictionary(factory);
-		hipo::bank  track(factory.getSchema("AHDC::track"));
-		hipo::bank  kftrack(factory.getSchema("AHDC::track"));
+		hipo::bank  track(factory.getSchema("AHDC::kftrack"));
 		hipo::bank  particles(factory.getSchema("REC::Particle"));
 		hipo::event event;
 		long unsigned int nevents =0;
 		long unsigned int nelectrons =0;
-		long unsigned int nkftracks =0;
 		long unsigned int ntracks =0;
 		// Histograms
 		// electron
@@ -47,23 +45,23 @@ int main(int argc, char const *argv[]) {
 		TH1D* H1_p_el     = new TH1D("p_electron", "p electron (GeV)", 100, 0, 11);
 		TH1D* H1_theta_el = new TH1D("theta_electron", "theta electron (deg)", 100, 0, 180);
 		TH1D* H1_phi_el   = new TH1D("phi_electron", "phi electron (deg)", 100, 0, 360);
-		// ahdc track
-		TH1D* H1_vz     = new TH1D("z_track", "z (mm)", 100, -400, 400); 
-		TH1D* H1_p     = new TH1D("p_track", "p (GeV)", 100, 0, 11);
-		TH1D* H1_theta = new TH1D("theta_track", "theta (deg)", 100, 0, 180);
-		TH1D* H1_phi   = new TH1D("phi_track", "phi (deg)", 100, 0, 360);
-		TH1D* H1_nhits = new TH1D("nhits", "number of hits per track", 100, 0, 15);
-		TH1D* H1_adc   = new TH1D("sum_adc", "sum of adc", 100, 0, 40000);
-		// ahdc kftrack
-		TH1D* H1_vz_kf     = new TH1D("z_kftrack", "z (mm)", 100, -400, 400); 
-		TH1D* H1_p_kf     = new TH1D("p_kftrack", "p (GeV)", 100, 0, 11);
-		TH1D* H1_theta_kf = new TH1D("theta_kftrack", "theta (deg)", 100, 0, 180);
-		TH1D* H1_phi_kf   = new TH1D("phi_kftrack", "phi (deg)", 100, 0, 360);
+		// ahdc (kf) track
+		TH1D* H1_vz      = new TH1D("z_track", "z (cm)", 100, -40, 40); 
+		TH1D* H1_p       = new TH1D("p_track", "p (GeV)", 100, 0, 11);
+		TH1D* H1_theta   = new TH1D("theta_track", "theta (deg)", 100, 0, 180);
+		TH1D* H1_phi     = new TH1D("phi_track", "phi (deg)", 100, 0, 360);
+		TH1D* H1_nhits   = new TH1D("nhits", "number of hits per track", 100, 0, 15);
+		TH1D* H1_adc     = new TH1D("sum_adc", "#Sigma #it{adc}", 100, 0, 40000);
+		TH1D* H1_path    = new TH1D("sum_path", "path (mm)", 100, 0, 1000);
+		TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 40);
+		TH1D* H1_sum_res = new TH1D("sum_res", "#Sigma #it{res} (mm)", 100, 0, 3);
+		TH1D* H1_chi2 = new TH1D("chi2", "#Sigma #it{res} (mm^{2})", 100, 0, 1000);
+		TH1D* H1_p_drift = new TH1D("p_drift", "p_{drift} (MeV)", 100, 0, 11000);
 		// physics
-		TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, -100, 100);
-		TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, -100, 100);
-		TH1D* H1_nu = new TH1D("nu", "#nu = #Delta E = E - E' (GeV)", 100, 0, 11);
-		TH1D* H1_xB = new TH1D("xB", "x_{B}", 100, 0, 1.05);
+		TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, 0, 40);
+		TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, -20, 100);
+		TH1D* H1_nu = new TH1D("nu", "#nu = #Delta E = E - E' (GeV)", 100, 0, 10.7);
+		TH1D* H1_xB = new TH1D("xB", "x_{B}", 100, 0, 2);
 
 		// Loop over events
 		while( reader.next()){
@@ -72,7 +70,6 @@ int main(int argc, char const *argv[]) {
 			if (nevents % 100000 == 0) { printf("Start event %ld\n", nevents);}
 			reader.read(event);
 			event.getStructure(track);
-			event.getStructure(kftrack);
 			event.getStructure(particles);
 			// electrons
 			for (int i = 0; i < particles.getRows(); i++) {
@@ -80,7 +77,7 @@ int main(int argc, char const *argv[]) {
 					nelectrons++;
 					double p, theta, phi;
 					futils::cart2polar(particles.getFloat("px",i), particles.getFloat("py",i), particles.getFloat("pz",i), p, theta, phi);
-					double Q2 = 4*Ee*p*sin(theta/2); // Ee' ~ p
+					double Q2 = 4*Ee*p*sin(theta/2); // Ee' ~ p as me << 1 GeV
 					double nu = Ee - p;
 					double W2 = Mt*Mt + 2*Mt*nu - Q2;
 					double xB = Q2/(2*Mt*nu);
@@ -106,27 +103,21 @@ int main(int argc, char const *argv[]) {
 				H1_p->Fill(p/1000.0); // here p was in MeV
 				H1_theta->Fill(theta*180.0/M_PI);
 				H1_phi->Fill(phi*180/M_PI);
-				H1_vz->Fill(track.getFloat("z", i));
-			}
-			// kftrack
-			for (int i = 0; i < kftrack.getRows(); i++) {
-				nkftracks++;
-				double p, theta, phi;
-				futils::cart2polar(kftrack.getFloat("px",i), kftrack.getFloat("py",i), kftrack.getFloat("pz",i), p, theta, phi);
-				H1_p_kf->Fill(p/1000.0); // here p was in MeV
-				H1_theta_kf->Fill(theta*180.0/M_PI);
-				H1_phi_kf->Fill(phi*180/M_PI);
-				H1_vz_kf->Fill(kftrack.getFloat("z", i));
-				H1_nhits->Fill(kftrack.getInt("n_hits", i));
-				H1_adc->Fill(kftrack.getInt("sum_adc", i));
+				H1_vz->Fill(track.getFloat("z", i)/10.0); // convert mm to cm
+				H1_nhits->Fill(track.getInt("n_hits", i)); 
+				H1_adc->Fill(track.getInt("sum_adc", i));
+				H1_path->Fill(track.getFloat("path", i));   
+				H1_dEdx->Fill(track.getFloat("dEdx", i));    
+				H1_sum_res->Fill(track.getFloat("sum_residuals", i));
+				H1_chi2->Fill(track.getFloat("chi2", i));
+				H1_p_drift->Fill(track.getFloat("p_drift", i));
 			}
 		}
 		printf("nevents    : %ld \n", nevents);
 		printf("nelectrons : %ld \n", nelectrons);
-		printf("nkftracks  : %ld \n", nkftracks);
-		printf("ntracks    : %ld \n", nkftracks);
+		printf("ntracks    : %ld \n", ntracks);
 		// output
-		const char * output = "../output/proton_track_study.root";
+		const char * output = "./output/track_study.root";
 		TFile *f = new TFile(output, "RECREATE");
 		H1_Q2->Write("Q2");
 		H1_W2->Write("W2");
@@ -142,10 +133,11 @@ int main(int argc, char const *argv[]) {
 		H1_vz->Write("vz");
 		H1_nhits->Write("nhits");
 		H1_adc->Write("sum_adc");
-		H1_p_kf->Write("p_kf");
-		H1_theta_kf->Write("theta_kf");
-		H1_phi_kf->Write("phi_kf");
-		H1_vz_kf->Write("vz_kf");
+		H1_path->Write("path");
+		H1_dEdx->Write("dEdx");
+		H1_sum_res->Write("sum_residuals");
+		H1_chi2->Write("chi2");
+		H1_p_drift->Write("p_drift");
 		f->Close();
 		printf("File created : %s\n", output);
 	} 
