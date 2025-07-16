@@ -95,7 +95,11 @@ protected :
 	
 	std::string filename;
 	hipo::reader hipo_reader;
-	hipo::banklist hipo_banklist;
+	hipo::dictionary hipo_factory;
+	hipo::event hipo_event;
+	hipo::bank adcBank;
+	hipo::bank wfBank;
+	hipo::bank trackBank;
 	long unsigned int hipo_nEvent = 0;
 	long unsigned int hipo_nEventMax = 1;
 	int nWF; ///< number of waveforms	

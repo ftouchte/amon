@@ -508,7 +508,10 @@ void Window::on_button_next_clicked(){
 	}
 	if (hipo_nEvent == 0) {
 		hipo_reader.open(filename.c_str());
-		hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+		hipo_reader.readDictionary(hipo_factory);
+		adcBank = hipo::bank(hipo_factory.getSchema("AHDC::adc"));
+		wfBank = hipo::bank(hipo_factory.getSchema("AHDC::wf"));
+		trackBank = hipo::bank(hipo_factory.getSchema("AHDC::kftrack"));
 		hipo_nEventMax = hipo_reader.getEntries();
 	}
 	Glib::signal_timeout().connect([this] () -> bool {
@@ -551,7 +554,10 @@ void Window::on_button_run_clicked(){
         }
         if (hipo_nEvent == 0) {
                 hipo_reader.open(filename.c_str());
-                hipo_banklist = hipo_reader.getBanks({"AHDC::adc","AHDC::wf"});
+		hipo_reader.readDictionary(hipo_factory);
+		adcBank = hipo::bank(hipo_factory.getSchema("AHDC::adc"));
+		wfBank = hipo::bank(hipo_factory.getSchema("AHDC::wf"));
+		trackBank = hipo::bank(hipo_factory.getSchema("AHDC::kftrack"));
 		hipo_nEventMax = hipo_reader.getEntries();
         }
 	Glib::signal_timeout().connect([this] () -> bool {
@@ -1083,32 +1089,37 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 
 bool Window::dataEventAction() {
 	// hipo4
-	if (hipo_reader.next(hipo_banklist)) {
+	if (hipo_reader.next()) {
+		hipo_reader.read(hipo_event);
+		hipo_event.getStructure(adcBank);
+		hipo_event.getStructure(wfBank);
+		hipo_event.getStructure(trackBank);
 		hipo_nEvent++;
 		// loop over hits
 		clearAhdcData();
 		ListOfAdc.clear();
 		bool doIshowWF = false;
 		nWF = 0;
-		for (int col = 0; col < hipo_banklist[1].getRows(); col++){
-			//int sector = hipo_banklist[1].getInt("sector", col);	
-			int layer = hipo_banklist[1].getInt("layer", col);
-			int component = hipo_banklist[1].getInt("component", col);
+		printf("trackBank, nentries : %d\n", trackBank.getRows());
+		for (int col = 0; col < wfBank.getRows(); col++){
+			//int sector = wfBank.getInt("sector", col);	
+			int layer = wfBank.getInt("layer", col);
+			int component = wfBank.getInt("component", col);
 			std::vector<double> samples;
 			for (int bin=0; bin < NumberOfBins; bin++){
 				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = hipo_banklist[1].getInt(binName.c_str(), col);
+				short value = wfBank.getInt(binName.c_str(), col);
 				samples.push_back(value);
 			}
 			// fill histograms
 			double factor = 1.0; // if == samplingTime, (the unit in bin number)
-			double timeMax = this->hipo_banklist[0].getFloat("time", col)/factor;
-                        double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/factor;
-                        double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/factor;
-                        double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/factor;
-                        double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
-                        double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-                        //double integral = this->hipo_banklist[0].getInt("integral", col);
+			double timeMax = this->adcBank.getFloat("time", col)/factor;
+                        double leadingEdgeTime = this->adcBank.getFloat("leadingEdgeTime", col)/factor;
+                        double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
+                        double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
+                        double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
+                        double adcOffset = this->adcBank.getInt("ped", col);
+                        //double integral = this->adcBank.getInt("integral", col);
 			bool flag = (adcMax >= adcCut) &&
 				(adcOffset >= cut_adcOffset_min) && 
 				(adcOffset <= cut_adcOffset_max) && 
@@ -1133,28 +1144,28 @@ bool Window::dataEventAction() {
 		}
 		// Criteria to show all the event 	
 		if (doIshowWF) {
-			for (int col = 0; col < hipo_banklist[1].getRows(); col++){
-				int sector = hipo_banklist[1].getInt("sector", col);	
-				int layer = hipo_banklist[1].getInt("layer", col);
-				int component = hipo_banklist[1].getInt("component", col);
-				int binOffset = hipo_banklist[1].getInt("time", col);
+			for (int col = 0; col < wfBank.getRows(); col++){
+				int sector = wfBank.getInt("sector", col);	
+				int layer = wfBank.getInt("layer", col);
+				int component = wfBank.getInt("component", col);
+				int binOffset = wfBank.getInt("time", col);
 				std::vector<double> samples;
 				for (int bin=0; bin < binOffset; bin++){
 					samples.push_back(0.0);
 				}
 				for (int bin=0; bin < NumberOfBins - binOffset; bin++){
 					std::string binName = "s" + std::__cxx11::to_string(bin+1);
-					short value = hipo_banklist[1].getInt(binName.c_str(), col);
+					short value = wfBank.getInt(binName.c_str(), col);
 					samples.push_back(value);
 				}
 				double factor = 1.0; // if == samplingTime, (the unit in bin number)
-				double timeMax = this->hipo_banklist[0].getFloat("time", col)/factor;
-				double leadingEdgeTime = this->hipo_banklist[0].getFloat("leadingEdgeTime", col)/factor;
-				double timeOverThreshold = this->hipo_banklist[0].getFloat("timeOverThreshold", col)/factor;
-				double constantFractionTime = this->hipo_banklist[0].getFloat("constantFractionTime", col)/factor;
-				double adcMax = this->hipo_banklist[0].getInt("ADC", col); // expected adcMax without adcOffset
-				double adcOffset = this->hipo_banklist[0].getInt("ped", col);
-				double integral = this->hipo_banklist[0].getInt("integral", col);
+				double timeMax = this->adcBank.getFloat("time", col)/factor;
+				double leadingEdgeTime = this->adcBank.getFloat("leadingEdgeTime", col)/factor;
+				double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
+				double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
+				double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
+				double adcOffset = this->adcBank.getInt("ped", col);
+				double integral = this->adcBank.getInt("integral", col);
 				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
 				wire->pulse.set_adcMax(adcMax);
 				wire->pulse.set_adcOffset(adcOffset);
