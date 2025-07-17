@@ -34,6 +34,7 @@ int main(int argc, char const *argv[]) {
 		hipo::dictionary factory;
 		reader.readDictionary(factory);
 		hipo::bank  track(factory.getSchema("AHDC::kftrack"));
+		hipo::bank  track0(factory.getSchema("AHDC::track"));
 		hipo::bank  particles(factory.getSchema("REC::Particle"));
 		hipo::event event;
 		long unsigned int nevents =0;
@@ -53,10 +54,13 @@ int main(int argc, char const *argv[]) {
 		TH1D* H1_nhits   = new TH1D("nhits", "number of hits per track", 100, 0, 15);
 		TH1D* H1_adc     = new TH1D("sum_adc", "#Sigma #it{adc}", 100, 0, 40000);
 		TH1D* H1_path    = new TH1D("sum_path", "path (mm)", 100, 0, 1000);
-		TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 40);
+		TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 500);
 		TH1D* H1_sum_res = new TH1D("sum_res", "#Sigma #it{res} (mm)", 100, 0, 3);
-		TH1D* H1_chi2 = new TH1D("chi2", "#Sigma #it{res} (mm^{2})", 100, 0, 1000);
-		TH1D* H1_p_drift = new TH1D("p_drift", "p_{drift} (MeV)", 100, 0, 11000);
+		TH1D* H1_chi2    = new TH1D("chi2", "#Sigma #it{res} (mm^{2})", 100, 0, 1000);
+		TH1D* H1_p_drift = new TH1D("p_drift", "p_{drift} (MeV ? in bankdef)", 100, 0, 11000);
+		// pid ? correlation study
+		TH2D* H2_dEdx_p  = new TH2D("dEdx_p_drift", "dEdx vs p_drift", 100, 0, 500, 100, 0, 11000); H2_dEdx_p->Draw("COLZ");
+		TH2D* H2_vze_vz   = new TH2D("vze_vz", "vz_{e} vs vz", 100, -40, 40, 100, -40, 40); H2_vze_vz->Draw("COLZ");
 		// physics
 		TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, 0, 40);
 		TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, -20, 100);
@@ -70,14 +74,18 @@ int main(int argc, char const *argv[]) {
 			if (nevents % 100000 == 0) { printf("Start event %ld\n", nevents);}
 			reader.read(event);
 			event.getStructure(track);
+			event.getStructure(track0);
 			event.getStructure(particles);
+			double vze = -999;
 			// electrons
 			for (int i = 0; i < particles.getRows(); i++) {
+				int nelectrons_per_evt = 0;
 				if (particles.getInt("pid", i) == 11) { // cut on electrons
 					nelectrons++;
+					nelectrons_per_evt++;
 					double p, theta, phi;
 					futils::cart2polar(particles.getFloat("px",i), particles.getFloat("py",i), particles.getFloat("pz",i), p, theta, phi);
-					double Q2 = 4*Ee*p*sin(theta/2); // Ee' ~ p as me << 1 GeV
+					double Q2 = 4*Ee*sqrt(p*p + me*me)*sin(theta/2); // Ee' ~ p as me << 1 GeV
 					double nu = Ee - p;
 					double W2 = Mt*Mt + 2*Mt*nu - Q2;
 					double xB = Q2/(2*Mt*nu);
@@ -93,6 +101,7 @@ int main(int argc, char const *argv[]) {
 						H1_nu->Fill(nu);
 						H1_xB->Fill(xB);
 					//}
+					if (nelectrons_per_evt == 1) { vze = particles.getFloat("vz", i);}
 				}
 			}
 			// track
@@ -107,11 +116,13 @@ int main(int argc, char const *argv[]) {
 				H1_nhits->Fill(track.getInt("n_hits", i)); 
 				H1_adc->Fill(track.getInt("sum_adc", i));
 				H1_path->Fill(track.getFloat("path", i));   
-				H1_dEdx->Fill(track.getFloat("dEdx", i));    
+				H1_dEdx->Fill(track0.getFloat("dEdx", i));    
 				H1_sum_res->Fill(track.getFloat("sum_residuals", i));
 				H1_chi2->Fill(track.getFloat("chi2", i));
 				H1_p_drift->Fill(track.getFloat("p_drift", i));
+				H2_dEdx_p->Fill(track0.getFloat("dEdx", i), track.getFloat("p_drift", i));
 			}
+			H2_vze_vz->Fill(vze, track.getFloat("z", 0)/10.0); // first electrons vs the first track (en cm) 
 		}
 		printf("nevents    : %ld \n", nevents);
 		printf("nelectrons : %ld \n", nelectrons);
@@ -138,6 +149,8 @@ int main(int argc, char const *argv[]) {
 		H1_sum_res->Write("sum_residuals");
 		H1_chi2->Write("chi2");
 		H1_p_drift->Write("p_drift");
+		H2_dEdx_p->Write("corr_dEdx_p_drift");
+		H2_vze_vz->Write("corr_vze_vz");
 		f->Close();
 		printf("File created : %s\n", output);
 	} 
