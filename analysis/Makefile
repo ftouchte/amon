@@ -7,15 +7,6 @@
 # Date : 12 avril 2024
 #********************************************************
 
-# ATTENTION
-
-# Les "paths" sont en chemin relatifs (rq: les ".."). Prière de localiser le dossier *hipo/hipo4...
-# Quelques options de compilations
-# 	-I<path> : Ajoute le répertoire <path> au chemin de recherche des fichiers d'en-tête.
-# 	-L<path> : Ajoute le répertoire <path> au chemin de recherche des bibliothèques.
-
-#PATH2HIPO := /homeijclab/touchte-codjo/hipo
-#PATH2HIPO := /home/ftouchte/hipo
 PATH2HIPO := /home/touchte-codjo/framework/hipo
 
 HIPOCFLAGS  := -I$(PATH2HIPO)/hipo4 -I$(PATH2HIPO)/hipo4/chart   
@@ -46,14 +37,17 @@ LDFLAGS   :=
 #all:  showFile histo plot benchmark simu
 all: hist1d empty_hv_sector 
 
+timestamp: timestamp.o
+	$(CXX) -o timestamp.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+
+track: track.o futils.o
+	$(CXX) -o track.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+
 test_load_ccdb: test_load_ccdb.o
 	$(CXX) -o test_load_ccdb.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 empty_hv_sector: empty_hv_sector.o futils.o AhdcMapping.o
 	$(CXX) -o empty_hv_sector.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
-
-track: track.o futils.o
-	$(CXX) -o track.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 raw_hit_cuts: raw_hit_cuts.o
 	$(CXX) -o raw_hit_cuts.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)

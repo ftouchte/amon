@@ -66,7 +66,7 @@ int main(int argc, char const *argv[]){
 		hist1d->GetYaxis()->SetTitleSize(0.05);
 		hist1d->Draw();
 		char buffer2[50];
-		sprintf(buffer2, "../output/%s_%s.pdf", bankname, attribut_name);
+		sprintf(buffer2, "./output/%s_%s.pdf", bankname, attribut_name);
 		canvas1->Print(buffer2);
 		delete hist1d;
 		delete canvas1;
