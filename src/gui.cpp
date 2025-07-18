@@ -2258,7 +2258,7 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 int main (int argc, char * argv[]) {
 	std::cout << "Start GUi..." << std::endl;
 
-	auto app = Gtk::Application::create("org.gtkmm.example");
+	auto app = Gtk::Application::create("org.gtkmm.example.amon");
 
 	return app->make_window_and_run<Window>(argc, argv);
 }
