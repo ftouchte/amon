@@ -74,7 +74,14 @@ int main(int argc, char const *argv[]) {
 			event.getStructure(adcBank);
 			event.getStructure(wfBank);
 			event.getStructure(eventBank);
+			double triggerTime 	= eventBank.getFloat("startTime",0);
+			// https://github.com/JeffersonLab/coatjava/tree/5912ac9f93b1fe5cdb7a72fbb2d370fe7c14ff48/reconstruction/eb#event-start-time
+			if (abs(triggerTime + 1000) <= 1e-15*std::max(std::fabs(triggerTime), 1000.0)) {
+				//printf("bad event, triggerTime : %lf\n", triggerTime);
+				continue;
+			}
 			for (int i = 0; i < adcBank.getRows(); i++) {
+				//printf("good event, triggerTime : %lf\n", triggerTime);
 				int sector    = adcBank.getInt("sector", i);
 				int layer     = adcBank.getInt("layer", i);
 				int component = adcBank.getInt("component", i);
@@ -87,16 +94,22 @@ int main(int argc, char const *argv[]) {
 				}
 
 				double leadingEdgeTime  = adcBank.getFloat("leadingEdgeTime",i);
-				double triggerTime 	= eventBank.getFloat("startTime",0);
-				long timestamp 		= wfBank.getLong("timestamp",i);
-				double timestampCorrection = fineTimestampCorrection(timestamp, 8, true);
+				long   timestamp 	= wfBank.getLong("timestamp",i);
+				double timestampCorrection = fineTimestampCorrection(timestamp, 8);
 				double timeCorrected       = leadingEdgeTime - t0 - triggerTime - timestampCorrection;
-				H1_leadingEdgeTime->Fill(leadingEdgeTime);
-				H1_t0Calibration->Fill(t0); 
-				H1_currentTime->Fill(leadingEdgeTime-t0); 
-				H1_triggerTime->Fill(triggerTime);
-				H1_timestampCorrection->Fill(timestampCorrection);
-				H1_timeCorrected->Fill(timeCorrected);
+				// Raw hit cuts
+				double time = leadingEdgeTime - t0;
+				double tot  = adcBank.getFloat("timeOverThreshold",i);
+				double ped  = adcBank.getInt("ped",i);
+				double adc  = adcBank.getInt("ADC",i);
+				if ((time >= 0) && (time <= 300) && (tot >= 300) && (tot <= 600) && (ped >= 180) && (ped <= 360) && (adc >= 0) && (adc <= 4095)) {
+					H1_leadingEdgeTime->Fill(leadingEdgeTime);
+					H1_t0Calibration->Fill(t0); 
+					H1_currentTime->Fill(time); 
+					H1_triggerTime->Fill(triggerTime);
+					H1_timestampCorrection->Fill(timestampCorrection);
+					H1_timeCorrected->Fill(timeCorrected);
+				}
 			}
 		}
 		printf("nevents    : %ld \n", nevents);
@@ -104,8 +117,8 @@ int main(int argc, char const *argv[]) {
 		const char * output = "./output/timestamp_study.root";
 		TFile *f = new TFile(output, "RECREATE");
 		H1_leadingEdgeTime->Write("leadingEdgeTime");
-		H1_t0Calibration->Write("t0_calibration"); 
 		H1_currentTime->Write("currentTime"); 
+		H1_t0Calibration->Write("t0_calibration"); 
 		H1_timestampCorrection->Write("timestampCorrection");
 		H1_triggerTime->Write("triggerTime");
 		H1_timeCorrected->Write("timeCorrected");
