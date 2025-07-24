@@ -58,11 +58,11 @@ int main(int argc, char const *argv[]) {
 		long unsigned int nevents =0;
 		// Histograms
 		TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime (ns)", 100, 0, 1000); 
-		TH1D* H1_currentTime     = new TH1D("currentTime", "leadingEdgeTime - t0 (ns)", 100, 0, 1000); 
-		TH1D* H1_t0Calibration	 = new TH1D("t0_calibration", "t0_calibration (ns)", 100, 0, 400); 
-		TH1D* H1_timestampCorrection  = new TH1D("timestampCorrection", "timestampCorrection (ns)", 100, 0, 60); 
-		TH1D* H1_triggerTime	 = new TH1D("triggerTime", "triggerTime (ns)", 100, -1000, 400); 
-		TH1D* H1_timeCorrected   = new TH1D("timeCorrected", "timeCorrected (ns)", 100, 0, 1000); 
+		TH1D* H1_currentTime     = new TH1D("currentTime", "leadingEdgeTime - t0 (ns)", 100, 0, 400); 
+		TH1D* H1_t0Calibration	 = new TH1D("t0_calibration", "t0_calibration (ns)", 100, 150, 400); 
+		TH1D* H1_timestampCorrection  = new TH1D("timestampCorrection", "FineTimestampCorrection (ns)", 100, 0, 40); 
+		TH1D* H1_triggerTime	 = new TH1D("triggerTime", "triggerTime (ns)", 100, 0, 200); 
+		TH1D* H1_timeCorrected   = new TH1D("timeCorrected", "timeCorrected (ns)", 100, -180, 400); 
 		
 		// Loop over events
 		while( reader.next()){
@@ -96,7 +96,7 @@ int main(int argc, char const *argv[]) {
 				double leadingEdgeTime  = adcBank.getFloat("leadingEdgeTime",i);
 				long   timestamp 	= wfBank.getLong("timestamp",i);
 				double timestampCorrection = fineTimestampCorrection(timestamp, 8);
-				double timeCorrected       = leadingEdgeTime - t0 - triggerTime - timestampCorrection;
+				double timeCorrected       = leadingEdgeTime - t0 - triggerTime + timestampCorrection;
 				// Raw hit cuts
 				double time = leadingEdgeTime - t0;
 				double tot  = adcBank.getFloat("timeOverThreshold",i);
@@ -119,7 +119,7 @@ int main(int argc, char const *argv[]) {
 		H1_leadingEdgeTime->Write("leadingEdgeTime");
 		H1_currentTime->Write("currentTime"); 
 		H1_t0Calibration->Write("t0_calibration"); 
-		H1_timestampCorrection->Write("timestampCorrection");
+		H1_timestampCorrection->Write("fineTimestampCorrection");
 		H1_triggerTime->Write("triggerTime");
 		H1_timeCorrected->Write("timeCorrected");
 		f->Close();
