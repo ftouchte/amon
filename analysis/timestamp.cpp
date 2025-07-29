@@ -25,11 +25,9 @@
 #include "TStyle.h"
 
 double fineTimestampCorrection(long timestamp, double dream_clock, bool verbose = false) {
-	std::string binaryTimestamp = std::bitset<64>(timestamp).to_string();
-	int fineTimestamp = (int) std::bitset<64>(binaryTimestamp.substr(64-3,3)).to_ulong();
+	long long fineTimestamp = timestamp & 0x00000007;
 	if (verbose) {
 		printf("timestamp       : %ld\n", timestamp);
-		printf("binaryTimestamp : %s\n", binaryTimestamp.c_str());
 		printf("fineTimestamp   : %d\n", fineTimestamp);
 		printf("timeCorrection  : %lf\n", (fineTimestamp + 0.5)*dream_clock);
 	}
@@ -37,16 +35,6 @@ double fineTimestampCorrection(long timestamp, double dream_clock, bool verbose 
 }
 
 int main(int argc, char const *argv[]) {
-	// test bitset library
-	/*std::bitset<8> b1(10);
-	std::bitset<8> b2(std::string("10000"));
-	std::bitset<8> b3(0b11);
-	printf("b1 : %s \n", b1.to_string().c_str());
-	printf("b2 : %ld \n", b2.to_ulong());
-	printf("b3 : %s \n", b3.to_string().c_str());
-	printf("b2.count : %d \n", b2.size());
-	fineTimestampCorrection(275540503, 8);
-	return 0;*/
 	if (argc > 1){
 		hipo::reader  reader(argv[1]);
 		hipo::dictionary factory;
@@ -54,6 +42,8 @@ int main(int argc, char const *argv[]) {
 		hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
 		hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
 		hipo::bank  eventBank(factory.getSchema("REC::Event"));
+		hipo::bank  runConfigBank(factory.getSchema("RUN::config"));
+		hipo::bank  kftrackBank(factory.getSchema("AHDC::kftrack"));
 		hipo::event event;
 		long unsigned int nevents =0;
 		// Histograms
@@ -63,22 +53,35 @@ int main(int argc, char const *argv[]) {
 		TH1D* H1_timestampCorrection  = new TH1D("timestampCorrection", "FineTimestampCorrection (ns)", 100, 0, 40); 
 		TH1D* H1_triggerTime	 = new TH1D("triggerTime", "triggerTime (ns)", 100, 0, 200); 
 		TH1D* H1_timeCorrected   = new TH1D("timeCorrected", "timeCorrected (ns)", 100, -180, 400); 
+		TGraph* gr_nevent   = new TGraph(); 
 		
 		// Loop over events
 		while( reader.next()){
 			nevents++;
 			if (nevents % 10000 == 0) { 
-				printf("Start event %ld\n", nevents);
+				//printf("Start event %ld\n", nevents);
 			}
 			reader.read(event);
 			event.getStructure(adcBank);
 			event.getStructure(wfBank);
 			event.getStructure(eventBank);
+			event.getStructure(runConfigBank);
+			event.getStructure(kftrackBank);
 			double triggerTime 	= eventBank.getFloat("startTime",0);
 			// https://github.com/JeffersonLab/coatjava/tree/5912ac9f93b1fe5cdb7a72fbb2d370fe7c14ff48/reconstruction/eb#event-start-time
-			if (abs(triggerTime + 1000) <= 1e-15*std::max(std::fabs(triggerTime), 1000.0)) {
+			if (triggerTime < 0) {
 				//printf("bad event, triggerTime : %lf\n", triggerTime);
 				continue;
+			}
+			gr_nevent->AddPoint(runConfigBank.getInt("event",0),1);
+			gr_nevent->Draw("AP");
+			if (kftrackBank.getRows() > 0) {
+				//printf("evt: %d --> n_kftracks %d\n", runConfigBank.getInt("event",0), kftrackBank.getRows());
+				printf("%d, ", runConfigBank.getInt("event",0));
+			}
+			if (nevents > 1000) {
+				printf("nevents processed : %ld \n", nevents);
+				return 0;
 			}
 			for (int i = 0; i < adcBank.getRows(); i++) {
 				//printf("good event, triggerTime : %lf\n", triggerTime);
@@ -122,6 +125,7 @@ int main(int argc, char const *argv[]) {
 		H1_timestampCorrection->Write("fineTimestampCorrection");
 		H1_triggerTime->Write("triggerTime");
 		H1_timeCorrected->Write("timeCorrected");
+		gr_nevent->Write("event_number");
 		f->Close();
 		printf("File created : %s\n", output);
 	} 
