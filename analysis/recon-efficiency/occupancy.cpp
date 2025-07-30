@@ -1,5 +1,18 @@
 /***********************************************
- * Occupancy study (raw hit cuts vs wfType)	
+ * Occupancy study (raw hit cuts vs wfType)
+ *
+ * A given file (see filename var.)
+ * - Plot the occupancy in percentage (with respect to the number of event)
+ *    * Without cuts
+ *    * with my raw hit cuts on (time, tot, adc, ped... see ccdb)
+ *    * with Noemie wfType
+ * - Plot the disrition of time, tot, adc and ped according to the above cuts
+ *
+ * Remarks: test on run 22435/00003
+ * - wfType is a good compromise (6 %); rawCuts (< 4%)
+ * - wfType <= 1 keep more track compared the rawCuts at low adc
+ * - wfType <= 1 keep less track compared the rawCuts at large adc
+ * - more time cut can be added to complete wfType <= 1
  *
  * @author Felix Touchte Codjo
  * @date July 29, 2025
@@ -33,6 +46,7 @@
 //5 has low ADC ("flat")
 
 int layer2number(int digit);
+void progressBar(int state);
 
 int main(int argc, char const *argv[]) {
         const char * filename = "/home/touchte-codjo/Desktop/hipofiles/occupancy/new_clas_022435.00003.hipo";
@@ -93,8 +107,8 @@ int main(int argc, char const *argv[]) {
 		// Loop over events
 		while( reader.next()){
 			nevents++;
-			if (nevents % 1000 == 0) { 
-                printf("Processing %.0lf %%\n", 100.0*nevents/reader.getEntries());
+            if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
+                progressBar(100.0*nevents/reader.getEntries());
             }
 			reader.read(event);
 			event.getStructure(adcBank);
@@ -329,4 +343,22 @@ int layer2number(int digit) {
     } else {
         return -1; // not a layer
     }
+}
+
+void progressBar(int state) { // state is a number between 0 and 100
+    if (state > 100) { return;}
+    printf("\rProgress \033[32m\[");
+    for (int i = 0; i <= state; i++) {
+        printf("#");
+    }
+    printf("\033[0m");
+    for (int i = state+1; i < 100; i++) {
+        printf(".");
+    }
+    if (state == 100) {
+        printf("\033[32m] \033[1m %d %%\033[0m\n", state);
+    } else {
+        printf("] %d %%", state);
+    }
+    fflush(stdout);
 }
