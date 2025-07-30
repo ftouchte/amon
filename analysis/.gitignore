@@ -1,2 +1,4 @@
 output/*
 *.jar
+*.root
+test_mysql.cpp
