@@ -12,6 +12,7 @@
 
 class AhdcPulse {
 	std::vector<double> samples;
+	int wfType;
 	double integral;
 	double adcMax;
 	double adcOffset;
@@ -32,7 +33,8 @@ public :
 	void set_constantFractionTime(double _constantFractionTime);
 	void set_binOffset(int _binOffset);
 	void set_samples(std::vector<double> _samples);
-	
+	void set_wfType(int _type);
+
 	double get_integral() const;
 	double get_adcMax() const;
 	double get_adcOffset() const;
@@ -42,6 +44,7 @@ public :
 	double get_constantFractionTime() const;
 	int get_binOffset() const;
 	std::vector<double> get_samples() const;
+    int get_wfType() const;
 };
 
 #endif
