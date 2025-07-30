@@ -954,7 +954,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 
 void Window::on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height){
 	cr->save();
-	fColorPalette Palette(5, 2);	
+	fColorPalette Palette(5, 1);	
 	int ncolors = Palette.get_ncolors();
 	fCanvas canvas(width, height, 0.0, 1.0*ncolors, 0.0, 1.0);
 	canvas.define_coord_system(cr);
@@ -1117,8 +1117,9 @@ bool Window::dataEventAction() {
                         double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
                         double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
                         double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
-                        double adcOffset = this->adcBank.getInt("ped", col);
+                        double adcOffset = this->adcBank.getFloat("ped", col);
                         //double integral = this->adcBank.getInt("integral", col);
+				        int wfType = this->adcBank.getInt("wfType", col);
 			bool flag = (adcMax >= adcCut) &&
 				(adcOffset >= cut_adcOffset_min) && 
 				(adcOffset <= cut_adcOffset_max) && 
@@ -1163,8 +1164,9 @@ bool Window::dataEventAction() {
 				double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
 				double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
 				double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
-				double adcOffset = this->adcBank.getInt("ped", col);
+				double adcOffset = this->adcBank.getFloat("ped", col);
 				double integral = this->adcBank.getInt("integral", col);
+				int wfType = this->adcBank.getInt("wfType", col);
 				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
 				wire->pulse.set_adcMax(adcMax);
 				wire->pulse.set_adcOffset(adcOffset);
@@ -1175,6 +1177,7 @@ bool Window::dataEventAction() {
 				wire->pulse.set_constantFractionTime(constantFractionTime);
 				wire->pulse.set_binOffset(binOffset);
 				wire->pulse.set_samples(samples);
+				wire->pulse.set_wfType(wfType);
 				wire->occ += 1;
 				ListOfAdc.push_back(adcMax);
 				nWF++;
@@ -1198,7 +1201,7 @@ bool Window::dataEventAction() {
 		else {
 			// do nothing
 		}
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf, ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent+1, hipo_nEventMax, nWF, adcCut, trackBank.getRows()).Data());
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf, ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent, hipo_nEventMax, nWF, adcCut, trackBank.getRows()).Data());
 		return true;
 	}
 	else {return false;}
@@ -1224,6 +1227,7 @@ void Window::drawWaveforms() {
 					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 					double timeMax           = wire->pulse.get_timeMax();
+					int    wfType            = wire->pulse.get_wfType();
 					bool flag = true;
 					if (adcMax > 0) {
 						if (num >= 10) {break;}
@@ -1743,7 +1747,7 @@ void Window::getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & M
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
 					double adc = wire->pulse.get_adcMax();
-					double occ = wire->occ;
+					int occ = wire->occ;
 					if (adc < adc_min) adc_min = adc;
 					if (adc > adc_max) adc_max = adc;
 					if (occ < occ_min) occ_min = occ;
@@ -2044,8 +2048,8 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 	this->getStats(adc_min, adc_max, i_occ_min, i_occ_max);
 	double occ_min = (100.0*i_occ_min)/hipo_nEvent; // expressed in %
 	double occ_max = (100.0*i_occ_max)/hipo_nEvent;
-	//printf("adc_min : %lf, adc_max : %lf, occ_min : %d, occ_max : %d\n", adc_min, adc_max, occ_min, occ_max);
-	fColorPalette Palette(5, 2);
+	//printf("adc_min : %lf, adc_max : %lf, occ_min : %lf, occ_max : %lf\n", adc_min, adc_max, occ_min, occ_max);
+	fColorPalette Palette(5, 1);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
 	cr->set_line_width(0.005*seff);
 	cr->move_to(x2w(80) + 0.01*window_size, y2h(-80)); // 0.1*window_size is the extra margin of right_margin
@@ -2127,7 +2131,8 @@ void Window::on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 					if (occ > 0) {
 						if (occ_min != occ_max) {
 							int ncolors = Palette.get_ncolors();
-							double occ_percent = (100.0*occ)/hipo_nEvent;
+                            //printf("(occ : %d, hipo_nEvent : %ld) ", wire->occ, hipo_nEvent);
+							double occ_percent = (100.0*occ)/hipo_nEvent; 
 							double slope = (1.0*(ncolors-1))/(occ_max - 0.0);
 							int color = floor(slope*(occ_percent-0.0) + 0.0);
 							//printf("occ_min : %.0lf, occ_max : %.0lf\n", occ_min, occ_max);
