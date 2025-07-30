@@ -13,6 +13,7 @@
  * - wfType <= 1 keep more track compared the rawCuts at low adc
  * - wfType <= 1 keep less track compared the rawCuts at large adc
  * - more time cut can be added to complete wfType <= 1
+ * - starting wfType 2, we have a default value of ped that is in the range of my rawCuts; maybe we keep bad events
  *
  * @author Felix Touchte Codjo
  * @date July 29, 2025
