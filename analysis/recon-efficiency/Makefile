@@ -35,14 +35,16 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: track occupancy
+all: deep_process occupancy elastics
 
 occupancy: occupancy.o
 	$(CXX) -o occupancy.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
-track: track.o futils.o
-	$(CXX) -o track.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+deep_process: deep_process.o futils.o
+	$(CXX) -o deep_process.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
+elastics: elastics.o futils.o
+	$(CXX) -o elastics.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 
 # $< représente la première de la cible, i.e histo.o
