@@ -35,7 +35,7 @@
 int layer2number(int digit);
 
 int main(int argc, char const *argv[]) {
-        const char * filename = "/home/touchte-codjo/Desktop/hipofiles/occupancy/clas_022435.00003.hipo";
+        const char * filename = "/home/touchte-codjo/Desktop/hipofiles/occupancy/new_clas_022435.00003.hipo";
 		hipo::reader  reader(filename);
 		hipo::dictionary factory;
 		reader.readDictionary(factory);
@@ -72,14 +72,14 @@ int main(int argc, char const *argv[]) {
         TOT.push_back(new TH1D("tot_rawCuts", "tot (rawCuts)", 100, 0, 1000)); // raw cuts
         TOT.push_back(new TH1D("tot_noCuts" , "tot (noCuts)" , 100, 0, 1000)); // no cuts
         std::vector<TH1D*> ADC;
-        ADC.push_back(new TH1D("adc_wftype0", "adc (wfType == 0)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_wftype1", "adc (wfType <= 1)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_wftype2", "adc (wfType <= 2)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_wftype3", "adc (wfType <= 3)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_wftype4", "adc (wfType <= 4)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_wftype5", "adc (wfType <= 5)", 100, 0, 1000));
-        ADC.push_back(new TH1D("adc_rawCuts", "adc (rawCuts)", 100, 0, 1000)); // raw cuts
-        ADC.push_back(new TH1D("adc_noCuts" , "adc (noCuts)" , 100, 0, 1000)); // no cuts
+        ADC.push_back(new TH1D("adc_wftype0", "adc (wfType == 0)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_wftype1", "adc (wfType <= 1)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_wftype2", "adc (wfType <= 2)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_wftype3", "adc (wfType <= 3)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_wftype4", "adc (wfType <= 4)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_wftype5", "adc (wfType <= 5)", 100, 0, 3700));
+        ADC.push_back(new TH1D("adc_rawCuts", "adc (rawCuts)", 100, 0, 3700)); // raw cuts
+        ADC.push_back(new TH1D("adc_noCuts" , "adc (noCuts)" , 100, 0, 3700)); // no cuts
         std::vector<TH1D*> PED;
         PED.push_back(new TH1D("ped_wftype0", "ped (wfType == 0)", 100, 0, 1000));
         PED.push_back(new TH1D("ped_wftype1", "ped (wfType <= 1)", 100, 0, 1000));
