@@ -49,13 +49,19 @@ const double Ee = 2.23951; // incident energy if the electron, GeV
 const double me = 0.511e-3; // energy mass of electron, GeV
 const double Mp = 938.272e-3; // energy mass of proton, GeV
 const double M_He = 3.73; // energy mass of Helium-4, GeV
-const double Mt = M_He; // target rest mass : choose Mp or M_He, GeV
+const double M_D = 1.875; // energy mass of Deuterium, GeV
+const double Mt = M_D; // target rest mass : choose Mp or M_He, GeV
 
 int main(int argc, char const *argv[]) {
-		//const char * filename = "/home/touchte-codjo/Desktop/hipofiles/occupancy/rec_clas_021317.evio.00000.hipo";
-		const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/all_rec_clas_021317.hipo";
-        double W2_min = 13.85;
-        double W2_max = 14;
+        // He4
+		//const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/rec_clas_021317.evio.00000.hipo";
+		//const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/all_rec_clas_021317.hipo";
+        // D2
+		//const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/rec_clas_021414.evio.00000.hipo";
+		const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/all_rec_clas_021414.hipo";
+        double W2_min = 3.46;
+        double W2_max = 3.67;
+        double delta_W2 = W2_max - W2_min;
         hipo::reader  reader(filename);
 		hipo::dictionary factory;
 		reader.readDictionary(factory);
@@ -73,16 +79,16 @@ int main(int argc, char const *argv[]) {
 		// electron
 		TH1D* H1_vz_el    = new TH1D("vz_electron", "vz electron (cm)", 100, -40, 40); 
 		TH1D* H1_vz_el_all    = new TH1D("vz_electron_all", "vz electron (cm)", 100, -40, 40); 
-		TH1D* H1_p_el     = new TH1D("p_electron", "p electron (GeV)", 100, 2.17, 2.24); // 0.8, 2.17
-		TH1D* H1_pT_el    = new TH1D("pT_electron", "pT_electron (GeV)", 100, 0.2, 0.45); // (0.07, 0.8)
-		TH1D* H1_theta_el = new TH1D("theta_electron", "#theta electron (deg)", 100, 4, 25); // (4, 25)
+		TH1D* H1_p_el     = new TH1D("p_electron", "p electron (GeV)", 100, 2.16, 2.24); 
+		TH1D* H1_pT_el    = new TH1D("pT_electron", "pT_electron (GeV)", 100, 0.18, 0.4); 
+		TH1D* H1_theta_el = new TH1D("theta_electron", "#theta electron (deg)", 100, 4, 25); 
 		TH1D* H1_phi_el   = new TH1D("phi_electron", "#phi electron (deg)", 100, 0, 361);
 		TH1D* H1_nelectrons_per_evt = new TH1D("nelectrons_per_evt", "# e^{-} / evt", 100, 0, 2);
 		// ahdc (kf) track
 		TH1D* H1_vz      = new TH1D("z_track", "z (cm)", 100, -30, 30); 
 		TH1D* H1_vz_all      = new TH1D("z_track_all", "z (cm)", 100, -30, 30); 
-		TH1D* H1_p       = new TH1D("p_track", "p (GeV)", 100, 0.3, 3);
-		TH1D* H1_pT      = new TH1D("pT_track", "pT_track (GeV)", 100, 0.2, 0.73);
+		TH1D* H1_p       = new TH1D("p_track", "p (GeV)", 100, 0.3, 1.5);
+		TH1D* H1_pT      = new TH1D("pT_track", "pT_track (GeV)", 100, 0.2, 0.8);
 		TH1D* H1_theta   = new TH1D("theta_track", "#theta (deg)", 100, 0, 181);
 		TH1D* H1_theta_all   = new TH1D("theta_track_all", "#theta (deg)", 100, 0, 181);
 		TH1D* H1_phi     = new TH1D("phi_track", "#phi (deg)", 100, 0, 361);
@@ -90,24 +96,24 @@ int main(int argc, char const *argv[]) {
 		TH1D* H1_nhits_all   = new TH1D("nhits_all", "number of hits per track", 100, 0, 15);
 		TH1D* H1_adc     = new TH1D("sum_adc", "#Sigma #it{adc}", 100, 0, 25000);
 		TH1D* H1_path    = new TH1D("sum_path", "path (mm)", 100, 40, 300);
-		TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 400);
+		TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 200);
 		TH1D* H1_sum_res = new TH1D("sum_res", "#Sigma #it{res} (mm)", 100, -25, 3);
 		TH1D* H1_sum_res_ndef = new TH1D("sum_res_ndef", "#Sigma #it{res} / nhits (mm)", 100, -4.17, 0.5);
 		TH1D* H1_chi2    = new TH1D("chi2", "chi2 (mm^{2})", 100, 0, 100);
 		TH1D* H1_chi2ndef    = new TH1D("chi2ndef", "chi2/ndef (mm^{2})", 100, 0, 16.67);
 		TH1D* H1_p_drift = new TH1D("p_drift", "p_{drift} (GeV)", 100, 0.3, 3);
 		// pid ? correlation study
-		TH2D* H2_p_dEdx    = new TH2D("pTe_dEdx", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 400); H2_p_dEdx->Draw("COLZ");
+		TH2D* H2_p_dEdx    = new TH2D("pTe_dEdx", "pT electron vs dEdx", 100, 0.18, 0.56, 100, 0, 200); H2_p_dEdx->Draw("COLZ");
 		TH2D* H2_vze_vz    = new TH2D("vze_vz", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16); H2_vze_vz->Draw("COLZ");
-		TH2D* H2_pTe_pT    = new TH2D("pTe_pT", "pT_{e} vs pT", 100, 0.2, 0.45, 100, 0.2, 0.73); H2_pTe_pT->Draw("COLZ");
+		TH2D* H2_pTe_pT    = new TH2D("pTe_pT", "pT_{e} vs pT", 100, 0.18, 0.4, 100, 0.2, 0.8); H2_pTe_pT->Draw("COLZ");
 		TH1D* H1_delta_vz  = new TH1D("delta_vz", "#Delta vz = vz_{e} - vz (cm)", 100, -30, 30);
-		TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -260, 200);
+		TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360);
 		// physics
-		TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, 0, 0.4);
-		TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, 13.7, 14); // 24.8, 18, 14
-		TH1D* H1_W2_all = new TH1D("W2_all", "W^{2} (GeV^{2})", 100, 13.7, 18); // 24.8, 18, 14
-		TH1D* H1_xB = new TH1D("xB", "x_{B}", 100, 0, 10); // (0, 1.2)
-		TH1D* H1_nu = new TH1D("nu", "#nu = #Delta E = E - E' (GeV)", 100, 0, 0.06); // 1.42, 0.06
+		TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, 0.03, 0.2);
+		TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, W2_min - 0.05*delta_W2, W2_max + 0.05*delta_W2); 
+		TH1D* H1_W2_all = new TH1D("W2_all", "W^{2} (GeV^{2})", 100, 3.37, 8.86); 
+		TH1D* H1_xB = new TH1D("xB", "x_{B}", 100, 0.38, 3); 
+		TH1D* H1_nu = new TH1D("nu", "#nu = #Delta E = E - E' (GeV)", 100, 0, 0.083); 
 
 		// Loop over events
 		while( reader.next()){
@@ -250,13 +256,13 @@ int main(int argc, char const *argv[]) {
             H1_W2_all->Draw();
             int w2_max = H1_W2_all->GetBinContent(H1_W2_all->GetMaximumBin());
             TGraph* gr_w2_min = new TGraph();
-            gr_w2_min->AddPoint(13.85, 0);
-            gr_w2_min->AddPoint(13.85, w2_max);
+            gr_w2_min->AddPoint(W2_min, 0);
+            gr_w2_min->AddPoint(W2_min, w2_max);
             gr_w2_min->SetLineColor(kRed);
             gr_w2_min->Draw("L");
             TGraph* gr_w2_max = new TGraph();
-            gr_w2_max->AddPoint(14, 0);
-            gr_w2_max->AddPoint(14, w2_max);
+            gr_w2_max->AddPoint(W2_max, 0);
+            gr_w2_max->AddPoint(W2_max, w2_max);
             gr_w2_max->SetLineColor(kRed);
             gr_w2_max->Draw("L");
             TLegend* legend_w2 = new TLegend(0.1,0.7,0.48,0.9);
