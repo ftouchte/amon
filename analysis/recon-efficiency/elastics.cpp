@@ -18,7 +18,7 @@
  *      - always nhits from 4
  *      - almost no longer path at 0
  * 4) track -> nhits >= 6
- * 5) Q2 < 14 and Q2 > 13.85
+ * 5) W2 < 14 and W2 > 13.85
  */
 
 #include <cstdlib>
@@ -27,9 +27,11 @@
 
 #include <vector>
 #include <string>
+#include <chrono>
 
 #include "reader.h"
 #include "futils.h"
+#include "elastics.h"
 
 #include "TH1.h"
 #include "TH2.h"
@@ -52,16 +54,54 @@ const double M_He = 3.73; // energy mass of Helium-4, GeV
 const double M_D = 1.875; // energy mass of Deuterium, GeV
 const double Mt = M_D; // target rest mass : choose Mp or M_He, GeV
 
+// Physics - Histogram limits
+const double lim_W2_inf = 2;
+const double lim_W2_sup = 7;
+const double lim_Q2_inf = 0;
+const double lim_Q2_sup = 0.4;
+const double lim_xB_inf = 0;
+const double lim_xB_sup = 2;
+const double lim_nu_inf = 0;
+const double lim_nu_sup = 1.9;
+// Probe - Electron or Photon
+const double lim_probe_p_inf = 0;
+const double lim_probe_p_sup = 2.5;
+const double lim_probe_pT_inf = 0;
+const double lim_probe_pT_sup = 0.9;
+const double lim_probe_theta_inf = 2;
+const double lim_probe_theta_sup = 25;
+const double lim_probe_phi_inf = 0;
+const double lim_probe_phi_sup = 361;
+const double lim_probe_vz_inf = -45;
+const double lim_probe_vz_sup = 35;
+// AHDC KF track 
+const double lim_track_p_inf = 0;
+const double lim_track_p_sup = 1.5;
+const double lim_track_pT_inf = 0.2;
+const double lim_track_pT_sup = 0.8;
+const double lim_track_theta_inf = 0;
+const double lim_track_theta_sup = 181;
+const double lim_track_phi_inf = 0;
+const double lim_track_phi_sup = 361;
+const double lim_track_vz_inf = -30;
+const double lim_track_vz_sup = 30;
+
+
 int main(int argc, char const *argv[]) {
-    // He4
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/rec_clas_021317.evio.00000.hipo";
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/all_rec_clas_021317.hipo";
-    // D2
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/rec_clas_021414.evio.00000.hipo";
-    const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/all_rec_clas_021414.hipo";
+    auto start = std::chrono::high_resolution_clock::now();
     double W2_min = 3.46;
     double W2_max = 3.67;
     double delta_W2 = W2_max - W2_min;
+    //////////////////////////////
+    // Open HIPO file
+    //////////////////////////////
+    // He4
+    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/half_det_lost/all_half_det_lost.hipo";
+    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/22767/all_rec_clas_022767.hipo";
+    // D2
+    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/rec_clas_022712.evio.00000.hipo"; 
+    const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
+    
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -72,48 +112,184 @@ int main(int argc, char const *argv[]) {
     hipo::event event;
     long unsigned int nevents = 0;
     long unsigned int nelectrons = 0;
+    long unsigned int nphotons = 0;
     long unsigned int ntracks = 0;
-    long unsigned int nentries = 0;
     // Histograms
-    TCanvas* canvas = new TCanvas("Canvas_1");
-    // electron
-    TH1D* H1_vz_el    = new TH1D("vz_electron", "vz electron (cm)", 100, -40, 40); 
-    TH1D* H1_vz_el_all    = new TH1D("vz_electron_all", "vz electron (cm)", 100, -40, 40); 
-    TH1D* H1_p_el     = new TH1D("p_electron", "p electron (GeV)", 100, 2.16, 2.24); 
-    TH1D* H1_pT_el    = new TH1D("pT_electron", "pT_electron (GeV)", 100, 0.18, 0.4); 
-    TH1D* H1_theta_el = new TH1D("theta_electron", "#theta electron (deg)", 100, 4, 25); 
-    TH1D* H1_phi_el   = new TH1D("phi_electron", "#phi electron (deg)", 100, 0, 361);
-    TH1D* H1_nelectrons_per_evt = new TH1D("nelectrons_per_evt", "# e^{-} / evt", 100, 0, 2);
-    // ahdc (kf) track
-    TH1D* H1_vz      = new TH1D("z_track", "z (cm)", 100, -30, 30); 
-    TH1D* H1_vz_all      = new TH1D("z_track_all", "z (cm)", 100, -30, 30); 
-    TH1D* H1_p       = new TH1D("p_track", "p (GeV)", 100, 0.3, 1.5);
-    TH1D* H1_pT      = new TH1D("pT_track", "pT_track (GeV)", 100, 0.2, 0.8);
-    TH1D* H1_theta   = new TH1D("theta_track", "#theta (deg)", 100, 0, 181);
-    TH1D* H1_theta_all   = new TH1D("theta_track_all", "#theta (deg)", 100, 0, 181);
-    TH1D* H1_phi     = new TH1D("phi_track", "#phi (deg)", 100, 0, 361);
-    TH1D* H1_nhits   = new TH1D("nhits", "number of hits per track", 100, 0, 15);
-    TH1D* H1_nhits_all   = new TH1D("nhits_all", "number of hits per track", 100, 0, 15);
-    TH1D* H1_adc     = new TH1D("sum_adc", "#Sigma #it{adc}", 100, 0, 25000);
-    TH1D* H1_path    = new TH1D("sum_path", "path (mm)", 100, 40, 300);
-    TH1D* H1_dEdx    = new TH1D("sum_dEdx", "dEdx (adc/mm)", 100, 0, 200);
-    TH1D* H1_sum_res = new TH1D("sum_res", "#Sigma #it{res} (mm)", 100, -25, 3);
-    TH1D* H1_sum_res_ndef = new TH1D("sum_res_ndef", "#Sigma #it{res} / nhits (mm)", 100, -4.17, 0.5);
-    TH1D* H1_chi2    = new TH1D("chi2", "chi2 (mm^{2})", 100, 0, 100);
-    TH1D* H1_chi2ndef    = new TH1D("chi2ndef", "chi2/ndef (mm^{2})", 100, 0, 16.67);
-    TH1D* H1_p_drift = new TH1D("p_drift", "p_{drift} (GeV)", 100, 0.3, 3);
-    // pid ? correlation study
-    TH2D* H2_p_dEdx    = new TH2D("pTe_dEdx", "pT electron vs dEdx", 100, 0.18, 0.56, 100, 0, 200); H2_p_dEdx->Draw("COLZ");
-    TH2D* H2_vze_vz    = new TH2D("vze_vz", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16); H2_vze_vz->Draw("COLZ");
-    TH2D* H2_pTe_pT    = new TH2D("pTe_pT", "pT_{e} vs pT", 100, 0.18, 0.4, 100, 0.2, 0.8); H2_pTe_pT->Draw("COLZ");
-    TH1D* H1_delta_vz  = new TH1D("delta_vz", "#Delta vz = vz_{e} - vz (cm)", 100, -30, 30);
-    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360);
+    TCanvas* canvas = new TCanvas("c1");
+    TH1I* H1_mon_nprobes    = new TH1I("nprobes_with_cuts", "number of probes with the cuts", 15, 0, 15); 
+    TH1I* H1_mon_ntracks    = new TH1I("ntracks_with_cuts", "number of tracks with the cuts", 15, 0, 15); 
+    //////////////////////////////
+    // Probe : electron or photon
+    //////////////////////////////
+    std::vector<TH1D*> H1_probe_vz;
+    H1_probe_vz.push_back(new TH1D("vz_probe_0", "vz electron/photon (cm)", 100, lim_probe_vz_inf, lim_probe_vz_sup));
+    H1_probe_vz.push_back(new TH1D("vz_probe_1", "vz electron/photon (cm)", 100, lim_probe_vz_inf, lim_probe_vz_sup));
+    H1_probe_vz.push_back(new TH1D("vz_probe_2", "vz electron/photon (cm)", 100, lim_probe_vz_inf, lim_probe_vz_sup));
+    H1_probe_vz.push_back(new TH1D("vz_probe_3", "vz electron/photon (cm)", 100, lim_probe_vz_inf, lim_probe_vz_sup));
+    std::vector<TH1D*> H1_probe_p;
+    H1_probe_p.push_back(new TH1D("p_probe_0", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
+    H1_probe_p.push_back(new TH1D("p_probe_1", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
+    H1_probe_p.push_back(new TH1D("p_probe_2", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
+    H1_probe_p.push_back(new TH1D("p_probe_3", "p electron/photon (GeV)", 100, 2.16, 2.25));
+    std::vector<TH1D*> H1_probe_pT;
+    H1_probe_pT.push_back(new TH1D("pT_probe_0", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
+    H1_probe_pT.push_back(new TH1D("pT_probe_1", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
+    H1_probe_pT.push_back(new TH1D("pT_probe_2", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
+    H1_probe_pT.push_back(new TH1D("pT_probe_3", "pT electron/photon (GeV)", 100, 0.1, 0.5));
+    std::vector<TH1D*> H1_probe_theta;
+    H1_probe_theta.push_back(new TH1D("theta_probe_0", "theta electron/photon (deg)", 100, lim_probe_theta_inf, lim_probe_theta_sup));
+    H1_probe_theta.push_back(new TH1D("theta_probe_1", "theta electron/photon (deg)", 100, lim_probe_theta_inf, lim_probe_theta_sup));
+    H1_probe_theta.push_back(new TH1D("theta_probe_2", "theta electron/photon (deg)", 100, lim_probe_theta_inf, lim_probe_theta_sup));
+    H1_probe_theta.push_back(new TH1D("theta_probe_3", "theta electron/photon (deg)", 100, 2.56, 12));
+    std::vector<TH1D*> H1_probe_phi;
+    H1_probe_phi.push_back(new TH1D("phi_probe_0", "phi electron/photon (deg)", 100, lim_probe_phi_inf, lim_probe_phi_sup));
+    H1_probe_phi.push_back(new TH1D("phi_probe_1", "phi electron/photon (deg)", 100, lim_probe_phi_inf, lim_probe_phi_sup));
+    H1_probe_phi.push_back(new TH1D("phi_probe_2", "phi electron/photon (deg)", 100, lim_probe_phi_inf, lim_probe_phi_sup));
+    H1_probe_phi.push_back(new TH1D("phi_probe_3", "phi electron/photon (deg)", 100, lim_probe_phi_inf, lim_probe_phi_sup));
+    std::vector<TH1I*> H1_nelectrons;
+    H1_nelectrons.push_back(new TH1I("nelectrons_0", "number of electrons / evt", 5, 0, 5));
+    H1_nelectrons.push_back(new TH1I("nelectrons_1", "number of electrons / evt", 5, 0, 5));
+    H1_nelectrons.push_back(new TH1I("nelectrons_2", "number of electrons / evt", 5, 0, 5));
+    H1_nelectrons.push_back(new TH1I("nelectrons_3", "number of electrons / evt", 5, 0, 5));
+    std::vector<TH1I*> H1_nphotons;
+    H1_nphotons.push_back(new TH1I("nphotons_0", "number of photons / evt", 5, 0, 5));
+    H1_nphotons.push_back(new TH1I("nphotons_1", "number of photons / evt", 5, 0, 5));
+    H1_nphotons.push_back(new TH1I("nphotons_2", "number of photons / evt", 5, 0, 5));
+    H1_nphotons.push_back(new TH1I("nphotons_3", "number of photons / evt", 5, 0, 5));
+    //////////////////////////////
     // physics
-    TH1D* H1_Q2 = new TH1D("Q2", "Q^{2} (GeV^{2})", 100, 0.03, 0.2);
-    TH1D* H1_W2 = new TH1D("W2", "W^{2} (GeV^{2})", 100, W2_min - 0.05*delta_W2, W2_max + 0.05*delta_W2); 
-    TH1D* H1_W2_all = new TH1D("W2_all", "W^{2} (GeV^{2})", 100, 3.37, 8.86); 
-    TH1D* H1_xB = new TH1D("xB", "x_{B}", 100, 0.38, 3); 
-    TH1D* H1_nu = new TH1D("nu", "#nu = #Delta E = E - E' (GeV)", 100, 0, 0.083); 
+    //////////////////////////////
+    std::vector<TH1D*> H1_Q2;
+    H1_Q2.push_back(new TH1D("Q2_0", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
+    H1_Q2.push_back(new TH1D("Q2_1", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
+    H1_Q2.push_back(new TH1D("Q2_2", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
+    H1_Q2.push_back(new TH1D("Q2_3", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
+    std::vector<TH1D*> H1_W2;
+    H1_W2.push_back(new TH1D("W2_0", "W^{2} (GeV^{2})", 100, lim_W2_inf, lim_W2_sup));
+    H1_W2.push_back(new TH1D("W2_1", "W^{2} (GeV^{2})", 100, lim_W2_inf, lim_W2_sup));
+    H1_W2.push_back(new TH1D("W2_2", "W^{2} (GeV^{2})", 100, lim_W2_inf, lim_W2_sup));
+    H1_W2.push_back(new TH1D("W2_3", "W^{2} (GeV^{2})", 100, lim_W2_inf, lim_W2_sup));
+    std::vector<TH1D*> H1_xB;
+    H1_xB.push_back(new TH1D("xB_0", "x_{B}", 100, lim_xB_inf, lim_xB_sup));
+    H1_xB.push_back(new TH1D("xB_1", "x_{B}", 100, lim_xB_inf, lim_xB_sup));
+    H1_xB.push_back(new TH1D("xB_2", "x_{B}", 100, lim_xB_inf, lim_xB_sup));
+    H1_xB.push_back(new TH1D("xB_3", "x_{B}", 100, 0.15, 4));
+    std::vector<TH1D*> H1_nu;
+    H1_nu.push_back(new TH1D("nu_0", "#nu = #Delta E = E - E' (GeV)", 100, lim_nu_inf, lim_nu_sup)); 
+    H1_nu.push_back(new TH1D("nu_1", "#nu = #Delta E = E - E' (GeV)", 100, lim_nu_inf, lim_nu_sup)); 
+    H1_nu.push_back(new TH1D("nu_2", "#nu = #Delta E = E - E' (GeV)", 100, lim_nu_inf, lim_nu_sup)); 
+    H1_nu.push_back(new TH1D("nu_3", "#nu = #Delta E = E - E' (GeV)", 100, lim_nu_inf, 0.1)); 
+    //////////////////////////////
+    // ahdc (kf) track
+    //////////////////////////////
+    std::vector<TH1I*> H1_ntracks;
+    H1_ntracks.push_back(new TH1I("ntracks_0", "number of tracks / evt", 5, 0, 5));
+    H1_ntracks.push_back(new TH1I("ntracks_1", "number of tracks / evt", 5, 0, 5));
+    H1_ntracks.push_back(new TH1I("ntracks_2", "number of tracks / evt", 5, 0, 5));
+    H1_ntracks.push_back(new TH1I("ntracks_3", "number of tracks / evt", 5, 0, 5));
+    std::vector<TH1D*> H1_track_vz;
+    H1_track_vz.push_back(new TH1D("vz_track_0", "vz (cm)", 100, -30, 30));
+    H1_track_vz.push_back(new TH1D("vz_track_1", "vz (cm)", 100, -30, 30));
+    H1_track_vz.push_back(new TH1D("vz_track_2", "vz (cm)", 100, -30, 30));
+    H1_track_vz.push_back(new TH1D("vz_track_3", "vz (cm)", 100, -30, 30));
+    std::vector<TH1D*> H1_track_p;
+    H1_track_p.push_back(new TH1D("p_track_0", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p.push_back(new TH1D("p_track_1", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p.push_back(new TH1D("p_track_2", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p.push_back(new TH1D("p_track_3", "p (GeV)", 100, 0.2, 1.6));
+    std::vector<TH1D*> H1_track_p_drift;
+    H1_track_p_drift.push_back(new TH1D("p_drift_track_0", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p_drift.push_back(new TH1D("p_drift_track_1", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p_drift.push_back(new TH1D("p_drift_track_2", "p (GeV)", 100, 0.2, 1.6));
+    H1_track_p_drift.push_back(new TH1D("p_drift_track_3", "p (GeV)", 100, 0.2, 1.6));
+    std::vector<TH1D*> H1_track_pT;
+    H1_track_pT.push_back(new TH1D("pT_track_0", "pT (GeV)", 100, 0, 1));
+    H1_track_pT.push_back(new TH1D("pT_track_1", "pT (GeV)", 100, 0, 1));
+    H1_track_pT.push_back(new TH1D("pT_track_2", "pT (GeV)", 100, 0, 1));
+    H1_track_pT.push_back(new TH1D("pT_track_3", "pT (GeV)", 100, 0, 1));
+    std::vector<TH1D*> H1_track_theta;
+    H1_track_theta.push_back(new TH1D("theta_track_0", "theta (deg)", 100, 0, 181));
+    H1_track_theta.push_back(new TH1D("theta_track_1", "theta (deg)", 100, 0, 181));
+    H1_track_theta.push_back(new TH1D("theta_track_2", "theta (deg)", 100, 0, 181));
+    H1_track_theta.push_back(new TH1D("theta_track_3", "theta (deg)", 100, 0, 181));
+    std::vector<TH1D*> H1_track_phi;
+    H1_track_phi.push_back(new TH1D("phi_track_0", "phi (deg)", 100, 0, 361));
+    H1_track_phi.push_back(new TH1D("phi_track_1", "phi (deg)", 100, 0, 361));
+    H1_track_phi.push_back(new TH1D("phi_track_2", "phi (deg)", 100, 0, 361));
+    H1_track_phi.push_back(new TH1D("phi_track_3", "phi (deg)", 100, 0, 361));
+    std::vector<TH1D*> H1_track_nhits;
+    H1_track_nhits.push_back(new TH1D("nhits_track_0", "nhits per track (deg)", 100, 0, 15));
+    H1_track_nhits.push_back(new TH1D("nhits_track_1", "nhits per track (deg)", 100, 0, 15));
+    H1_track_nhits.push_back(new TH1D("nhits_track_2", "nhits per track (deg)", 100, 0, 15));
+    H1_track_nhits.push_back(new TH1D("nhits_track_3", "nhits per track (deg)", 100, 0, 15));
+    std::vector<TH1D*> H1_track_adc;
+    H1_track_adc.push_back(new TH1D("adc_track_0", "Sum adc (adc)", 100, 0, 25000));
+    H1_track_adc.push_back(new TH1D("adc_track_1", "Sum adc (adc)", 100, 0, 25000));
+    H1_track_adc.push_back(new TH1D("adc_track_2", "Sum adc (adc)", 100, 0, 25000));
+    H1_track_adc.push_back(new TH1D("adc_track_3", "Sum adc (adc)", 100, 0, 25000));
+    std::vector<TH1D*> H1_track_path;
+    H1_track_path.push_back(new TH1D("path_track_0", "path (mm)", 100, 40, 300));
+    H1_track_path.push_back(new TH1D("path_track_1", "path (mm)", 100, 40, 300));
+    H1_track_path.push_back(new TH1D("path_track_2", "path (mm)", 100, 40, 300));
+    H1_track_path.push_back(new TH1D("path_track_3", "path (mm)", 100, 40, 300));
+    std::vector<TH1D*> H1_track_dEdx;
+    H1_track_dEdx.push_back(new TH1D("dEdx_track_0", "dEdx (adc/mm)", 100, 0, 400));
+    H1_track_dEdx.push_back(new TH1D("dEdx_track_1", "dEdx (adc/mm)", 100, 0, 400));
+    H1_track_dEdx.push_back(new TH1D("dEdx_track_2", "dEdx (adc/mm)", 100, 0, 400));
+    H1_track_dEdx.push_back(new TH1D("dEdx_track_3", "dEdx (adc/mm)", 100, 0, 400));
+    std::vector<TH1D*> H1_track_residuals;
+    H1_track_residuals.push_back(new TH1D("residuals_track_0", "Sum residuals(mm)", 100, -25, 3));
+    H1_track_residuals.push_back(new TH1D("residuals_track_1", "Sum residuals(mm)", 100, -25, 3));
+    H1_track_residuals.push_back(new TH1D("residuals_track_2", "Sum residuals(mm)", 100, -25, 3));
+    H1_track_residuals.push_back(new TH1D("residuals_track_3", "Sum residuals(mm)", 100, -25, 3));
+    std::vector<TH1D*> H1_track_residuals_per_nhits;
+    H1_track_residuals_per_nhits.push_back(new TH1D("residuals_per_nhits_track_0", "residual per hit (mm)", 100, -4.17, 0.5));
+    H1_track_residuals_per_nhits.push_back(new TH1D("residuals_per_nhits_track_1", "residual per hit (mm)", 100, -4.17, 0.5));
+    H1_track_residuals_per_nhits.push_back(new TH1D("residuals_per_nhits_track_2", "residual per hit (mm)", 100, -4.17, 0.5));
+    H1_track_residuals_per_nhits.push_back(new TH1D("residuals_per_nhits_track_3", "residual per hit (mm)", 100, -4.17, 0.5));
+    std::vector<TH1D*> H1_track_chi2;
+    H1_track_chi2.push_back(new TH1D("chi2_track_0", "chi2 (mm^{2})", 100, 0, 100));
+    H1_track_chi2.push_back(new TH1D("chi2_track_1", "chi2 (mm^{2})", 100, 0, 100));
+    H1_track_chi2.push_back(new TH1D("chi2_track_2", "chi2 (mm^{2})", 100, 0, 100));
+    H1_track_chi2.push_back(new TH1D("chi2_track_3", "chi2 (mm^{2})", 100, 0, 100));
+    std::vector<TH1D*> H1_track_chi2_per_nhits;
+    H1_track_chi2_per_nhits.push_back(new TH1D("chi2_per_nhits_track_0", "chi2 per hit (mm^{2})", 100, 0, 16.67));
+    H1_track_chi2_per_nhits.push_back(new TH1D("chi2_per_nhits_track_1", "chi2 per hit (mm^{2})", 100, 0, 16.67));
+    H1_track_chi2_per_nhits.push_back(new TH1D("chi2_per_nhits_track_2", "chi2 per hit (mm^{2})", 100, 0, 16.67));
+    H1_track_chi2_per_nhits.push_back(new TH1D("chi2_per_nhits_track_3", "chi2 per hit (mm^{2})", 100, 0, 16.67));
+    //////////////////////////////////////////////////////
+    // correlations probes (electron or gamma) vs tracks)
+    //////////////////////////////////////////////////////
+    std::vector<TH2D*> H2_p_dEdx;
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_0", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_1", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
+    std::vector<TH2D*> H2_p_adc;
+    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
+    std::vector<TH2D*> H2_vze_vz;
+    H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_2", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_3", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
+    std::vector<TH2D*> H2_pTe_pT;
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_0", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_1", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_2", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_3", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
+    std::vector<TH1D*> H1_delta_vz;
+    H1_delta_vz.push_back(new TH1D("delta_vz_0", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
+    H1_delta_vz.push_back(new TH1D("delta_vz_1", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
+    H1_delta_vz.push_back(new TH1D("delta_vz_2", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
+    H1_delta_vz.push_back(new TH1D("delta_vz_3", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
+    std::vector<TH1D*> H1_delta_phi; 
+    H1_delta_phi.push_back(new TH1D("delta_phi_0", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
+    H1_delta_phi.push_back(new TH1D("delta_phi_1", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
+    H1_delta_phi.push_back(new TH1D("delta_phi_2", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
+    H1_delta_phi.push_back(new TH1D("delta_phi_3", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
 
     // Loop over events
     while( reader.next()){
@@ -127,304 +303,625 @@ int main(int argc, char const *argv[]) {
         event.getStructure(track0Bank);
         event.getStructure(particleBank);
         event.getStructure(recEventBank);
-        // ----- Ignore event if
-        // - no track
-        // - startTime < 0 
-        // - no electrons
-        if ((trackBank.getRows() < 1) || 
-            (recEventBank.get("startTime", 0) < 0)) { 
-            continue;
-        }
-        int nelectrons_per_evt = 0;
+        
+        //////////////////////
+        //  REC::Particle
+        //////////////////////
+        std::vector<State> Electrons; 
+        std::vector<State> Photons; 
+        std::vector<Physics> ElectronKinematics;
+        std::vector<Physics> PhotonKinematics;
         for (int i = 0; i < particleBank.getRows(); i++) {
-            if (particleBank.getInt("pid", i) == 11) { // cut on electrons
-                nelectrons_per_evt++;
+            int pid = particleBank.getInt("pid", i);
+            if (pid == 11) { // electron (11)
+                State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
+                        particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                Physics K(S, Mt, Ee);
+                Electrons.push_back(S);
+                ElectronKinematics.push_back(K);
+                // Histograms (0) no cuts
+                H1_probe_vz[0]->Fill(S.vz);
+                H1_probe_p[0]->Fill(S.p);
+                H1_probe_pT[0]->Fill(S.pT);
+                H1_probe_theta[0]->Fill(S.theta);
+                H1_probe_phi[0]->Fill(S.phi);
+                H1_Q2[0]->Fill(K.Q2);
+                H1_W2[0]->Fill(K.W2);
+                H1_xB[0]->Fill(K.xB);
+                H1_nu[0]->Fill(K.nu);
+            }
+            else if (pid == 22) { // photon (22)
+                State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
+                        particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                Physics K(S, Ee, Mt);
+                Photons.push_back(S);
+                PhotonKinematics.push_back(K);
+                // Histograms (0) no cuts
+                H1_probe_vz[0]->Fill(S.vz);
+                H1_probe_p[0]->Fill(S.p);
+                H1_probe_pT[0]->Fill(S.pT);
+                H1_probe_theta[0]->Fill(S.theta);
+                H1_probe_phi[0]->Fill(S.phi);
+                H1_Q2[0]->Fill(K.Q2);
+                H1_W2[0]->Fill(K.W2);
+                H1_xB[0]->Fill(K.xB);
+                H1_nu[0]->Fill(K.nu);
             }
         }
-        if (nelectrons_per_evt == 0) continue;
-        nelectrons += nelectrons_per_evt;
-        H1_nelectrons_per_evt->Fill(nelectrons_per_evt);
-        // ----- end Ingore  event
-        // actually, we can only detect one electron!
-        // physics and control cuts
-        double Q2 = -9999;
-        double nu = -9999;
-        double W2 = -9999;
-        double xB = -9999;
-        double vz_e = -9999;
-        double px_e = -999, py_e = -9999, pz_e = -9999;
-        double p_e = -9999, theta_e = -9999, phi_e = -9999;
-        double pT_e = -9999;
-        // end physics
-        for (int i = 0; i < particleBank.getRows(); i++) {
-            if (particleBank.getInt("pid", i) == 11) { // electron
-                px_e = particleBank.getFloat("px",i);
-                py_e = particleBank.getFloat("py",i);
-                pz_e = particleBank.getFloat("pz",i);
-                futils::cart2polar(px_e, py_e, pz_e, p_e, theta_e, phi_e);
-                pT_e = sqrt(pow(px_e,2) + pow(py_e,2));
-                vz_e = particleBank.getFloat("vz", i);
-                Q2 = 4*Ee*sqrt(p_e*p_e + me*me)*pow(sin(theta_e/2),2); // Ee' ~ p as me << 1 GeV
-                nu = Ee - p_e;
-                W2 = Mt*Mt + 2*Mt*nu - Q2;
-                xB = Q2/(2*Mp*nu);
-            }
-        }
-        H1_W2_all->Fill(W2);
-        H1_vz_el_all->Fill(vz_e);
-        // CUT CAN BE DONE HERE
-        if ((vz_e < -25) || (vz_e > 10) ||
-            (W2 > W2_max) || (W2 < W2_min)
-        ) { continue;}
-        nentries++; // number of electrons that pass the cut
-        // Fill histograms for electrons
-        H1_p_el->Fill(p_e); // here is already in GeV
-        H1_pT_el->Fill(pT_e); // here is already in GeV
-        H1_theta_el->Fill(theta_e*180.0/M_PI);
-        H1_phi_el->Fill(phi_e*180/M_PI);
-        H1_vz_el->Fill(vz_e);
-        H1_Q2->Fill(Q2);
-        H1_W2->Fill(W2);
-        H1_nu->Fill(nu);
-        H1_xB->Fill(xB);
-        // track
-        double  vz_first_track = -999;
-        double phi_first_track = -999;
-        double dEdx_first_track = -999;
-        double pT_first_track = -999;
-        int one = 0;
+        nelectrons += Electrons.size();
+        nphotons += Photons.size();
+        H1_nelectrons[0]->Fill(Electrons.size());
+        H1_nphotons[0]->Fill(Photons.size());
+        H1_mon_nprobes->Fill(0.0, (int) Electrons.size() + Photons.size());
+        //////////////////////
+        //  AHDC::kftrack
+        //////////////////////
+        std::vector<State> Tracks;
+        H1_ntracks[0]->Fill(trackBank.getRows()); 
+        H1_mon_ntracks->Fill(0.0, (int) trackBank.getRows());
         for (int i = 0; i < trackBank.getRows(); i++) {
-            double p, theta, phi;
-            futils::cart2polar(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), p, theta, phi);
-            H1_theta_all->Fill(theta*180.0/M_PI);
-            H1_vz_all->Fill(0.1*trackBank.getFloat("z", i)); // convert mm to cm
-            H1_nhits_all->Fill(trackBank.getInt("n_hits", i)); 
-            // CUT CAN BE DONE HERE
-            double theta_deg = theta*180.0/M_PI;
-            if (std::isnan(theta) || (theta_deg < 10) || (theta_deg > 170) || 
-                (fabs(0.1*trackBank.getFloat("z", i)) > 15) ||
-                (trackBank.getInt("n_hits", i) < 6)
-            ){ continue;}
-            ntracks++;
-            one++;
-            if (one == 1) {
-                vz_first_track  = 0.1*trackBank.getFloat("z",i); // convert mm to cm
-                phi_first_track = phi;
-                pT_first_track = 0.001*sqrt(pow(trackBank.getFloat("px",i),2) + pow(trackBank.getFloat("py",i),2));
-                dEdx_first_track = track0Bank.getFloat("dEdx", i);
+            State S(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+                    trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+            // Histograms -- Level 0, no cuts on tracks
+            H1_track_vz[0]->Fill(S.vz*0.1); // convert mm to cm
+            H1_track_p[0]->Fill(S.p*0.001); // convert MeV to GeV
+            H1_track_pT[0]->Fill(S.pT*0.001); // convert MeV to GeV
+            H1_track_theta[0]->Fill(S.theta);
+            H1_track_phi[0]->Fill(S.phi);
+            H1_track_nhits[0]->Fill(trackBank.getInt("n_hits", i)); 
+            H1_track_adc[0]->Fill(trackBank.getInt("sum_adc", i));
+            H1_track_path[0]->Fill(trackBank.getFloat("path", i));   
+            H1_track_dEdx[0]->Fill(track0Bank.getFloat("dEdx", i));    
+            H1_track_residuals[0]->Fill(trackBank.getFloat("sum_residuals", i));
+            H1_track_residuals_per_nhits[0]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+            H1_track_chi2[0]->Fill(trackBank.getFloat("chi2", i));
+            H1_track_chi2_per_nhits[0]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+            H1_track_p_drift[0]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+            S.dEdx = track0Bank.getFloat("dEdx", i);
+            S.adc = trackBank.getInt("sum_adc", i);
+            Tracks.push_back(S);
+        }
+        // Correlations -- level 0, no cuts
+        // loop over all configurations
+        for (State T : Tracks) {
+            for (State S : Electrons) {
+                H2_vze_vz[0]->Fill(S.vz, T.vz); 
+                H1_delta_vz[0]->Fill(S.vz - T.vz); 
+                H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
+                H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
+                H2_p_adc[0]->Fill(S.pT, T.adc);
+                H2_pTe_pT[0]->Fill(S.pT, T.pT);
             }
-            H1_p->Fill(0.001*p); // here p was in MeV
-            H1_pT->Fill(0.001*sqrt(pow(trackBank.getFloat("px",i),2) + pow(trackBank.getFloat("py",i),2))); 
-            H1_theta->Fill(theta*180.0/M_PI);
-            H1_phi->Fill(phi*180/M_PI);
-            H1_vz->Fill(0.1*trackBank.getFloat("z", i)); // convert mm to cm
-            H1_nhits->Fill(trackBank.getInt("n_hits", i)); 
-            H1_adc->Fill(trackBank.getInt("sum_adc", i));
-            H1_path->Fill(trackBank.getFloat("path", i));   
-            H1_dEdx->Fill(track0Bank.getFloat("dEdx", i));    
-            H1_sum_res->Fill(trackBank.getFloat("sum_residuals", i));
-            H1_sum_res_ndef->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-            H1_chi2->Fill(trackBank.getFloat("chi2", i));
-            H1_chi2ndef->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-            H1_p_drift->Fill(0.001*trackBank.getFloat("p_drift", i));
+            for (State S : Photons) {
+                H2_vze_vz[0]->Fill(S.vz, T.vz*0.1); 
+                H1_delta_vz[0]->Fill(S.vz - T.vz*0.1); 
+                H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
+                H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
+                H2_p_adc[0]->Fill(S.pT, T.adc);
+                H2_pTe_pT[0]->Fill(S.pT, T.pT*0.001);
+            }
         }
-        if (one >= 1) { // require at least one track
-            H2_vze_vz->Fill(vz_e, vz_first_track); 
-            H1_delta_vz->Fill(vz_e - vz_first_track); 
-            H1_delta_phi->Fill((phi_e - phi_first_track)*180/M_PI); // convert rad in deg 
-            H2_p_dEdx->Fill(pT_e, dEdx_first_track);
-            H2_pTe_pT->Fill(pT_e, pT_first_track);
+
+        /*******************************************
+         *  Define a priority order for the probes (cut level 1)
+         * *****************************************/
+        if (Electrons.size() > 0) {
+            // select all electrons if there are; ignore photons
+            H1_nelectrons[1]->Fill(Electrons.size());
+            H1_mon_nprobes->Fill(1, Electrons.size());
+            for (int i = 0; i < (int) Electrons.size(); i++) {
+                State S = Electrons[i];
+                Physics K = ElectronKinematics[i];
+                H1_probe_vz[1]->Fill(S.vz);
+                H1_probe_p[1]->Fill(S.p);
+                H1_probe_pT[1]->Fill(S.pT);
+                H1_probe_theta[1]->Fill(S.theta);
+                H1_probe_phi[1]->Fill(S.phi);
+                H1_Q2[1]->Fill(K.Q2);
+                H1_W2[1]->Fill(K.W2);
+                H1_xB[1]->Fill(K.xB);
+                H1_nu[1]->Fill(K.nu);
+            }
+            Photons.clear();
         }
+        else if (Photons.size() > 0) {
+            std::vector<State> NewPhotons;
+            std::vector<Physics> NewPhotonKinematics;
+            for (int i = 0; i < (int) Photons.size(); i++) {
+                State S = Photons[i];
+                Physics K = PhotonKinematics[i];
+                if (S.theta <= 5) { // keep only photons in the FT
+                    H1_probe_vz[1]->Fill(S.vz);
+                    H1_probe_p[1]->Fill(S.p);
+                    H1_probe_pT[1]->Fill(S.pT);
+                    H1_probe_theta[1]->Fill(S.theta);
+                    H1_probe_phi[1]->Fill(S.phi);
+                    H1_Q2[1]->Fill(K.Q2);
+                    H1_W2[1]->Fill(K.W2);
+                    H1_xB[1]->Fill(K.xB);
+                    H1_nu[1]->Fill(K.nu);
+                    NewPhotons.push_back(S);
+                    NewPhotonKinematics.push_back(K);
+                }
+            }
+            H1_nphotons[1]->Fill(NewPhotons.size());
+            H1_mon_nprobes->Fill(1, NewPhotons.size());
+            // keep only photons in the FT
+            Photons = NewPhotons;
+            PhotonKinematics = NewPhotonKinematics;
+        }
+        else {
+            continue; // ignore this event
+        }
+        // if the event is not ignored, let check the tracks
+        Tracks.clear(); // restart
+        H1_ntracks[1]->Fill(trackBank.getRows()); 
+        H1_mon_ntracks->Fill(1.0, (int) trackBank.getRows());
+        for (int i = 0; i < trackBank.getRows(); i++) {
+            State S(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+                    trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+            // Histograms -- Level 1
+            H1_track_vz[1]->Fill(S.vz*0.1); // convert mm to cm
+            H1_track_p[1]->Fill(S.p*0.001); // convert MeV to GeV
+            H1_track_pT[1]->Fill(S.pT*0.001); // convert MeV to GeV
+            H1_track_theta[1]->Fill(S.theta);
+            H1_track_phi[1]->Fill(S.phi);
+            H1_track_nhits[1]->Fill(trackBank.getInt("n_hits", i)); 
+            H1_track_adc[1]->Fill(trackBank.getInt("sum_adc", i));
+            H1_track_path[1]->Fill(trackBank.getFloat("path", i));   
+            H1_track_dEdx[1]->Fill(track0Bank.getFloat("dEdx", i));    
+            H1_track_residuals[1]->Fill(trackBank.getFloat("sum_residuals", i));
+            H1_track_residuals_per_nhits[1]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+            H1_track_chi2[1]->Fill(trackBank.getFloat("chi2", i));
+            H1_track_chi2_per_nhits[1]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+            H1_track_p_drift[1]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+            S.dEdx = track0Bank.getFloat("dEdx", i);
+            S.adc = trackBank.getInt("sum_adc", i);
+            Tracks.push_back(S);
+        }
+        // let check the correlations
+        for (State T : Tracks) {
+            for (State S : Electrons) {
+                H2_vze_vz[1]->Fill(S.vz, T.vz); 
+                H1_delta_vz[1]->Fill(S.vz - T.vz); 
+                H1_delta_phi[1]->Fill(S.phi - T.phi);  
+                H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
+                H2_p_adc[1]->Fill(S.pT, T.adc);
+                H2_pTe_pT[1]->Fill(S.pT, T.pT);
+            }
+            for (State S : Photons) {
+                H2_vze_vz[1]->Fill(S.vz, T.vz*0.1); 
+                H1_delta_vz[1]->Fill(S.vz - T.vz*0.1); 
+                H1_delta_phi[1]->Fill(S.phi - T.phi);  
+                H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
+                H2_p_adc[1]->Fill(S.pT, T.adc);
+                H2_pTe_pT[1]->Fill(S.pT, T.pT*0.001);
+            }
+        }
+        /*******************************************
+         *  cut on delta phi (cut level 2)
+         * *****************************************/
+        int count_electrons = 0;
+        int count_photons = 0;
+        int count_tracks = 0;
+        int count_electrons3 = 0; // level 3
+        int count_photons3 = 0;
+        int count_tracks3 = 0;
+        for (State T : Tracks) {
+            for (int i = 0; i < (int) Electrons.size(); i++) {
+                State S = Electrons[i];
+                Physics K = ElectronKinematics[i];
+                double delta_phi = S.phi - T.phi;
+                double stdev = 20;
+                if ((fabs(delta_phi+198) < stdev) || (fabs(delta_phi-162) < stdev)) {
+                    count_electrons++;
+                    count_tracks++;
+                    // corr
+                    H2_vze_vz[2]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[2]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[2]->Fill(S.phi - T.phi);  
+                    H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[2]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[2]->Fill(S.pT, T.pT);
+                    // probe 
+                    H1_probe_vz[2]->Fill(S.vz);
+                    H1_probe_p[2]->Fill(S.p);
+                    H1_probe_pT[2]->Fill(S.pT);
+                    H1_probe_theta[2]->Fill(S.theta);
+                    H1_probe_phi[2]->Fill(S.phi);
+                    H1_Q2[2]->Fill(K.Q2);
+                    H1_W2[2]->Fill(K.W2);
+                    H1_xB[2]->Fill(K.xB);
+                    H1_nu[2]->Fill(K.nu);
+                    // track
+                    H1_track_vz[2]->Fill(T.vz*0.1); // convert mm to cm
+                    H1_track_p[2]->Fill(T.p*0.001); // convert MeV to GeV
+                    H1_track_pT[2]->Fill(T.pT*0.001); // convert MeV to GeV
+                    H1_track_theta[2]->Fill(T.theta);
+                    H1_track_phi[2]->Fill(T.phi);
+                    H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
+                    H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
+                    H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
+                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
+                    H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
+                    H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                    H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
+                    H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                    H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    /*******************************************
+                     *  cut on W2 (cut level 3)
+                     * *****************************************/
+                    if ((K.W2 > W2_min) && (K.W2 < W2_max)) {
+                        count_electrons3++;
+                        count_tracks3++;
+                        // corr
+                        H2_vze_vz[3]->Fill(S.vz, T.vz); 
+                        H1_delta_vz[3]->Fill(S.vz - T.vz); 
+                        H1_delta_phi[3]->Fill(S.phi - T.phi);  
+                        H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
+                        H2_p_adc[3]->Fill(S.pT, T.adc);
+                        H2_pTe_pT[3]->Fill(S.pT, T.pT);
+                        // probe 
+                        H1_probe_vz[3]->Fill(S.vz);
+                        H1_probe_p[3]->Fill(S.p);
+                        H1_probe_pT[3]->Fill(S.pT);
+                        H1_probe_theta[3]->Fill(S.theta);
+                        H1_probe_phi[3]->Fill(S.phi);
+                        H1_Q2[3]->Fill(K.Q2);
+                        H1_W2[3]->Fill(K.W2);
+                        H1_xB[3]->Fill(K.xB);
+                        H1_nu[3]->Fill(K.nu);
+                        // track
+                        H1_track_vz[3]->Fill(T.vz*0.1); // convert mm to cm
+                        H1_track_p[3]->Fill(T.p*0.001); // convert MeV to GeV
+                        H1_track_pT[3]->Fill(T.pT*0.001); // convert MeV to GeV
+                        H1_track_theta[3]->Fill(T.theta);
+                        H1_track_phi[3]->Fill(T.phi);
+                        H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
+                        H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
+                        H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
+                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
+                        H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
+                        H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                        H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
+                        H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                        H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    }
+                }
+            }
+            for (int i = 0; i < (int) Photons.size(); i++) {
+                State S = Photons[i];
+                Physics K = PhotonKinematics[i];
+                double delta_phi = S.phi - T.phi;
+                double stdev = 20;
+                if ((fabs(delta_phi+198) < stdev) || (fabs(delta_phi-162) < stdev)) {
+                    count_photons++;
+                    count_tracks++;
+                    // corr 
+                    H2_vze_vz[2]->Fill(S.vz, T.vz*0.1); 
+                    H1_delta_vz[2]->Fill(S.vz - T.vz*0.1); 
+                    H1_delta_phi[2]->Fill(S.phi - T.phi);  
+                    H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[2]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[2]->Fill(S.pT, T.pT*0.001);
+                    // probe : photon
+                    H1_probe_vz[2]->Fill(S.vz);
+                    H1_probe_p[2]->Fill(S.p);
+                    H1_probe_pT[2]->Fill(S.pT);
+                    H1_probe_theta[2]->Fill(S.theta);
+                    H1_probe_phi[2]->Fill(S.phi);
+                    H1_Q2[2]->Fill(K.Q2);
+                    H1_W2[2]->Fill(K.W2);
+                    H1_xB[2]->Fill(K.xB);
+                    H1_nu[2]->Fill(K.nu);
+                    // track
+                    H1_track_vz[2]->Fill(T.vz*0.1); // convert mm to cm
+                    H1_track_p[2]->Fill(T.p*0.001); // convert MeV to GeV
+                    H1_track_pT[2]->Fill(T.pT*0.001); // convert MeV to GeV
+                    H1_track_theta[2]->Fill(T.theta);
+                    H1_track_phi[2]->Fill(T.phi);
+                    H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
+                    H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
+                    H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
+                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
+                    H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
+                    H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                    H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
+                    H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                    H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    /*******************************************
+                     *  cut on W2 (cut level 3)
+                     * *****************************************/
+                    if ((K.Q2 > W2_min) && (K.Q2 < W2_max)) {
+                        count_photons3++;
+                        count_tracks3++;
+                        // corr 
+                        H2_vze_vz[3]->Fill(S.vz, T.vz*0.1); 
+                        H1_delta_vz[3]->Fill(S.vz - T.vz*0.1); 
+                        H1_delta_phi[3]->Fill(S.phi - T.phi);  
+                        H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
+                        H2_p_adc[3]->Fill(S.pT, T.adc);
+                        H2_pTe_pT[3]->Fill(S.pT, T.pT*0.001);
+                        // probe : photon
+                        H1_probe_vz[3]->Fill(S.vz);
+                        H1_probe_p[3]->Fill(S.p);
+                        H1_probe_pT[3]->Fill(S.pT);
+                        H1_probe_theta[3]->Fill(S.theta);
+                        H1_probe_phi[3]->Fill(S.phi);
+                        H1_Q2[3]->Fill(K.Q2);
+                        H1_W2[3]->Fill(K.W2);
+                        H1_xB[3]->Fill(K.xB);
+                        H1_nu[3]->Fill(K.nu);
+                        // track
+                        H1_track_vz[3]->Fill(T.vz*0.1); // convert mm to cm
+                        H1_track_p[3]->Fill(T.p*0.001); // convert MeV to GeV
+                        H1_track_pT[3]->Fill(T.pT*0.001); // convert MeV to GeV
+                        H1_track_theta[3]->Fill(T.theta);
+                        H1_track_phi[3]->Fill(T.phi);
+                        H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
+                        H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
+                        H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
+                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
+                        H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
+                        H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                        H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
+                        H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                        H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    }
+                }
+            }
+            // level 2
+            H1_nelectrons[2]->Fill(count_electrons);
+            H1_nphotons[2]->Fill(count_photons);
+            H1_ntracks[2]->Fill(count_tracks);
+            H1_mon_nprobes->Fill(2.0, count_electrons + count_photons);
+            H1_mon_ntracks->Fill(2.0, count_tracks);
+            // level 3
+            H1_nelectrons[3]->Fill(count_electrons3);
+            H1_nphotons[3]->Fill(count_photons3);
+            H1_ntracks[3]->Fill(count_tracks3);
+            H1_mon_nprobes->Fill(3.0, count_electrons + count_photons);
+            H1_mon_ntracks->Fill(3.0, count_tracks);
+        }
+        /*******************************************
+         *  cut on W2 (cut level 3)
+         * *****************************************/
     }
+    // analysis
+    //double delta_phi_max = H1_delta_phi[1]->GetBinContent(H1_delta_phi[1]->GetMaximumBin());
+    //double delta_phi_max2 = delta_phi_max < 0 ? delta_phi_max + 360 : delta_phi_max - 360;
+
     printf("nevents    : %ld \n", nevents);
     printf("nelectrons : %ld \n", nelectrons);
+    printf("nphotons   : %ld \n", nphotons);
     printf("ntracks    : %ld \n", ntracks);
-    printf("nentries   : %ld \n", nentries);
-    /**************************
-     * output
-     * ***********************/
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration<double>(end - start);
+    printf("* time elapsed : %lf seconds\n", elapsed.count());
+
+/************************************************************
+ * output
+ * **********************************************************/
+
     const char * output = "./elastics.root";
     TFile *f = new TFile(output, "RECREATE");
+    TDirectory *probes_dir   = f->mkdir("probes");
     TDirectory *physics_dir  = f->mkdir("physics");
-    TDirectory *electron_dir = f->mkdir("electron");
-    TDirectory *track_dir    = f->mkdir("track");
+    TDirectory *tracks_dir  = f->mkdir("tracks");
     TDirectory *corr_dir     = f->mkdir("correlation");
+    
+    //////////////////////
+    //  probes
+    //////////////////////
+    f->cd();
+    H1_mon_nprobes->Write("nprobes_evolution");
+    H1_mon_ntracks->Write("ntracks_evolution");
+    // Level 0 -- no cuts
+    TDirectory* probes_nocuts_dir = probes_dir->mkdir("nocuts");
+    probes_nocuts_dir->cd();
+    H1_probe_p[0]->Write("p");
+    H1_probe_pT[0]->Write("pT");
+    H1_probe_vz[0]->Write("vz");
+    H1_probe_theta[0]->Write("theta");
+    H1_probe_phi[0]->Write("phi");
+    H1_nelectrons[0]->Write("nelectrons");
+    H1_nphotons[0]->Write("nphotons");
+    // Level 1 -- priority on the selection of the probe
+    TDirectory* probes_priority_dir = probes_dir->mkdir("priority");
+    probes_priority_dir->cd();
+    H1_probe_p[1]->Write("p");
+    H1_probe_pT[1]->Write("pT");
+    H1_probe_vz[1]->Write("vz");
+    H1_probe_theta[1]->Write("theta");
+    H1_probe_phi[1]->Write("phi");
+    H1_nelectrons[1]->Write("nelectrons");
+    H1_nphotons[1]->Write("nphotons");
+    // Level 2 -- delta_phi 
+    TDirectory* probes_delta_phi_dir = probes_dir->mkdir("cut_on_delta_phi");
+    probes_delta_phi_dir->cd();
+    H1_probe_p[2]->Write("p");
+    H1_probe_pT[2]->Write("pT");
+    H1_probe_vz[2]->Write("vz");
+    H1_probe_theta[2]->Write("theta");
+    H1_probe_phi[2]->Write("phi");
+    H1_nelectrons[2]->Write("nelectrons");
+    H1_nphotons[2]->Write("nphotons");
+    // Level 3 -- cut_on_W2
+    TDirectory* probes_w2_cut_dir = probes_dir->mkdir("cut_on_W2");
+    probes_w2_cut_dir->cd();
+    H1_probe_p[3]->Write("p");
+    H1_probe_pT[3]->Write("pT");
+    H1_probe_vz[3]->Write("vz");
+    H1_probe_theta[3]->Write("theta");
+    H1_probe_phi[3]->Write("phi");
+    H1_nelectrons[3]->Write("nelectrons");
+    H1_nphotons[3]->Write("nphotons");
     //////////////////////
     //  physics
     //////////////////////
-    physics_dir->cd();
-    // Q2
-    H1_Q2->Write("Q2");
-    // W2
-    H1_W2->Write("W2");
-    // W2 with a display of the cuts
-    canvas->Clear();
-    H1_W2_all->Draw();
-    int w2_max = H1_W2_all->GetBinContent(H1_W2_all->GetMaximumBin());
-    TGraph* gr_w2_min = new TGraph();
-    gr_w2_min->AddPoint(W2_min, 0);
-    gr_w2_min->AddPoint(W2_min, w2_max);
-    gr_w2_min->SetLineColor(kRed);
-    gr_w2_min->Draw("L");
-    TGraph* gr_w2_max = new TGraph();
-    gr_w2_max->AddPoint(W2_max, 0);
-    gr_w2_max->AddPoint(W2_max, w2_max);
-    gr_w2_max->SetLineColor(kRed);
-    gr_w2_max->Draw("L");
-    TLegend* legend_w2 = new TLegend(0.1,0.7,0.48,0.9);
-    legend_w2->SetHeader("Cuts","C");
-    legend_w2->AddEntry(gr_w2_min, (std::string("W2 >= ") + std::to_string(W2_min)).c_str());
-    legend_w2->AddEntry(gr_w2_max, (std::string("W2 >= ") + std::to_string(W2_max)).c_str());
-    legend_w2->Draw();
-    canvas->Write("W2_cut_displayed");
-    // xB
-    H1_xB->Write("xB");
-    // nu
-    H1_nu->Write("nu");
+    // Level 0 -- no cuts
+    TDirectory* physics_nocuts_dir = physics_dir->mkdir("nocuts");
+    physics_nocuts_dir->cd();
+    H1_W2[0]->Write("W2");
+    H1_Q2[0]->Write("Q2");
+    H1_xB[0]->Write("xB");
+    H1_nu[0]->Write("nu");
+    // Level 1 -- priority on the selection of the probe
+    TDirectory* physics_priority_dir = physics_dir->mkdir("priority");
+    physics_priority_dir->cd();
+    H1_W2[1]->Write("W2");
+    H1_Q2[1]->Write("Q2");
+    H1_xB[1]->Write("xB");
+    H1_nu[1]->Write("nu");
+    // Level 2 -- delta_phi
+    TDirectory* physics_delta_phi_dir = physics_dir->mkdir("cut_on_delta_phi");
+    physics_delta_phi_dir->cd();
+    H1_W2[2]->Write("W2");
+    H1_Q2[2]->Write("Q2");
+    H1_xB[2]->Write("xB");
+    H1_nu[2]->Write("nu");
+    // Level 3 -- cut_on_W2
+    TDirectory* physics_w2_cut_dir = physics_dir->mkdir("cut_on_W2");
+    physics_w2_cut_dir->cd();
+    H1_W2[3]->Write("W2");
+    H1_Q2[3]->Write("Q2");
+    H1_xB[3]->Write("xB");
+    H1_nu[3]->Write("nu");
     //////////////////////
-    //  electrons
+    //  tracks
     //////////////////////
-    electron_dir->cd();
-    // p
-    H1_p_el->Write("p_el");
-    // pT
-    H1_pT_el->Write("pT_el");
-    // theta
-    H1_theta_el->Write("theta_el");
-    // phi
-    H1_phi_el->Write("phi_el");
-    // vz
-    H1_vz_el->Write("vz_el");
-    // cut vz electron
-    canvas->Clear();
-    H1_vz_el_all->Draw();
-    int vz_el_max = H1_vz_el_all->GetBinContent(H1_vz_el_all->GetMaximumBin());
-    TGraph* gr_vz_el_min = new TGraph();
-    gr_vz_el_min->AddPoint(-25, 0);
-    gr_vz_el_min->AddPoint(-25, vz_el_max);
-    gr_vz_el_min->SetLineColor(kRed);
-    gr_vz_el_min->Draw("L");
-    TGraph* gr_vz_el_max = new TGraph();
-    gr_vz_el_max->AddPoint(10, 0);
-    gr_vz_el_max->AddPoint(10, vz_el_max);
-    gr_vz_el_max->SetLineColor(kRed);
-    gr_vz_el_max->Draw("L");
-    TLegend* legend_vz_el = new TLegend(0.1,0.7,0.48,0.9);
-    legend_vz_el->SetHeader("Cuts","C");
-    legend_vz_el->AddEntry(gr_vz_el_min, "vz >= -25");
-    legend_vz_el->AddEntry(gr_vz_el_max, "vz <= 10");
-    legend_vz_el->Draw();
-    canvas->Write("vz_el_cut_displayed");
-    // nelectrons
-    H1_nelectrons_per_evt->Write("nelectrons_per_evt");
+    // Level 0 -- no cuts
+    TDirectory* tracks_nocuts_dir = tracks_dir->mkdir("nocuts");
+    tracks_nocuts_dir->cd();
+    H1_ntracks[0]->Write("ntracks");
+    H1_track_vz[0]->Write("vz");
+    H1_track_p[0]->Write("p");
+    H1_track_p_drift[0]->Write("p_drift");
+    H1_track_pT[0]->Write("pT");
+    H1_track_theta[0]->Write("theta");
+    H1_track_phi[0]->Write("phi");
+    H1_track_nhits[0]->Write("nhits");
+    H1_track_adc[0]->Write("adc");
+    H1_track_path[0]->Write("path");
+    H1_track_dEdx[0]->Write("dEdx");
+    H1_track_residuals[0]->Write("residuals");
+    H1_track_residuals_per_nhits[0]->Write("residuals_per_hit");
+    H1_track_chi2[0]->Write("chi2");
+    H1_track_chi2_per_nhits[0]->Write("chi2_per_hit");
+    // Level 1 -- probe priority
+    TDirectory* tracks_probe_dir = tracks_dir->mkdir("probe_priority");
+    tracks_probe_dir->cd();
+    H1_ntracks[1]->Write("ntracks");
+    H1_track_vz[1]->Write("vz");
+    H1_track_p[1]->Write("p");
+    H1_track_p_drift[1]->Write("p_drift");
+    H1_track_pT[1]->Write("pT");
+    H1_track_theta[1]->Write("theta");
+    H1_track_phi[1]->Write("phi");
+    H1_track_nhits[1]->Write("nhits");
+    H1_track_adc[1]->Write("adc");
+    H1_track_path[1]->Write("path");
+    H1_track_dEdx[1]->Write("dEdx");
+    H1_track_residuals[1]->Write("residuals");
+    H1_track_residuals_per_nhits[1]->Write("residuals_per_hit");
+    H1_track_chi2[1]->Write("chi2");
+    H1_track_chi2_per_nhits[1]->Write("chi2_per_hit");
+    // Level 2 -- delta phi
+    TDirectory* tracks_delta_phi_dir = tracks_dir->mkdir("cut_on_delta_phi");
+    tracks_delta_phi_dir->cd();
+    H1_ntracks[2]->Write("ntracks");
+    H1_track_vz[2]->Write("vz");
+    H1_track_p[2]->Write("p");
+    H1_track_p_drift[2]->Write("p_drift");
+    H1_track_pT[2]->Write("pT");
+    H1_track_theta[2]->Write("theta");
+    H1_track_phi[2]->Write("phi");
+    H1_track_nhits[2]->Write("nhits");
+    H1_track_adc[2]->Write("adc");
+    H1_track_path[2]->Write("path");
+    H1_track_dEdx[2]->Write("dEdx");
+    H1_track_residuals[2]->Write("residuals");
+    H1_track_residuals_per_nhits[2]->Write("residuals_per_hit");
+    H1_track_chi2[2]->Write("chi2");
+    H1_track_chi2_per_nhits[2]->Write("chi2_per_hit");
+    // Level 3 -- cut_on_W2
+    TDirectory* tracks_w2_cut_dir = tracks_dir->mkdir("cut_on_W2");
+    tracks_w2_cut_dir->cd();
+    H1_ntracks[3]->Write("ntracks");
+    H1_track_vz[3]->Write("vz");
+    H1_track_p[3]->Write("p");
+    H1_track_p_drift[3]->Write("p_drift");
+    H1_track_pT[3]->Write("pT");
+    H1_track_theta[3]->Write("theta");
+    H1_track_phi[3]->Write("phi");
+    H1_track_nhits[3]->Write("nhits");
+    H1_track_adc[3]->Write("adc");
+    H1_track_path[3]->Write("path");
+    H1_track_dEdx[3]->Write("dEdx");
+    H1_track_residuals[3]->Write("residuals");
+    H1_track_residuals_per_nhits[3]->Write("residuals_per_hit");
+    H1_track_chi2[3]->Write("chi2");
+    H1_track_chi2_per_nhits[3]->Write("chi2_per_hit");
     //////////////////////
-    // ahdc kf track
+    //  correlation
     //////////////////////
-    // ahdc kf track
-    track_dir->cd();
-    // p
-    H1_p->Write("p");
-    // pT
-    H1_pT->Write("pT");
-    // theta
-    H1_theta->Write("theta");
-    // cut theta 
-    canvas->Clear();
-    H1_theta_all->Draw();
-    int theta_max = H1_theta_all->GetBinContent(H1_theta_all->GetMaximumBin());
-    TGraph* gr_theta_min = new TGraph();
-    gr_theta_min->AddPoint(10, 0);
-    gr_theta_min->AddPoint(10, theta_max);
-    gr_theta_min->SetLineColor(kRed);
-    gr_theta_min->Draw("L");
-    TGraph* gr_theta_max = new TGraph();
-    gr_theta_max->AddPoint(170, 0);
-    gr_theta_max->AddPoint(170, theta_max);
-    gr_theta_max->SetLineColor(kRed);
-    gr_theta_max->Draw("L");
-    TLegend* legend_theta = new TLegend(0.1,0.7,0.48,0.9);
-    legend_theta->SetHeader("Cuts","C");
-    legend_theta->AddEntry(gr_theta_min, "theta >= 10 deg");
-    legend_theta->AddEntry(gr_theta_max, "theta <= 170 deg");
-    legend_theta->Draw();
-    canvas->Write("theta_cut_displayed");
-    // phi
-    H1_phi->Write("phi");
-    // vz
-    H1_vz->Write("vz");
-    // cut vz 
-    canvas->Clear();
-    H1_vz_all->Draw();
-    int vz_max = H1_vz_all->GetBinContent(H1_vz_all->GetMaximumBin());
-    TGraph* gr_vz_min = new TGraph();
-    gr_vz_min->AddPoint(-15, 0);
-    gr_vz_min->AddPoint(-15, vz_max);
-    gr_vz_min->SetLineColor(kRed);
-    gr_vz_min->Draw("L");
-    TGraph* gr_vz_max = new TGraph();
-    gr_vz_max->AddPoint(15, 0);
-    gr_vz_max->AddPoint(15, vz_max);
-    gr_vz_max->SetLineColor(kRed);
-    gr_vz_max->Draw("L");
-    TLegend* legend_vz = new TLegend(0.1,0.7,0.48,0.9);
-    legend_vz->SetHeader("Cuts","C");
-    legend_vz->AddEntry(gr_vz_min, "vz >= -15");
-    legend_vz->AddEntry(gr_vz_max, "vz <= 15");
-    legend_vz->Draw();
-    canvas->Write("vz_cut_displayed");
-    // nhits
-    H1_nhits->Write("nhits");
-    // cut nhits 
-    canvas->Clear();
-    H1_nhits_all->Draw();
-    int nhits_max = H1_nhits_all->GetBinContent(H1_nhits_all->GetMaximumBin());
-    TGraph* gr_nhits_min = new TGraph();
-    gr_nhits_min->AddPoint(6, 0);
-    gr_nhits_min->AddPoint(6, nhits_max);
-    gr_nhits_min->SetLineColor(kRed);
-    gr_nhits_min->Draw("L");
-    TLegend* legend_nhits = new TLegend(0.1,0.7,0.48,0.9);
-    legend_nhits->SetHeader("Cuts","C");
-    legend_nhits->AddEntry(gr_nhits_min, "nhits >= 6");
-    legend_nhits->Draw();
-    canvas->Write("nhits_cut_displayed");
-    // sum adc
-    H1_adc->Write("sum_adc");
-    // path
-    H1_path->Write("path");
-    //dEdx
-    H1_dEdx->Write("dEdx");
-    // sum_res
-    H1_sum_res->Write("sum_residuals");
-    // sum_res_ndef
-    H1_sum_res_ndef->Write("sum_residuals_per_nhits");
-    // chi2
-    H1_chi2->Write("chi2");
-    // chi2ndef
-    H1_chi2ndef->Write("chi2ndef");
-    // p_drift
-    H1_p_drift->Write("p_drift");
-    //////////////////////
-    // correlations
-    //////////////////////
-    corr_dir->cd();
-    // pT_el vs dEdx
-    H2_p_dEdx->GetXaxis()->SetTitle("pT electron (GeV)"); 
-    H2_p_dEdx->GetYaxis()->SetTitle("dEdx (adc/mm)");
-    H2_p_dEdx->Write("pTe_dEdx");
-    // vz_el vs vz
-    H2_vze_vz->GetXaxis()->SetTitle("vz electron (mm)"); 
-    H2_vze_vz->GetYaxis()->SetTitle("vz track (mm)");
-    H2_vze_vz->Write("vz_electron_track"); 
-    // delta vz
-    H1_delta_vz->Write("delta_vz");
-    // delta phi
-    H1_delta_phi->Write("delta_phi");
-    // pT_e and pT
-    H2_pTe_pT->GetXaxis()->SetTitle("pT electron (GeV)"); 
-    H2_pTe_pT->GetYaxis()->SetTitle("pT track(GeV)");
-    H2_pTe_pT->Write("pTe_pT");
+    for (TH2D* ptr : H2_vze_vz) {
+        ptr->GetXaxis()->SetTitle("vz probe (cm)");
+        ptr->GetYaxis()->SetTitle("vz track (cm)");
+    }
+    for (TH2D* ptr : H2_pTe_pT) {
+        ptr->GetXaxis()->SetTitle("pT probe (GeV)");
+        ptr->GetYaxis()->SetTitle("pT track (GeV)");
+    }
+    for (TH2D* ptr : H2_p_dEdx) {
+        ptr->GetXaxis()->SetTitle("pT probe (GeV)");
+        ptr->GetYaxis()->SetTitle("dEdx track (adc/mm)");
+    }
+    for (TH2D* ptr : H2_p_adc) {
+        ptr->GetXaxis()->SetTitle("pT probe (GeV)");
+        ptr->GetYaxis()->SetTitle("adc track (adc)");
+    }
+    // Level 0 -- no cuts
+    TDirectory* corr_nocuts_dir = corr_dir->mkdir("nocuts");
+    corr_nocuts_dir->cd();
+    H2_vze_vz[0]->Write("corr_vz"); 
+    H1_delta_vz[0]->Write("delta_vz"); 
+    H1_delta_phi[0]->Write("delat_phi");  
+    H2_p_dEdx[0]->Write("corr_pT_dEdx");
+    H2_p_adc[0]->Write("corr_pT_adc");
+    H2_pTe_pT[0]->Write("corr_pT");
+    // Level 1 -- probe priority
+    TDirectory* corr_probe_priority_dir = corr_dir->mkdir("probe_priority");
+    corr_probe_priority_dir->cd();
+    H2_vze_vz[1]->Write("corr_vz"); 
+    H1_delta_vz[1]->Write("delta_vz"); 
+    H1_delta_phi[1]->Write("delat_phi");  
+    H2_p_dEdx[1]->Write("corr_pT_dEdx");
+    H2_p_adc[1]->Write("corr_pT_adc");
+    H2_pTe_pT[1]->Write("corr_pT");
+    // Level 2 -- delta phi
+    TDirectory* corr_delta_phi_dir = corr_dir->mkdir("cut_on_delta_phi");
+    corr_delta_phi_dir->cd();
+    H2_vze_vz[2]->Write("corr_vz"); 
+    H1_delta_vz[2]->Write("delta_vz"); 
+    H1_delta_phi[2]->Write("delat_phi");  
+    H2_p_dEdx[2]->Write("corr_pT_dEdx");
+    H2_p_adc[2]->Write("corr_pT_adc");
+    H2_pTe_pT[2]->Write("corr_pT");
+    // Level 3 -- cut_on_W2
+    TDirectory* corr_w2_cut_dir = corr_dir->mkdir("cut_on_W2");
+    corr_w2_cut_dir->cd();
+    H2_vze_vz[3]->Write("corr_vz"); 
+    H1_delta_vz[3]->Write("delta_vz"); 
+    H1_delta_phi[3]->Write("delat_phi");  
+    H2_p_dEdx[3]->Write("corr_pT_dEdx");
+    H2_p_adc[3]->Write("corr_pT_adc");
+    H2_pTe_pT[3]->Write("corr_pT");
     
+    
+
+    // Close file
     f->Close();
     printf("File created : %s\n", output);
 
@@ -448,4 +945,20 @@ void progressBar(int state, int bar_length) { // state is a number between 0 and
         printf("] %d %%", state);
     }
     fflush(stdout);
+}
+
+State::State(double _px, double _py, double _pz, double _vx, double _vy, double _vz) 
+    : px(_px), py(_py), pz(_pz), vx(_vx), vy(_vy), vz(_vz) {
+    futils::cart2polar(px, py, pz, p, theta, phi);
+    pT = sqrt(px*px + py*py);
+    // convert theta and phi in deg
+    theta = theta*180/M_PI;
+    phi = phi*180/M_PI;
+}
+
+Physics::Physics(State Probe, double _Mt, double _Ee, double _me, double _Mp) {
+    Q2 = 4*_Ee*sqrt(Probe.p*Probe.p + _me*_me)*pow(sin(Probe.theta*M_PI/(2*180)), 2);
+    nu = _Ee - Probe.p;
+    W2 = _Mt*_Mt + 2*_Mt*nu - Q2;
+    xB = Q2/(2*_Mp*nu);
 }
