@@ -116,6 +116,7 @@ protected :
 	double cut_timeMax_min = 0;
 	double cut_timeMax_max = 950;
 	bool flag_mask_wires = false;
+	bool cut_flag = true;
 	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
 	int HV_SECTOR = -1;
 	Gtk::TextView TextView_occupancy;
@@ -145,6 +146,7 @@ public :
 	int getNumberOfWaveforms();
 	bool is_oscillating(std::vector<double> samples);
 	void getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & MAX_OCC);
+    void update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax);
 	// Signals
 	void on_button_settings_clicked();
 	void on_button_prev_clicked();

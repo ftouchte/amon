@@ -46,7 +46,7 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	// Decoding parameters	
 	ADC_LIMIT(4095),
-	NumberOfBins(20),
+	NumberOfBins(30),
 	samplingTime(50.0), // set at 50.0 if you want use measure in terms of bins
 	amplitudeFractionCFA(0.5),
 	binDelayCFD(5),
@@ -472,11 +472,10 @@ void Window::on_button_settings_clicked(){
 				flag_mask_wires = this->CheckButton_mask_wires.get_active();
 				if (flag_mask_wires) {
 					printf("Flag_mask_wires is activated\n");
-					DrawingArea_event.queue_draw();
 				} else {
 					printf("Flag_mask_wires is desactivated\n");
-					DrawingArea_event.queue_draw();
 				}
+				DrawingArea_event.queue_draw();
 			});
 	Window_settings->show();
 }
@@ -913,23 +912,14 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					// show activated wires
 					double adcMax            = wire->pulse.get_adcMax();
 					if (adcMax > 0) {
-						bool flag = true;
 						double adcOffset         = wire->pulse.get_adcOffset();
 						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 						double timeMax           = wire->pulse.get_timeMax();
 						if (flag_mask_wires) {
-							flag = (adcMax >= adcCut) &&
-								(adcOffset >= cut_adcOffset_min) && 
-								(adcOffset <= cut_adcOffset_max) && 
-								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-								(timeOverThreshold >= cut_timeOverThreshold_min) && 
-								(timeOverThreshold <= cut_timeOverThreshold_max) &&
-								(timeMax >= cut_timeMax_min) &&
-								(timeMax <= cut_timeMax_max); 
+                            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
 						}
-						if (!flag) continue;
+						if (!cut_flag && false) continue;
 						if (zmin != zmax) {
 							int ncolors = Palette.get_ncolors();
 							double slope = (1.0*(ncolors-1))/(zmax-zmin);
@@ -1113,24 +1103,15 @@ bool Window::dataEventAction() {
 			// fill histograms
 			double factor = 1.0; // if == samplingTime, (the unit in bin number)
 			double timeMax = this->adcBank.getFloat("time", col)/factor;
-                        double leadingEdgeTime = this->adcBank.getFloat("leadingEdgeTime", col)/factor;
-                        double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
-                        double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
-                        double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
-                        double adcOffset = this->adcBank.getFloat("ped", col);
-                        //double integral = this->adcBank.getInt("integral", col);
-				        int wfType = this->adcBank.getInt("wfType", col);
-			bool flag = (adcMax >= adcCut) &&
-				(adcOffset >= cut_adcOffset_min) && 
-				(adcOffset <= cut_adcOffset_max) && 
-				(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-				(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-				(timeOverThreshold >= cut_timeOverThreshold_min) && 
-				(timeOverThreshold <= cut_timeOverThreshold_max) &&
-				(timeMax >= cut_timeMax_min) &&
-				(timeMax <= cut_timeMax_max);
-                       	//bool flag = (adcMax >= adcCut) && (adcOffset >= cut_adcOffset_min) && (adcOffset <= cut_adcOffset_max) && (leadingEdgeTime >= cut_leadingEdgeTime_min) && (leadingEdgeTime <= cut_leadingEdgeTime_max) && (timeOverThreshold >= cut_timeOverThreshold_min) && (timeOverThreshold <= cut_timeOverThreshold_max) && (timeMax >= cut_timeMax_min) && (timeMax <= cut_timeMax_max); 
-			if (flag) {
+            double leadingEdgeTime = this->adcBank.getFloat("leadingEdgeTime", col)/factor;
+            double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
+            double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
+            double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
+            double adcOffset = this->adcBank.getFloat("ped", col);
+            //double integral = this->adcBank.getInt("integral", col);
+            int wfType = this->adcBank.getInt("wfType", col);
+            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
+			if (cut_flag || true) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
 					hist1d_timeOverThreshold.fill(timeOverThreshold);
@@ -1228,21 +1209,12 @@ void Window::drawWaveforms() {
 					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 					double timeMax           = wire->pulse.get_timeMax();
 					int    wfType            = wire->pulse.get_wfType();
-					bool flag = true;
 					if (adcMax > 0) {
 						if (num >= 10) {break;}
 						if (flag_mask_wires) {
-							flag = (adcMax >= adcCut) &&
-								(adcOffset >= cut_adcOffset_min) &&
-								(adcOffset <= cut_adcOffset_max) &&
-								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-								(timeOverThreshold >= cut_timeOverThreshold_min) &&
-								(timeOverThreshold <= cut_timeOverThreshold_max) &&
-								(timeMax >= cut_timeMax_min) &&
-								(timeMax <= cut_timeMax_max);
-							}
-						if (!flag) continue;
+							    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
+                        }
+						if (!cut_flag && false) continue;
 						std::vector<double> samples = wire->pulse.get_samples();
 						// 0 or 1
 						col = (num % 2) + 1;
@@ -1282,20 +1254,11 @@ void Window::drawWaveformsPerLayer() {
 					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 					double timeMax           = wire->pulse.get_timeMax();
-					bool flag = true;
 					if (adcMax > 0) {
 						if (flag_mask_wires) {
-							flag = (adcMax >= adcCut) &&
-								(adcOffset >= cut_adcOffset_min) &&
-								(adcOffset <= cut_adcOffset_max) &&
-								(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-								(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-								(timeOverThreshold >= cut_timeOverThreshold_min) &&
-								(timeOverThreshold <= cut_timeOverThreshold_max) &&
-								(timeMax >= cut_timeMax_min) &&
-								(timeMax <= cut_timeMax_max);
-							}
-						if (!flag) continue;
+							update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
+                        }
+						if (!cut_flag && false) continue;
 						nhits++;
 						std::vector<double> samples = wire->pulse.get_samples();
 						for (int i = 0; i < NumberOfBins; i++) {
@@ -1342,20 +1305,11 @@ void Window::drawWaveformsPerLayer() {
 						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 						double timeMax           = wire->pulse.get_timeMax();
-						bool flag = true;
 						if (adcMax > 0) {
 							if (flag_mask_wires) {
-								flag = (adcMax >= adcCut) &&
-									(adcOffset >= cut_adcOffset_min) &&
-									(adcOffset <= cut_adcOffset_max) &&
-									(leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-									(leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-									(timeOverThreshold >= cut_timeOverThreshold_min) &&
-									(timeOverThreshold <= cut_timeOverThreshold_max) &&
-									(timeMax >= cut_timeMax_min) &&
-									(timeMax <= cut_timeMax_max);
-								}
-							if (!flag) continue;
+							    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
+                            }
+							if (!cut_flag && false) continue;
 							std::vector<double> samples = wire->pulse.get_samples();
 							double r1 = 0.0, g1 = 0.0, b1 = 1.0;
 							double r2 = 0.0, g2 = 1.0, b2 = 0.0;
@@ -2257,6 +2211,20 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 			sub_hv = 1;
 		}
 	}
+}
+
+void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax) {
+    cut_flag = (adcMax >= adcCut) &&
+        (adcOffset >= cut_adcOffset_min) && 
+        (adcOffset <= cut_adcOffset_max) && 
+        (leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+        (leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+        (timeOverThreshold >= cut_timeOverThreshold_min) && 
+        (timeOverThreshold <= cut_timeOverThreshold_max) &&
+        (timeMax >= cut_timeMax_min) &&
+        (timeMax <= cut_timeMax_max);
+    printf("cut_flag : %s\n", (cut_flag ? "true" : "false"));
+    printf("   adc %lf, ped %lf time %lf tot %lf tmax %lf\n", adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
 }
 
 /** Main function */
