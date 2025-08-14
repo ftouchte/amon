@@ -8,6 +8,7 @@ struct State {
     double pT;
     double dEdx = -9999;
     double adc = -9999;
+    int pid = -9999;
     State(double _px, double _py, double _pz, double _vx, double _vy, double _vz);
 };
 
