@@ -115,7 +115,7 @@ int main(int argc, char const *argv[]) {
     long unsigned int nphotons = 0;
     long unsigned int ntracks = 0;
     // Histograms
-    TCanvas* canvas = new TCanvas("c1");
+    //TCanvas* canvas = new TCanvas("c1");
     TH1I* H1_mon_nprobes    = new TH1I("nprobes_with_cuts", "number of probes with the cuts", 15, 0, 15); 
     TH1I* H1_mon_ntracks    = new TH1I("ntracks_with_cuts", "number of tracks with the cuts", 15, 0, 15); 
     //////////////////////////////
@@ -316,6 +316,7 @@ int main(int argc, char const *argv[]) {
             if (pid == 11) { // electron (11)
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                S.pid = 11;
                 Physics K(S, Mt, Ee);
                 Electrons.push_back(S);
                 ElectronKinematics.push_back(K);
@@ -333,6 +334,7 @@ int main(int argc, char const *argv[]) {
             else if (pid == 22) { // photon (22)
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                S.pid = 22;
                 Physics K(S, Ee, Mt);
                 Photons.push_back(S);
                 PhotonKinematics.push_back(K);
@@ -360,14 +362,20 @@ int main(int argc, char const *argv[]) {
         H1_ntracks[0]->Fill(trackBank.getRows()); 
         H1_mon_ntracks->Fill(0.0, (int) trackBank.getRows());
         for (int i = 0; i < trackBank.getRows(); i++) {
-            State S(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+            State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
                     trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+            T.vz = T.vz*0.1; // convert mm to cm
+            T.p  = T.p*0.001; // convert MeV to GeV
+            T.pT = T.pT*0.001; // convert MeV to Gev
+            T.dEdx = track0Bank.getFloat("dEdx", i);
+            T.adc = trackBank.getInt("sum_adc", i);
+            Tracks.push_back(T);
             // Histograms -- Level 0, no cuts on tracks
-            H1_track_vz[0]->Fill(S.vz*0.1); // convert mm to cm
-            H1_track_p[0]->Fill(S.p*0.001); // convert MeV to GeV
-            H1_track_pT[0]->Fill(S.pT*0.001); // convert MeV to GeV
-            H1_track_theta[0]->Fill(S.theta);
-            H1_track_phi[0]->Fill(S.phi);
+            H1_track_vz[0]->Fill(T.vz); 
+            H1_track_p[0]->Fill(T.p); 
+            H1_track_pT[0]->Fill(T.pT);
+            H1_track_theta[0]->Fill(T.theta);
+            H1_track_phi[0]->Fill(T.phi);
             H1_track_nhits[0]->Fill(trackBank.getInt("n_hits", i)); 
             H1_track_adc[0]->Fill(trackBank.getInt("sum_adc", i));
             H1_track_path[0]->Fill(trackBank.getFloat("path", i));   
@@ -377,9 +385,6 @@ int main(int argc, char const *argv[]) {
             H1_track_chi2[0]->Fill(trackBank.getFloat("chi2", i));
             H1_track_chi2_per_nhits[0]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
             H1_track_p_drift[0]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-            S.dEdx = track0Bank.getFloat("dEdx", i);
-            S.adc = trackBank.getInt("sum_adc", i);
-            Tracks.push_back(S);
         }
         // Correlations -- level 0, no cuts
         // loop over all configurations
@@ -393,12 +398,12 @@ int main(int argc, char const *argv[]) {
                 H2_pTe_pT[0]->Fill(S.pT, T.pT);
             }
             for (State S : Photons) {
-                H2_vze_vz[0]->Fill(S.vz, T.vz*0.1); 
-                H1_delta_vz[0]->Fill(S.vz - T.vz*0.1); 
+                H2_vze_vz[0]->Fill(S.vz, T.vz); 
+                H1_delta_vz[0]->Fill(S.vz - T.vz); 
                 H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
                 H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
                 H2_p_adc[0]->Fill(S.pT, T.adc);
-                H2_pTe_pT[0]->Fill(S.pT, T.pT*0.001);
+                H2_pTe_pT[0]->Fill(S.pT, T.pT);
             }
         }
 
@@ -423,6 +428,7 @@ int main(int argc, char const *argv[]) {
                 H1_nu[1]->Fill(K.nu);
             }
             Photons.clear();
+            PhotonKinematics.clear();
         }
         else if (Photons.size() > 0) {
             std::vector<State> NewPhotons;
@@ -458,14 +464,20 @@ int main(int argc, char const *argv[]) {
         H1_ntracks[1]->Fill(trackBank.getRows()); 
         H1_mon_ntracks->Fill(1.0, (int) trackBank.getRows());
         for (int i = 0; i < trackBank.getRows(); i++) {
-            State S(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+            State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
                     trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+            T.vz = T.vz*0.1; // convert mm to cm
+            T.p  = T.p*0.001; // convert MeV to GeV
+            T.pT = T.pT*0.001; // convert MeV to Gev
+            T.dEdx = track0Bank.getFloat("dEdx", i);
+            T.adc = trackBank.getInt("sum_adc", i);
+            Tracks.push_back(T);
             // Histograms -- Level 1
-            H1_track_vz[1]->Fill(S.vz*0.1); // convert mm to cm
-            H1_track_p[1]->Fill(S.p*0.001); // convert MeV to GeV
-            H1_track_pT[1]->Fill(S.pT*0.001); // convert MeV to GeV
-            H1_track_theta[1]->Fill(S.theta);
-            H1_track_phi[1]->Fill(S.phi);
+            H1_track_vz[1]->Fill(T.vz);
+            H1_track_p[1]->Fill(T.p); 
+            H1_track_pT[1]->Fill(T.pT);
+            H1_track_theta[1]->Fill(T.theta);
+            H1_track_phi[1]->Fill(T.phi);
             H1_track_nhits[1]->Fill(trackBank.getInt("n_hits", i)); 
             H1_track_adc[1]->Fill(trackBank.getInt("sum_adc", i));
             H1_track_path[1]->Fill(trackBank.getFloat("path", i));   
@@ -475,13 +487,19 @@ int main(int argc, char const *argv[]) {
             H1_track_chi2[1]->Fill(trackBank.getFloat("chi2", i));
             H1_track_chi2_per_nhits[1]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
             H1_track_p_drift[1]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-            S.dEdx = track0Bank.getFloat("dEdx", i);
-            S.adc = trackBank.getInt("sum_adc", i);
-            Tracks.push_back(S);
         }
+        // Now Combined Electrons and Photons
+        std::vector<State> Probes;
+        Probes.reserve(Electrons.size() + Photons.size());
+        Probes.insert(Probes.end(), Electrons.begin(), Electrons.end());
+        Probes.insert(Probes.end(), Photons.begin(), Photons.end());
+        std::vector<Physics> ProbeKinematics;
+        ProbeKinematics.reserve(ElectronKinematics.size() + PhotonKinematics.size());
+        ProbeKinematics.insert(ProbeKinematics.end(), ElectronKinematics.begin(), ElectronKinematics.end());
+        ProbeKinematics.insert(ProbeKinematics.end(), PhotonKinematics.begin(), PhotonKinematics.end());
         // let check the correlations
         for (State T : Tracks) {
-            for (State S : Electrons) {
+            for (State S : Probes) {
                 H2_vze_vz[1]->Fill(S.vz, T.vz); 
                 H1_delta_vz[1]->Fill(S.vz - T.vz); 
                 H1_delta_phi[1]->Fill(S.phi - T.phi);  
@@ -489,33 +507,26 @@ int main(int argc, char const *argv[]) {
                 H2_p_adc[1]->Fill(S.pT, T.adc);
                 H2_pTe_pT[1]->Fill(S.pT, T.pT);
             }
-            for (State S : Photons) {
-                H2_vze_vz[1]->Fill(S.vz, T.vz*0.1); 
-                H1_delta_vz[1]->Fill(S.vz - T.vz*0.1); 
-                H1_delta_phi[1]->Fill(S.phi - T.phi);  
-                H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
-                H2_p_adc[1]->Fill(S.pT, T.adc);
-                H2_pTe_pT[1]->Fill(S.pT, T.pT*0.001);
-            }
         }
         /*******************************************
          *  cut on delta phi (cut level 2)
          * *****************************************/
-        int count_electrons = 0;
-        int count_photons = 0;
-        int count_tracks = 0;
+        int count_electrons2 = 0;
+        int count_photons2 = 0;
+        int count_tracks2 = 0;
         int count_electrons3 = 0; // level 3
         int count_photons3 = 0;
         int count_tracks3 = 0;
         for (State T : Tracks) {
-            for (int i = 0; i < (int) Electrons.size(); i++) {
-                State S = Electrons[i];
-                Physics K = ElectronKinematics[i];
+            for (int i = 0; i < (int) Probes.size(); i++) {
+                State S = Probes[i];
+                Physics K = ProbeKinematics[i];
                 double delta_phi = S.phi - T.phi;
                 double stdev = 20;
                 if ((fabs(delta_phi+198) < stdev) || (fabs(delta_phi-162) < stdev)) {
-                    count_electrons++;
-                    count_tracks++;
+                    if (S.pid == 11) count_electrons2++;
+                    if (S.pid == 22) count_photons2++;
+                    count_tracks2++;
                     // corr
                     H2_vze_vz[2]->Fill(S.vz, T.vz); 
                     H1_delta_vz[2]->Fill(S.vz - T.vz); 
@@ -534,9 +545,9 @@ int main(int argc, char const *argv[]) {
                     H1_xB[2]->Fill(K.xB);
                     H1_nu[2]->Fill(K.nu);
                     // track
-                    H1_track_vz[2]->Fill(T.vz*0.1); // convert mm to cm
-                    H1_track_p[2]->Fill(T.p*0.001); // convert MeV to GeV
-                    H1_track_pT[2]->Fill(T.pT*0.001); // convert MeV to GeV
+                    H1_track_vz[2]->Fill(T.vz);
+                    H1_track_p[2]->Fill(T.p);
+                    H1_track_pT[2]->Fill(T.pT);
                     H1_track_theta[2]->Fill(T.theta);
                     H1_track_phi[2]->Fill(T.phi);
                     H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
@@ -552,7 +563,8 @@ int main(int argc, char const *argv[]) {
                      *  cut on W2 (cut level 3)
                      * *****************************************/
                     if ((K.W2 > W2_min) && (K.W2 < W2_max)) {
-                        count_electrons3++;
+                        if (S.pid == 11) count_electrons3++;
+                        if (S.pid == 22) count_photons3++;
                         count_tracks3++;
                         // corr
                         H2_vze_vz[3]->Fill(S.vz, T.vz); 
@@ -572,90 +584,9 @@ int main(int argc, char const *argv[]) {
                         H1_xB[3]->Fill(K.xB);
                         H1_nu[3]->Fill(K.nu);
                         // track
-                        H1_track_vz[3]->Fill(T.vz*0.1); // convert mm to cm
-                        H1_track_p[3]->Fill(T.p*0.001); // convert MeV to GeV
-                        H1_track_pT[3]->Fill(T.pT*0.001); // convert MeV to GeV
-                        H1_track_theta[3]->Fill(T.theta);
-                        H1_track_phi[3]->Fill(T.phi);
-                        H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
-                        H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
-                        H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
-                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
-                        H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
-                        H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                        H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
-                        H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                        H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                    }
-                }
-            }
-            for (int i = 0; i < (int) Photons.size(); i++) {
-                State S = Photons[i];
-                Physics K = PhotonKinematics[i];
-                double delta_phi = S.phi - T.phi;
-                double stdev = 20;
-                if ((fabs(delta_phi+198) < stdev) || (fabs(delta_phi-162) < stdev)) {
-                    count_photons++;
-                    count_tracks++;
-                    // corr 
-                    H2_vze_vz[2]->Fill(S.vz, T.vz*0.1); 
-                    H1_delta_vz[2]->Fill(S.vz - T.vz*0.1); 
-                    H1_delta_phi[2]->Fill(S.phi - T.phi);  
-                    H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
-                    H2_p_adc[2]->Fill(S.pT, T.adc);
-                    H2_pTe_pT[2]->Fill(S.pT, T.pT*0.001);
-                    // probe : photon
-                    H1_probe_vz[2]->Fill(S.vz);
-                    H1_probe_p[2]->Fill(S.p);
-                    H1_probe_pT[2]->Fill(S.pT);
-                    H1_probe_theta[2]->Fill(S.theta);
-                    H1_probe_phi[2]->Fill(S.phi);
-                    H1_Q2[2]->Fill(K.Q2);
-                    H1_W2[2]->Fill(K.W2);
-                    H1_xB[2]->Fill(K.xB);
-                    H1_nu[2]->Fill(K.nu);
-                    // track
-                    H1_track_vz[2]->Fill(T.vz*0.1); // convert mm to cm
-                    H1_track_p[2]->Fill(T.p*0.001); // convert MeV to GeV
-                    H1_track_pT[2]->Fill(T.pT*0.001); // convert MeV to GeV
-                    H1_track_theta[2]->Fill(T.theta);
-                    H1_track_phi[2]->Fill(T.phi);
-                    H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
-                    H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
-                    H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
-                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
-                    H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
-                    H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                    H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
-                    H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                    H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                    /*******************************************
-                     *  cut on W2 (cut level 3)
-                     * *****************************************/
-                    if ((K.Q2 > W2_min) && (K.Q2 < W2_max)) {
-                        count_photons3++;
-                        count_tracks3++;
-                        // corr 
-                        H2_vze_vz[3]->Fill(S.vz, T.vz*0.1); 
-                        H1_delta_vz[3]->Fill(S.vz - T.vz*0.1); 
-                        H1_delta_phi[3]->Fill(S.phi - T.phi);  
-                        H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
-                        H2_p_adc[3]->Fill(S.pT, T.adc);
-                        H2_pTe_pT[3]->Fill(S.pT, T.pT*0.001);
-                        // probe : photon
-                        H1_probe_vz[3]->Fill(S.vz);
-                        H1_probe_p[3]->Fill(S.p);
-                        H1_probe_pT[3]->Fill(S.pT);
-                        H1_probe_theta[3]->Fill(S.theta);
-                        H1_probe_phi[3]->Fill(S.phi);
-                        H1_Q2[3]->Fill(K.Q2);
-                        H1_W2[3]->Fill(K.W2);
-                        H1_xB[3]->Fill(K.xB);
-                        H1_nu[3]->Fill(K.nu);
-                        // track
-                        H1_track_vz[3]->Fill(T.vz*0.1); // convert mm to cm
-                        H1_track_p[3]->Fill(T.p*0.001); // convert MeV to GeV
-                        H1_track_pT[3]->Fill(T.pT*0.001); // convert MeV to GeV
+                        H1_track_vz[3]->Fill(T.vz);
+                        H1_track_p[3]->Fill(T.p); 
+                        H1_track_pT[3]->Fill(T.pT);
                         H1_track_theta[3]->Fill(T.theta);
                         H1_track_phi[3]->Fill(T.phi);
                         H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
@@ -671,17 +602,17 @@ int main(int argc, char const *argv[]) {
                 }
             }
             // level 2
-            H1_nelectrons[2]->Fill(count_electrons);
-            H1_nphotons[2]->Fill(count_photons);
-            H1_ntracks[2]->Fill(count_tracks);
-            H1_mon_nprobes->Fill(2.0, count_electrons + count_photons);
-            H1_mon_ntracks->Fill(2.0, count_tracks);
+            H1_nelectrons[2]->Fill(count_electrons2);
+            H1_nphotons[2]->Fill(count_photons2);
+            H1_ntracks[2]->Fill(count_tracks2);
+            H1_mon_nprobes->Fill(2.0, count_electrons2 + count_photons2);
+            H1_mon_ntracks->Fill(2.0, count_tracks2);
             // level 3
             H1_nelectrons[3]->Fill(count_electrons3);
             H1_nphotons[3]->Fill(count_photons3);
             H1_ntracks[3]->Fill(count_tracks3);
-            H1_mon_nprobes->Fill(3.0, count_electrons + count_photons);
-            H1_mon_ntracks->Fill(3.0, count_tracks);
+            H1_mon_nprobes->Fill(3.0, count_electrons3 + count_photons3);
+            H1_mon_ntracks->Fill(3.0, count_tracks3);
         }
         /*******************************************
          *  cut on W2 (cut level 3)
@@ -704,12 +635,12 @@ int main(int argc, char const *argv[]) {
  * output
  * **********************************************************/
 
-    const char * output = "./elastics.root";
+    const char * output = "./new_elastics.root";
     TFile *f = new TFile(output, "RECREATE");
-    TDirectory *probes_dir   = f->mkdir("probes");
+    TDirectory *probes_dir   = f->mkdir("electrons/photons");
     TDirectory *physics_dir  = f->mkdir("physics");
     TDirectory *tracks_dir  = f->mkdir("tracks");
-    TDirectory *corr_dir     = f->mkdir("correlation");
+    TDirectory *corr_dir     = f->mkdir("correlations");
     
     //////////////////////
     //  probes
