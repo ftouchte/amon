@@ -266,10 +266,10 @@ int main(int argc, char const *argv[]) {
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     std::vector<TH2D*> H2_p_adc;
-    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT electron vs adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
     std::vector<TH2D*> H2_vze_vz;
     H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
     H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
@@ -614,13 +614,7 @@ int main(int argc, char const *argv[]) {
             H1_mon_nprobes->Fill(3.0, count_electrons3 + count_photons3);
             H1_mon_ntracks->Fill(3.0, count_tracks3);
         }
-        /*******************************************
-         *  cut on W2 (cut level 3)
-         * *****************************************/
     }
-    // analysis
-    //double delta_phi_max = H1_delta_phi[1]->GetBinContent(H1_delta_phi[1]->GetMaximumBin());
-    //double delta_phi_max2 = delta_phi_max < 0 ? delta_phi_max + 360 : delta_phi_max - 360;
 
     printf("nevents    : %ld \n", nevents);
     printf("nelectrons : %ld \n", nelectrons);
@@ -637,7 +631,7 @@ int main(int argc, char const *argv[]) {
 
     const char * output = "./new_elastics.root";
     TFile *f = new TFile(output, "RECREATE");
-    TDirectory *probes_dir   = f->mkdir("electrons/photons");
+    TDirectory *probes_dir   = f->mkdir("electrons_photons");
     TDirectory *physics_dir  = f->mkdir("physics");
     TDirectory *tracks_dir  = f->mkdir("tracks");
     TDirectory *corr_dir     = f->mkdir("correlations");
