@@ -636,58 +636,59 @@ int main(int argc, char const *argv[]) {
                     }
                 }
             }
-            // level 2
-            H1_nelectrons[2]->Fill(count_electrons2);
-            H1_nphotons[2]->Fill(count_photons2);
-            H1_ntracks[2]->Fill(count_tracks2);
-            H1_mon_nprobes->Fill(2.0, count_electrons2 + count_photons2);
-            H1_mon_ntracks->Fill(2.0, count_tracks2);
-            // level 3
-            H1_nelectrons[3]->Fill(count_electrons3);
-            H1_nphotons[3]->Fill(count_photons3);
-            H1_ntracks[3]->Fill(count_tracks3);
-            H1_mon_nprobes->Fill(3.0, count_electrons3 + count_photons3);
-            H1_mon_ntracks->Fill(3.0, count_tracks3);
-            /***********************************************
-             * for simulation calibration
-             * ********************************************/
-            std::vector<int> HitId;
-            H1_nelastics->Fill(Elastics.size());
-            for (int i = 0; i < hitBank.getRows(); i++) {
-                int trackid = hitBank.getInt("trackid",i);
-                for (ElasticsOutput e : Elastics) {
-                    if (trackid == e.track.trackid) {
-                        HitId.push_back(hitBank.getInt("id",i)); // they correspond to the column index in AHDC::adc
-                        H1_sim_track_p->Fill(e.track.p);
-                        H1_sim_track_pT->Fill(e.track.pT);
-                        H1_sim_track_theta->Fill(e.track.theta);
-                        H1_sim_track_phi->Fill(e.track.phi);
-                        H1_sim_probe_p->Fill(e.probe.p);
-                        H1_sim_probe_pT->Fill(e.probe.pT);
-                        H1_sim_probe_theta->Fill(e.probe.theta);
-                        H1_sim_probe_phi->Fill(e.probe.phi);
-                        H2_sim_pT_adc->Fill(e.probe.pT, e.track.adc);
-                    }
-                }
-            }
-            for (int i : HitId) {
-                double time    = adcBank.getFloat("leadingEdgeTime", i);
-                double timeMax = adcBank.getFloat("time", i);
-                double tot     = adcBank.getFloat("timeOverThreshold", i);
-                int adc        = adcBank.getInt("ADC", i);
-                //int wfType = adcBank.getInt("wfType", i);
-                H1_leadingEdgeTime->Fill(time); 
-                H1_timeMax->Fill(timeMax);
-                H1_deltaTime->Fill(timeMax-time); 
-                H1_timeOverThreshold->Fill(tot);
-                //H1_wfType->Fill(wfType);
-                H1_amplitude->Fill(adc); 
-                H2_times->Fill(timeMax, time);
-                H2_amp_tot->Fill(adc, tot);
-                H2_deltaTime_adc->Fill(timeMax-time, adc); 
-            }
         }
-    }
+        // level 2
+        H1_nelectrons[2]->Fill(count_electrons2);
+        H1_nphotons[2]->Fill(count_photons2);
+        H1_ntracks[2]->Fill(count_tracks2);
+        H1_mon_nprobes->Fill(2.0, count_electrons2 + count_photons2);
+        H1_mon_ntracks->Fill(2.0, count_tracks2);
+        // level 3
+        H1_nelectrons[3]->Fill(count_electrons3);
+        H1_nphotons[3]->Fill(count_photons3);
+        H1_ntracks[3]->Fill(count_tracks3);
+        H1_mon_nprobes->Fill(3.0, count_electrons3 + count_photons3);
+        H1_mon_ntracks->Fill(3.0, count_tracks3);
+        /***********************************************
+         * for simulation calibration
+         * ********************************************/
+        std::vector<int> HitId;
+        H1_nelastics->Fill(Elastics.size());
+        for (int i = 0; i < hitBank.getRows(); i++) {
+            int trackid = hitBank.getInt("trackid",i);
+            for (ElasticsOutput e : Elastics) {
+                if (trackid == e.track.trackid) {
+                    // hits
+                    int hit_id = hitBank.getInt("id",i);
+                    double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
+                    double timeMax = adcBank.getFloat("time", hit_id);
+                    double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
+                    int adc        = adcBank.getInt("ADC", hit_id);
+                    //int wfType = adcBank.getInt("wfType", hit_id);
+                    //H1_wfType->Fill(wfType);
+                    H1_leadingEdgeTime->Fill(time); 
+                    H1_timeMax->Fill(timeMax);
+                    H1_deltaTime->Fill(timeMax-time); 
+                    H1_timeOverThreshold->Fill(tot);
+                    H1_amplitude->Fill(adc); 
+                    H2_times->Fill(timeMax, time);
+                    H2_amp_tot->Fill(adc, tot);
+                    H2_deltaTime_adc->Fill(timeMax-time, adc); 
+                    // track and probe
+                    HitId.push_back(hitBank.getInt("id",i)); // they correspond to the column index in AHDC::adc
+                    H1_sim_track_p->Fill(e.track.p);
+                    H1_sim_track_pT->Fill(e.track.pT);
+                    H1_sim_track_theta->Fill(e.track.theta);
+                    H1_sim_track_phi->Fill(e.track.phi);
+                    H1_sim_probe_p->Fill(e.probe.p);
+                    H1_sim_probe_pT->Fill(e.probe.pT);
+                    H1_sim_probe_theta->Fill(e.probe.theta);
+                    H1_sim_probe_phi->Fill(e.probe.phi);
+                    H2_sim_pT_adc->Fill(e.probe.pT, e.track.adc);
+                }
+            } // end loop over elastics
+        } // end loop over hits
+    } // and loop over events
 
     printf("nevents    : %ld \n", nevents);
     printf("nelectrons : %ld \n", nelectrons);
