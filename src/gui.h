@@ -57,8 +57,8 @@ protected :
 	
 	Gtk::Box HBox_footer;
 	//Gtk::Box HBox_prev, HBox_next, HBox_pause, HBox_run, HBox_info,  HBox_hipo4, HBox_reset;
-	Gtk::Button Button_settings, Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset, Button_zpos;
-	Gtk::Image img_settings, img_prev, img_next, img_pause, img_run, img_hipo4, img_reset, img_zpos;
+	Gtk::Button Button_settings, Button_prev, Button_next, Button_pause, Button_run, Button_hipo4, Button_reset, Button_zpos, Button_restart_histo;
+	Gtk::Image img_settings, img_prev, img_next, img_pause, img_run, img_hipo4, img_reset, img_zpos, img_restart_histo;
 	Gtk::Box HBox_info;
 	Gtk::Label Label_info;
 	Gtk::Label Label_header;
@@ -74,21 +74,25 @@ protected :
 	const int binDelayCFD;
 	const double fractionCFD;
 
-	Glib::RefPtr<Gtk::Adjustment> Adjustment_adcMax;
+	Glib::RefPtr<Gtk::Adjustment> Adjustment_amplitude_min, Adjustment_amplitude_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_adcOffset_min, Adjustment_cut_adcOffset_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_leadingEdgeTime_min, Adjustment_cut_leadingEdgeTime_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_timeOverThreshold_min, Adjustment_cut_timeOverThreshold_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_cut_timeMax_min, Adjustment_cut_timeMax_max;
 	Glib::RefPtr<Gtk::Adjustment> Adjustment_zpos; 
-	Gtk::Scale Scale_adcMax;
+	Gtk::Scale Scale_amplitude_min, Scale_amplitude_max;
 	Gtk::Scale Scale_cut_adcOffset_min, Scale_cut_adcOffset_max;
 	Gtk::Scale Scale_cut_leadingEdgeTime_min, Scale_cut_leadingEdgeTime_max;
 	Gtk::Scale Scale_cut_timeOverThreshold_min, Scale_cut_timeOverThreshold_max;
 	Gtk::Scale Scale_cut_timeMax_min, Scale_cut_timeMax_max;
 	Gtk::Scale Scale_zpos;
 	Gtk::CheckButton CheckButton_mask_wires; // only show or not wires that satisfy all cuts
-	Gtk::CheckButton CheckButton_active_layer51;
-	Gtk::CheckButton CheckButton_active_layer42;
+	Gtk::CheckButton CheckButton_wfType_0; 
+	Gtk::CheckButton CheckButton_wfType_1; 
+	Gtk::CheckButton CheckButton_wfType_2; 
+	Gtk::CheckButton CheckButton_wfType_3; 
+	Gtk::CheckButton CheckButton_wfType_4; 
+	Gtk::CheckButton CheckButton_wfType_5; 
 		
 	/******************  DATA  *****************
 	 * *****************************************/
@@ -106,9 +110,10 @@ protected :
 	AhdcDetector *ahdc; ///< AHDC detector
 	std::vector<double> ListOfAdc;		///< List of adcMax
 	// Define variable for cut
-	double adcCut = 0;
+	double cut_amplitude_min = 0;
+	double cut_amplitude_max = 4095;
 	double cut_adcOffset_min = 0;
-	double cut_adcOffset_max = 4095;
+	double cut_adcOffset_max = 1000;
 	double cut_leadingEdgeTime_min = 0;
 	double cut_leadingEdgeTime_max = 950;
 	double cut_timeOverThreshold_min = 0;
@@ -116,6 +121,12 @@ protected :
 	double cut_timeMax_min = 0;
 	double cut_timeMax_max = 950;
 	bool flag_mask_wires = false;
+	bool flag_wfType_0 = false;
+	bool flag_wfType_1 = false;
+	bool flag_wfType_2 = false;
+	bool flag_wfType_3 = false;
+	bool flag_wfType_4 = false;
+	bool flag_wfType_5 = false;
 	bool cut_flag = true;
 	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
 	int HV_SECTOR = -1;
@@ -146,7 +157,9 @@ public :
 	int getNumberOfWaveforms();
 	bool is_oscillating(std::vector<double> samples);
 	void getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & MAX_OCC);
-    void update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax);
+    void update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType);
+    void update_gui();
+    void restart_histograms();
 	// Signals
 	void on_button_settings_clicked();
 	void on_button_prev_clicked();
