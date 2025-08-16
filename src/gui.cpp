@@ -52,9 +52,10 @@ Window::Window() :
 	binDelayCFD(5),
 	fractionCFD(0.3),
 	// Value, lower, upper, step_increment, page_increment, page_size
-	Adjustment_adcMax(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
+	Adjustment_amplitude_min(Gtk::Adjustment::create(0.0, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
+	Adjustment_amplitude_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, ADC_LIMIT, 1, 0.0, 0.0)),
 	Adjustment_cut_adcOffset_min(Gtk::Adjustment::create(0.0, 0.0, 1000, 1, 0.0, 0.0)),
-	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(ADC_LIMIT, 0.0, 1000, 1, 0.0, 0.0)),
+	Adjustment_cut_adcOffset_max(Gtk::Adjustment::create(1000, 0.0, 1000, 1, 0.0, 0.0)),
 	Adjustment_cut_leadingEdgeTime_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_leadingEdgeTime_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeOverThreshold_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
@@ -62,7 +63,8 @@ Window::Window() :
 	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_zpos(Gtk::Adjustment::create(-150, -150.0, 150.0, 1.0, 0.0, 0.0)),
-	Scale_adcMax(Adjustment_adcMax, Gtk::Orientation::HORIZONTAL),
+	Scale_amplitude_min(Adjustment_amplitude_min, Gtk::Orientation::HORIZONTAL),
+	Scale_amplitude_max(Adjustment_amplitude_max, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_min(Adjustment_cut_adcOffset_min, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_max(Adjustment_cut_adcOffset_max, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_leadingEdgeTime_min(Adjustment_cut_leadingEdgeTime_min, Gtk::Orientation::HORIZONTAL),
@@ -83,7 +85,6 @@ Window::Window() :
 {
 	// Data
 	ahdc = new AhdcDetector();
-	adcCut = 0;
         cut_adcOffset_min = 0;
         cut_adcOffset_max = 4095;
         cut_leadingEdgeTime_min = 0;
@@ -270,6 +271,19 @@ Window::Window() :
 	HBox_zpos->append(*Gtk::make_managed<Gtk::Label>("zpos") );
 	Button_zpos.signal_clicked().connect( sigc::mem_fun(*this, &Window::on_button_zpos_clicked) );
 	
+    // restart histograms
+	HBox_footer.append(Button_restart_histo);
+	auto HBox_restart_histo = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,20);
+	Button_restart_histo.set_child(*HBox_restart_histo);
+	img_restart_histo.set("../img/icon_reset_on.png");
+	HBox_restart_histo->append(img_restart_histo);
+	HBox_restart_histo->append(*Gtk::make_managed<Gtk::Label>("restart_histo") );
+	Button_restart_histo.signal_clicked().connect([this] () -> void {
+                printf("Restart histograms...");
+                restart_histograms();
+                update_gui();
+			});
+	
 	// middle
 	HBox_footer.append(HBox_info);
 	HBox_info.set_hexpand(true);
@@ -315,7 +329,8 @@ void Window::on_button_settings_clicked(){
 	// Initialization
 	auto Window_settings = Gtk::make_managed<Gtk::Window>();
 	auto VBox_settings = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
-	auto HBox_Scale_adcMax = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_amplitude_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_Scale_amplitude_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_adcOffset_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_adcOffset_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_leadingEdgeTime_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
@@ -324,25 +339,120 @@ void Window::on_button_settings_clicked(){
 	auto HBox_Scale_cut_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_CheckButtons = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_CheckButton_mask_wires = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_CheckButton_wfTypes = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	// Window for settings
 	Window_settings->set_title("Settings");
 	Window_settings->set_default_size(500,300);
 	Window_settings->set_child(*VBox_settings);
-	// Scale_adcMax
+	// A lot of CheckButton(s)
+	VBox_settings->append(*HBox_CheckButton_mask_wires);
+	HBox_CheckButton_mask_wires->set_halign(Gtk::Align::CENTER);
+	HBox_CheckButton_mask_wires->set_margin_top(10);
+	HBox_CheckButton_mask_wires->set_margin_start(10);
+	HBox_CheckButton_mask_wires->set_margin_bottom(10);
+	auto Label_mask_wires = Gtk::make_managed<Gtk::Label>();
+    Label_mask_wires->set_markup("<span foreground='red'> <b> Apply these cuts (yes/no) </b> </span>");
+	HBox_CheckButton_mask_wires->append(*Label_mask_wires);
+	HBox_CheckButton_mask_wires->append(CheckButton_mask_wires);
+	CheckButton_mask_wires.signal_toggled().connect([this] () -> void {
+				flag_mask_wires = this->CheckButton_mask_wires.get_active();
+                printf("Mask wire : %s\n", flag_mask_wires ? "ON" : "OFF");
+                update_gui();
+			});
+    CheckButton_mask_wires.set_active(false);
+        // wfTypes
+	VBox_settings->append(*HBox_CheckButton_wfTypes);
+	HBox_CheckButton_wfTypes->set_margin_bottom(10);
+    //HBox_CheckButton_wfTypes->set_homogeneous();
+	auto Label_wfType = Gtk::make_managed<Gtk::Label>();
+    Label_wfType->set_markup("<b> wfTypes</b>");
+	HBox_CheckButton_wfTypes->append(*Label_wfType);
+        // wfType_0
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("0"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_0);
+	CheckButton_wfType_0.signal_toggled().connect([this] () -> void {
+				flag_wfType_0 = this->CheckButton_wfType_0.get_active();
+                update_gui();
+                printf("wfType_0 : %s\n", flag_wfType_0 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_0.set_active();
+        // wfType_1
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("1"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_1);
+	CheckButton_wfType_1.signal_toggled().connect([this] () -> void {
+				flag_wfType_1 = this->CheckButton_wfType_1.get_active();
+                update_gui();
+                printf("wfType_1 : %s\n", flag_wfType_1 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_1.set_active();
+        // wfType_2
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("2"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_2);
+	CheckButton_wfType_2.signal_toggled().connect([this] () -> void {
+				flag_wfType_2 = this->CheckButton_wfType_2.get_active();
+                update_gui();
+                printf("wfType_2 : %s\n", flag_wfType_2 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_2.set_active();
+        // wfType_3
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("3"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_3);
+	CheckButton_wfType_3.signal_toggled().connect([this] () -> void {
+				flag_wfType_3 = this->CheckButton_wfType_3.get_active();
+                update_gui();
+                printf("wfType_3 : %s\n", flag_wfType_3 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_3.set_active(false);
+        // wfType_4
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("4"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_4);
+	CheckButton_wfType_4.signal_toggled().connect([this] () -> void {
+				flag_wfType_4 = this->CheckButton_wfType_4.get_active();
+                update_gui();
+                printf("wfType_4 : %s\n", flag_wfType_4 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_4.set_active(false);
+        // wfType_5
+	HBox_CheckButton_wfTypes->append(*Gtk::make_managed<Gtk::Label>("5"));
+	HBox_CheckButton_wfTypes->append(CheckButton_wfType_5);
+	CheckButton_wfType_5.signal_toggled().connect([this] () -> void {
+				flag_wfType_5 = this->CheckButton_wfType_5.get_active();
+                update_gui();
+                printf("wfType_5 : %s\n", flag_wfType_5 ? "ON" : "OFF");
+			});
+    CheckButton_wfType_5.set_active(false);
+
+	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
+	VBox_settings->append(*Separator4);
+	// Scale_amplitude_min
 	auto Label0 = Gtk::make_managed<Gtk::Label>();
 	Label0->set_markup("<b> adcMax </b>");
 	VBox_settings->append(*Label0);
-	VBox_settings->append(*HBox_Scale_adcMax);
-	HBox_Scale_adcMax->set_margin_start(10);
-	HBox_Scale_adcMax->append(*Gtk::make_managed<Gtk::Label>("MIN"));
-	HBox_Scale_adcMax->append(Scale_adcMax);
-	Scale_adcMax.set_hexpand(true);
-	Scale_adcMax.set_draw_value();
-	Scale_adcMax.set_digits(0);
-	Adjustment_adcMax->signal_value_changed().connect([this] () -> void {
-				const double val = this->Adjustment_adcMax->get_value();
-				this->adcCut = val;
+	VBox_settings->append(*HBox_Scale_amplitude_min);
+	HBox_Scale_amplitude_min->set_margin_start(10);
+	HBox_Scale_amplitude_min->append(*Gtk::make_managed<Gtk::Label>("MIN"));
+	HBox_Scale_amplitude_min->append(Scale_amplitude_min);
+	Scale_amplitude_min.set_hexpand(true);
+	Scale_amplitude_min.set_draw_value();
+	Scale_amplitude_min.set_digits(0);
+	Adjustment_amplitude_min->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_amplitude_min->get_value();
+				this->cut_amplitude_min = val;
+                update_gui();
+			});
+	// Scale_amplitude_max
+	VBox_settings->append(*HBox_Scale_amplitude_max);
+	HBox_Scale_amplitude_max->set_margin_start(10);
+	HBox_Scale_amplitude_max->append(*Gtk::make_managed<Gtk::Label>("MAX"));
+	HBox_Scale_amplitude_max->append(Scale_amplitude_max);
+	Scale_amplitude_max.set_hexpand(true);
+	Scale_amplitude_max.set_draw_value();
+	Scale_amplitude_max.set_digits(0);
+	Adjustment_amplitude_max->signal_value_changed().connect([this] () -> void {
+				const double val = this->Adjustment_amplitude_max->get_value();
+				this->cut_amplitude_max = val;
+                update_gui();
 			});
 	auto Separator0 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator0);	
@@ -360,6 +470,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_adcOffset_min->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_adcOffset_min->get_value();
 				this->cut_adcOffset_min = val;
+                update_gui();
 			});
 	// Scale_cut_adcOffset_max
 	VBox_settings->append(*HBox_Scale_cut_adcOffset_max);
@@ -372,6 +483,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_adcOffset_max->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_adcOffset_max->get_value();
 				this->cut_adcOffset_max = val;
+                update_gui();
 			});
 	auto Separator1 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator1);	
@@ -389,6 +501,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_leadingEdgeTime_min->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_leadingEdgeTime_min->get_value();
 				this->cut_leadingEdgeTime_min = val;
+                update_gui();
 			});
 	// Scale_cut_leadingEdgeTime_max
 	VBox_settings->append(*HBox_Scale_cut_leadingEdgeTime_max);
@@ -401,6 +514,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_leadingEdgeTime_max->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_leadingEdgeTime_max->get_value();
 				this->cut_leadingEdgeTime_max = val;
+                update_gui();
 			});
 	auto Separator2 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator2);	
@@ -418,6 +532,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_timeOverThreshold_min->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_timeOverThreshold_min->get_value();
 				this->cut_timeOverThreshold_min = val;
+                update_gui();
 			});
 	// Scale_cut_timeOverThreshold_max
 	VBox_settings->append(*HBox_Scale_cut_timeOverThreshold_max);
@@ -430,6 +545,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_timeOverThreshold_max->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_timeOverThreshold_max->get_value();
 				this->cut_timeOverThreshold_max = val;
+                update_gui();
 			});
 	auto Separator3 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator3);	
@@ -447,6 +563,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_timeMax_min->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_timeMax_min->get_value();
 				this->cut_timeMax_min = val;
+                update_gui();
 			});
 	// Scale_cut_timeMax_max
 	VBox_settings->append(*HBox_Scale_cut_timeMax_max);
@@ -459,23 +576,7 @@ void Window::on_button_settings_clicked(){
 	Adjustment_cut_timeMax_max->signal_value_changed().connect([this] () -> void {
 				const double val = this->Adjustment_cut_timeMax_max->get_value();
 				this->cut_timeMax_max = val;
-			});
-	// A lot of CheckButton(s)
-	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
-	VBox_settings->append(*Separator4);
-	VBox_settings->append(*HBox_CheckButtons);
-	HBox_CheckButtons->set_margin_start(10);
-	HBox_CheckButtons->set_margin_bottom(10);
-	HBox_CheckButtons->append(*Gtk::make_managed<Gtk::Label>("Mask wires"));
-	HBox_CheckButtons->append(CheckButton_mask_wires);
-	CheckButton_mask_wires.signal_toggled().connect([this] () -> void {
-				flag_mask_wires = this->CheckButton_mask_wires.get_active();
-				if (flag_mask_wires) {
-					printf("Flag_mask_wires is activated\n");
-				} else {
-					printf("Flag_mask_wires is desactivated\n");
-				}
-				DrawingArea_event.queue_draw();
+                update_gui();
 			});
 	Window_settings->show();
 }
@@ -673,21 +774,9 @@ void Window::on_button_reset_clicked(){
 	hipo_nEventMax = 1;
 	clearAhdcData();
 	ListOfAdc.clear();
-	// Reset eventViewer waveforms
-	DrawingArea_event.queue_draw();
-	drawWaveforms();
-	drawWaveformsPerLayer();
-	// Reset histograms
-	hist1d_adcMax.reset();
-	hist1d_leadingEdgeTime.reset();
-	hist1d_timeOverThreshold.reset();
-	hist1d_timeMax.reset();
-	hist1d_adcOffset.reset();
-        hist1d_constantFractionTime.reset();
-	hist2d_occupancy.reset();
-	drawHistograms();
+    restart_histograms();
+    update_gui();
 	// Reset occupancy
-	drawOccupancy();
 	// Update Label
 	Label_info.set_text("No data"); Label_info.queue_draw();
 	Label_header.set_text("No file selected"); Label_header.queue_draw();
@@ -916,10 +1005,9 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 						double timeMax           = wire->pulse.get_timeMax();
-						if (flag_mask_wires) {
-                            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
-						}
-						if (!cut_flag && false) continue;
+                        int wfType = wire->pulse.get_wfType();
+                        update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+						if (!cut_flag) continue;
 						if (zmin != zmax) {
 							int ncolors = Palette.get_ncolors();
 							double slope = (1.0*(ncolors-1))/(zmax-zmin);
@@ -1110,8 +1198,8 @@ bool Window::dataEventAction() {
             double adcOffset = this->adcBank.getFloat("ped", col);
             //double integral = this->adcBank.getInt("integral", col);
             int wfType = this->adcBank.getInt("wfType", col);
-            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
-			if (cut_flag || true) {
+            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+            if (cut_flag) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
 					hist1d_timeOverThreshold.fill(timeOverThreshold);
@@ -1165,24 +1253,8 @@ bool Window::dataEventAction() {
 			}
 		}
 		// Update drawings
-		int tab_number = Book.get_current_page();
-		if      (tab_number == 0) {
-			DrawingArea_event.queue_draw();
-			drawWaveforms();
-		}
-		else if (tab_number == 1) {
-			drawWaveformsPerLayer();
-		}
-		else if (tab_number == 2) {
-			drawHistograms();
-		}
-		else if (tab_number == 3) {
-			drawOccupancy();
-		}
-		else {
-			// do nothing
-		}
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., adcCut : %.0lf, ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent, hipo_nEventMax, nWF, adcCut, trackBank.getRows()).Data());
+        update_gui();
+		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent, hipo_nEventMax, nWF, trackBank.getRows()).Data());
 		return true;
 	}
 	else {return false;}
@@ -1211,10 +1283,8 @@ void Window::drawWaveforms() {
 					int    wfType            = wire->pulse.get_wfType();
 					if (adcMax > 0) {
 						if (num >= 10) {break;}
-						if (flag_mask_wires) {
-							    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
-                        }
-						if (!cut_flag && false) continue;
+						    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+                        if (!cut_flag) continue;
 						std::vector<double> samples = wire->pulse.get_samples();
 						// 0 or 1
 						col = (num % 2) + 1;
@@ -1254,11 +1324,10 @@ void Window::drawWaveformsPerLayer() {
 					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 					double timeMax           = wire->pulse.get_timeMax();
+                    int wfType = wire->pulse.get_wfType();
 					if (adcMax > 0) {
-						if (flag_mask_wires) {
-							update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
-                        }
-						if (!cut_flag && false) continue;
+						update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+						if (!cut_flag) continue;
 						nhits++;
 						std::vector<double> samples = wire->pulse.get_samples();
 						for (int i = 0; i < NumberOfBins; i++) {
@@ -1305,11 +1374,10 @@ void Window::drawWaveformsPerLayer() {
 						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
 						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 						double timeMax           = wire->pulse.get_timeMax();
+                        int wfType = wire->pulse.get_wfType();
 						if (adcMax > 0) {
-							if (flag_mask_wires) {
-							    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
-                            }
-							if (!cut_flag && false) continue;
+							update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+                            if (!cut_flag) continue;
 							std::vector<double> samples = wire->pulse.get_samples();
 							double r1 = 0.0, g1 = 0.0, b1 = 1.0;
 							double r2 = 0.0, g2 = 1.0, b2 = 0.0;
@@ -1767,8 +1835,7 @@ void Window::on_zpos_value_changed() {
 		}
 	}
 	//printf("AHDC is now view in the plane z = %lf\n", zpos);
-	DrawingArea_event.queue_draw();
-	drawOccupancy();
+    update_gui();
 }
 
 void Window::drawOccupancy() {
@@ -2213,18 +2280,68 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 	}
 }
 
-void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax) {
-    cut_flag = (adcMax >= adcCut) &&
-        (adcOffset >= cut_adcOffset_min) && 
-        (adcOffset <= cut_adcOffset_max) && 
-        (leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-        (leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-        (timeOverThreshold >= cut_timeOverThreshold_min) && 
-        (timeOverThreshold <= cut_timeOverThreshold_max) &&
-        (timeMax >= cut_timeMax_min) &&
-        (timeMax <= cut_timeMax_max);
-    printf("cut_flag : %s\n", (cut_flag ? "true" : "false"));
-    printf("   adc %lf, ped %lf time %lf tot %lf tmax %lf\n", adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax);
+void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType) {
+    // require the user to select "apply these cuts"
+    if (!flag_mask_wires) {cut_flag = true; return;}
+    // priority on cut flag
+    std::vector<int> authorisedValues;
+    std::vector<bool> all_flags = {flag_wfType_0, flag_wfType_1, flag_wfType_2, flag_wfType_3, flag_wfType_4, flag_wfType_5};
+    for (int i = 0; i <= 5; i++) {
+        if (all_flags[i]) authorisedValues.push_back(i); 
+    }
+    if (authorisedValues.empty()) { cut_flag = true; } // no flag cuts to be applied
+    else {
+        bool is_good_wfType = false;
+        for (int i : authorisedValues) {
+            is_good_wfType = (wfType == i);
+            if (is_good_wfType) break;
+        }
+        cut_flag = is_good_wfType;
+    }
+    // raw cuts
+    if ((adcMax < 0) || (adcOffset < 0) || (leadingEdgeTime < 0) || (timeOverThreshold < 0) || (timeMax < 0)) {cut_flag = false; return;}
+    cut_flag = cut_flag && 
+            (adcMax >= cut_amplitude_min) && 
+            (adcMax <= cut_amplitude_max) && 
+            (adcOffset >= cut_adcOffset_min) && 
+            (adcOffset <= cut_adcOffset_max) && 
+            (leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+            (leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+            (timeOverThreshold >= cut_timeOverThreshold_min) && 
+            (timeOverThreshold <= cut_timeOverThreshold_max) &&
+            (timeMax >= cut_timeMax_min) &&
+            (timeMax <= cut_timeMax_max);
+    //printf("cut_flag : %s\n", cut_flag ? "True" : "False");
+}
+
+void Window::update_gui() {
+    int tab_number = Book.get_current_page();
+    if      (tab_number == 0) {
+        DrawingArea_event.queue_draw();
+        drawWaveforms();
+    }
+    else if (tab_number == 1) {
+        drawWaveformsPerLayer();
+    }
+    else if (tab_number == 2) {
+        drawHistograms();
+    }
+    else if (tab_number == 3) {
+        drawOccupancy();
+    }
+    else {
+        // do nothing
+    }
+}
+
+void Window::restart_histograms() {
+	hist1d_adcMax.reset();
+	hist1d_leadingEdgeTime.reset();
+	hist1d_timeOverThreshold.reset();
+	hist1d_timeMax.reset();
+	hist1d_adcOffset.reset();
+    hist1d_constantFractionTime.reset();
+	hist2d_occupancy.reset();
 }
 
 /** Main function */
