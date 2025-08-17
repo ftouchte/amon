@@ -27,6 +27,11 @@ GTKFLAGS = $(shell pkg-config --cflags gtkmm-4.0)
 CAIROLIBS = $(shell pkg-config --libs cairomm-1.16)
 CAIROFLAGS = $(shell pkg-config --cflags cairomm-1.16)
 
+CLHEPLIBS = $(shell pkg-config --libs clhep)
+CLHEPFLAGS = $(shell pkg-config --cflags clhep)
+
+CCDBLIBS = -L$(CCDB_HOME)/cpp/install/lib -lccdb
+CCDBFLAGS = -I$(CCDB_HOME)/cpp/install/include
 
 CXX       := g++
 CXXFLAGS  += -Wall -fPIC -std=c++17
@@ -35,7 +40,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: simu elastics
+all: simu elastics test
+
+test: test.o AhdcCCDB.o
+	$(CXX) -o test.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CLHEPLIBS) $(CCDBLIBS)
 
 simu: simu.o
 	$(CXX) -o simu.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
@@ -51,6 +59,6 @@ clean:
 	@rm -rf *.o *~ *.exe example*hipo ./output/*.pdf
 
 %.o: %.cpp
-	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) 
+	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) $(CLHEPFLAGS) $(CCDBFLAGS) 
 	
 
