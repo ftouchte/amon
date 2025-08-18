@@ -33,6 +33,7 @@
 #include "reader.h"
 #include "futils.h"
 #include "elastics.h"
+#include "AhdcCCDB.h"
 
 #include "TH1.h"
 #include "TH2.h"
@@ -105,7 +106,9 @@ int main(int argc, char const *argv[]) {
     // D2
     //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/rec_clas_022712.evio.00000.hipo"; 
     const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
-    
+
+    AhdcCCDB ahdcConstants; // load ccdb
+
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -272,10 +275,10 @@ int main(int argc, char const *argv[]) {
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     std::vector<TH2D*> H2_p_adc;
-    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     std::vector<TH2D*> H2_vze_vz;
     H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
     H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
@@ -299,11 +302,15 @@ int main(int argc, char const *argv[]) {
     //////////////////////////////////////////////////////
     /// for simulation
     //////////////////////////////////////////////////////
+    TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400); 
+    TH1D* H1_dt0 = new TH1D("dt0", "#Delta t_0; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
+    TH1D* H1_dt00 = new TH1D("dt0_before_cuts", "#Delta t_0 before cuts; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
     TH1I* H1_nelastics = new TH1I("nelastics", "nelastics per event; nelastics; count;", 10, 0, 10); 
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
     TH1D* H1_timeOverThreshold = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
+    TH1D* H1_tot0 = new TH1D("timeOverThreshold0", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
@@ -312,16 +319,26 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_elastic_track_p = new TH1D("elastic_track_p", "p (GeV)", 100, 0.2, 1.6); 
     TH1D* H1_elastic_track_pT = new TH1D("elastic_track_pT", "pT (GeV)", 100, 0, 1); 
     TH1D* H1_elastic_track_theta = new TH1D("elastic_track_theta", "theta (deg)", 100, 0, 181); 
-    TH1D* H1_elastic_track_phi = new TH1D("elastic_track_phi", "theta (deg)", 100, 0, 361); 
+    TH1D* H1_elastic_track_phi = new TH1D("elastic_track_phi", "phi (deg)", 100, 0, 361); 
     TH1D* H1_elastic_probe_p = new TH1D("elastic_probe_p", "p (GeV)", 100, 2.16, 2.25); 
-    TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "p (GeV)", 100, 0.1, 0.5); 
+    TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "pT (GeV)", 100, 0.1, 0.5); 
     TH1D* H1_elastic_probe_theta = new TH1D("elastic_probe_theta", "theta (deg)", 100, 0, 12); 
-    TH1D* H1_elastic_probe_phi = new TH1D("elastic_probe_phi", "theta (deg)", 100, 0, 361);
-    TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000);
+    TH1D* H1_elastic_probe_phi = new TH1D("elastic_probe_phi", "phi (deg)", 100, 0, 361);
+    TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000);
     TH1D* H1_elastic_theory_p = new TH1D("theory_track_p", "p (GeV)", 100, 0.2, 1.6); // what should be the track knowing it is an elastic and from theta_electron 
     TH1D* H1_elastic_theory_pT = new TH1D("theory_track_pT", "pT (GeV)", 100, 0, 1); 
     TH1D* H1_elastic_theory_theta = new TH1D("theory_track_theta", "theta (deg)", 100, 0, 181); 
-    TH1D* H1_elastic_theory_phi = new TH1D("theory_track_phi", "theta (deg)", 100, 0, 361); 
+    TH1D* H1_elastic_theory_phi = new TH1D("theory_track_phi", "phi (deg)", 100, 0, 361); 
+    TH1D* H1_selection_theory_p = new TH1D("selection_theory_track_p", "p (GeV)", 100, 0.229, 0.271); 
+    TH1D* H1_selection_theory_pT = new TH1D("selection_theory_track_pT", "pT (GeV)", 100, 0.22, 0.27); 
+    TH1D* H1_selection_theory_theta = new TH1D("selection_theory_track_theta", "theta (deg)", 100, 86.55, 87.05); 
+    TH1D* H1_selection_theory_phi = new TH1D("selection_theory_track_phi", "phi (deg)", 100, 0, 361); 
+    TH1D* H1_selection_theory_adc = new TH1D("selection_theory_track_adc", "#Sum adc; #Sum adc; count", 100, 950, 3550); 
+    // photons in FT
+    TH1D* H1_photon_p = new TH1D("ft_photon_p", "FT/photon p (GeV); p (GeV); count", 100, 0, 2.5); 
+    TH1D* H1_photon_pT = new TH1D("ft_photon_pT", "FT/photon pT (GeV); pT (GeV); count", 100, 0, 0.21); 
+    TH1D* H1_photon_theta = new TH1D("ft_photon_theta", "FT/photon theta (deg); theta (deg); count", 100, 2, 5); 
+    TH1D* H1_photon_phi = new TH1D("ft_photon_phi", "FT/photon phi (deg); phi (deg); count", 100, 0, 361); 
 
     // Loop over events
     while( reader.next()){
@@ -351,10 +368,6 @@ int main(int argc, char const *argv[]) {
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
                 S.pid = 11;
-                if (S.theta < 5) { // add a 15% correction on FT photons
-                    S.p = 1.155*S.p;
-                    S.pT = 1.155*S.pT;
-                }
                 Physics K(S, Mt, Ee);
                 Electrons.push_back(S);
                 ElectronKinematics.push_back(K);
@@ -373,9 +386,11 @@ int main(int argc, char const *argv[]) {
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
                 S.pid = 22;
-                if (S.theta < 5) { // add a 15% correction on FT photons
-                    S.p = 1.155*S.p;
-                    S.pT = 1.155*S.pT;
+                if (S.theta < 5) { // photon distribution in the FT
+                    H1_photon_p->Fill(S.p);
+                    H1_photon_pT->Fill(S.pT);
+                    H1_photon_theta->Fill(S.theta);
+                    H1_photon_phi->Fill(S.phi);
                 }
                 Physics K(S, Ee, Mt);
                 Photons.push_back(S);
@@ -553,7 +568,7 @@ int main(int argc, char const *argv[]) {
             }
         }
         /*******************************************
-         *  cut on delta phi (cut level 2)
+         *  cut on W2 (cut level 2)
          * *****************************************/
         int count_electrons2 = 0;
         int count_photons2 = 0;
@@ -562,92 +577,91 @@ int main(int argc, char const *argv[]) {
         int count_photons3 = 0;
         int count_tracks3 = 0;
         std::vector<ElasticsOutput> Elastics; // list of couples (e/gamma, track) for elastics
-        for (State T : Tracks) {
-            for (int i = 0; i < (int) Probes.size(); i++) {
-                State S = Probes[i];
-                Physics K = ProbeKinematics[i];
+        for (int i = 0; i < (int) Probes.size(); i++) {
+            State S = Probes[i];
+            Physics K = ProbeKinematics[i];
+            if ((K.W2 < W2_min) || (K.W2 > W2_max)) continue;
+            if (S.pid == 11) count_electrons2++;
+            if (S.pid == 22) count_photons2++;
+            for (State T : Tracks) {
+                count_tracks2++;
+                // corr
+                H2_vze_vz[2]->Fill(S.vz, T.vz); 
+                H1_delta_vz[2]->Fill(S.vz - T.vz); 
+                H1_delta_phi[2]->Fill(S.phi - T.phi);  
+                H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
+                H2_p_adc[2]->Fill(S.pT, T.adc);
+                H2_pTe_pT[2]->Fill(S.pT, T.pT);
+                // probe 
+                H1_probe_vz[2]->Fill(S.vz);
+                H1_probe_p[2]->Fill(S.p);
+                H1_probe_pT[2]->Fill(S.pT);
+                H1_probe_theta[2]->Fill(S.theta);
+                H1_probe_phi[2]->Fill(S.phi);
+                H1_Q2[2]->Fill(K.Q2);
+                H1_W2[2]->Fill(K.W2);
+                H1_xB[2]->Fill(K.xB);
+                H1_nu[2]->Fill(K.nu);
+                // track
+                H1_track_vz[2]->Fill(T.vz);
+                H1_track_p[2]->Fill(T.p);
+                H1_track_pT[2]->Fill(T.pT);
+                H1_track_theta[2]->Fill(T.theta);
+                H1_track_phi[2]->Fill(T.phi);
+                H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
+                H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
+                H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
+                H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
+                H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
+                H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
+                H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                /*******************************************
+                 *  delta_phi (cut level 3)
+                 * *****************************************/
                 double delta_phi = S.phi - T.phi;
                 double stdev = 20;
                 if ((fabs(delta_phi+198) < stdev) || (fabs(delta_phi-162) < stdev)) {
-                    if (S.pid == 11) count_electrons2++;
-                    if (S.pid == 22) count_photons2++;
-                    count_tracks2++;
+                    if (S.pid == 11) count_electrons3++;
+                    if (S.pid == 22) count_photons3++;
+                    count_tracks3++;
                     // corr
-                    H2_vze_vz[2]->Fill(S.vz, T.vz); 
-                    H1_delta_vz[2]->Fill(S.vz - T.vz); 
-                    H1_delta_phi[2]->Fill(S.phi - T.phi);  
-                    H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
-                    H2_p_adc[2]->Fill(S.pT, T.adc);
-                    H2_pTe_pT[2]->Fill(S.pT, T.pT);
+                    H2_vze_vz[3]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[3]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[3]->Fill(S.phi - T.phi);  
+                    H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[3]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[3]->Fill(S.pT, T.pT);
                     // probe 
-                    H1_probe_vz[2]->Fill(S.vz);
-                    H1_probe_p[2]->Fill(S.p);
-                    H1_probe_pT[2]->Fill(S.pT);
-                    H1_probe_theta[2]->Fill(S.theta);
-                    H1_probe_phi[2]->Fill(S.phi);
-                    H1_Q2[2]->Fill(K.Q2);
-                    H1_W2[2]->Fill(K.W2);
-                    H1_xB[2]->Fill(K.xB);
-                    H1_nu[2]->Fill(K.nu);
+                    H1_probe_vz[3]->Fill(S.vz);
+                    H1_probe_p[3]->Fill(S.p);
+                    H1_probe_pT[3]->Fill(S.pT);
+                    H1_probe_theta[3]->Fill(S.theta);
+                    H1_probe_phi[3]->Fill(S.phi);
+                    H1_Q2[3]->Fill(K.Q2);
+                    H1_W2[3]->Fill(K.W2);
+                    H1_xB[3]->Fill(K.xB);
+                    H1_nu[3]->Fill(K.nu);
                     // track
-                    H1_track_vz[2]->Fill(T.vz);
-                    H1_track_p[2]->Fill(T.p);
-                    H1_track_pT[2]->Fill(T.pT);
-                    H1_track_theta[2]->Fill(T.theta);
-                    H1_track_phi[2]->Fill(T.phi);
-                    H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
-                    H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
-                    H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
-                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
-                    H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
-                    H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                    H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
-                    H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                    H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                    /*******************************************
-                     *  cut on W2 (cut level 3)
-                     * *****************************************/
-                    if ((K.W2 > W2_min) && (K.W2 < W2_max)) {
-                        if (S.pid == 11) count_electrons3++;
-                        if (S.pid == 22) count_photons3++;
-                        count_tracks3++;
-                        // corr
-                        H2_vze_vz[3]->Fill(S.vz, T.vz); 
-                        H1_delta_vz[3]->Fill(S.vz - T.vz); 
-                        H1_delta_phi[3]->Fill(S.phi - T.phi);  
-                        H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
-                        H2_p_adc[3]->Fill(S.pT, T.adc);
-                        H2_pTe_pT[3]->Fill(S.pT, T.pT);
-                        // probe 
-                        H1_probe_vz[3]->Fill(S.vz);
-                        H1_probe_p[3]->Fill(S.p);
-                        H1_probe_pT[3]->Fill(S.pT);
-                        H1_probe_theta[3]->Fill(S.theta);
-                        H1_probe_phi[3]->Fill(S.phi);
-                        H1_Q2[3]->Fill(K.Q2);
-                        H1_W2[3]->Fill(K.W2);
-                        H1_xB[3]->Fill(K.xB);
-                        H1_nu[3]->Fill(K.nu);
-                        // track
-                        H1_track_vz[3]->Fill(T.vz);
-                        H1_track_p[3]->Fill(T.p); 
-                        H1_track_pT[3]->Fill(T.pT);
-                        H1_track_theta[3]->Fill(T.theta);
-                        H1_track_phi[3]->Fill(T.phi);
-                        H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
-                        H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
-                        H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
-                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
-                        H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
-                        H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                        H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
-                        H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                        H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                        /***********************************************
-                         * for simulation calibration
-                         * ********************************************/
-                        Elastics.push_back({S,T}); 
-                    }
+                    H1_track_vz[3]->Fill(T.vz);
+                    H1_track_p[3]->Fill(T.p); 
+                    H1_track_pT[3]->Fill(T.pT);
+                    H1_track_theta[3]->Fill(T.theta);
+                    H1_track_phi[3]->Fill(T.phi);
+                    H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
+                    H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
+                    H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
+                    H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
+                    H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
+                    H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                    H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
+                    H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                    H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    /***********************************************
+                     * for simulation calibration
+                     * ********************************************/
+                    Elastics.push_back({S,T}); 
                 }
             }
         }
@@ -674,12 +688,23 @@ int main(int argc, char const *argv[]) {
                 if (trackid == e.track.trackid) {
                     // hits
                     int hit_id = hitBank.getInt("id",i);
+                    double sector    = adcBank.getInt("sector", hit_id);
+                    double layer     = adcBank.getInt("layer", hit_id);
+                    double component = adcBank.getInt("component", hit_id);
+                    ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
                     double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
                     double timeMax = adcBank.getFloat("time", hit_id);
                     double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
                     int adc        = adcBank.getInt("ADC", hit_id);
+                    // hit cut on time
+                    H1_dt00->Fill(time-obj.t0);
+                    if ((time - obj.t0 < 50) || (time - obj.t0 > 250)) continue;
+                    H1_tot0->Fill(tot);
+                    if ((tot < 400) || (tot > 600)) continue;
                     //int wfType = adcBank.getInt("wfType", hit_id);
                     //H1_wfType->Fill(wfType);
+                    H1_t0->Fill(obj.t0);
+                    H1_dt0->Fill(time-obj.t0);
                     H1_leadingEdgeTime->Fill(time); 
                     H1_timeMax->Fill(timeMax);
                     H1_deltaTime->Fill(timeMax-time); 
@@ -710,6 +735,13 @@ int main(int argc, char const *argv[]) {
                     H1_elastic_theory_pT->Fill(pT);
                     H1_elastic_theory_theta->Fill(theta_track);
                     H1_elastic_theory_phi->Fill(phi_track);
+                    if ((e.probe.pT > 0.230) && (e.probe.pT < 0.260) && (e.track.adc > 1000) && (e.track.adc < 3500)) {
+                        H1_selection_theory_p->Fill(p);
+                        H1_selection_theory_pT->Fill(pT);
+                        H1_selection_theory_theta->Fill(theta_track);
+                        H1_selection_theory_phi->Fill(phi_track);
+                        H1_selection_theory_adc->Fill(e.track.adc);
+                    }
                 }
             } // end loop over elastics
         } // end loop over hits
@@ -947,10 +979,14 @@ int main(int argc, char const *argv[]) {
     //  calibration
     //////////////////////
     calibration->cd(); 
+    H1_dt00->Write("dt00"); 
+    H1_dt0->Write("dt0"); 
+    H1_tot0->Write("tot0"); 
+    H1_timeOverThreshold->Write("tot");
     H1_leadingEdgeTime->Write("time"); 
     H1_timeMax->Write("timeMax");
+    H1_t0->Write("t0"); 
     H1_deltaTime->Write("dt"); 
-    H1_timeOverThreshold->Write("tot");
     H1_wfType->Write("wfType");
     H1_amplitude->Write("amplitude"); 
     H2_times->Write("corr_times");
@@ -996,6 +1032,10 @@ int main(int argc, char const *argv[]) {
     H1_elastic_probe_theta->Write("e.probe.theta");
     H1_elastic_probe_phi->Write("e.probe.phi");
     H2_elastic_pT_adc->Write("e.pT_vs_adc");
+    H1_photon_p->Write("ft_photon_p");
+    H1_photon_pT->Write("ft_photon_pT");
+    H1_photon_theta->Write("ft_photon_theta");
+    H1_photon_phi->Write("ft_photon_phi");
     H1_nelastics->Write("nelastics");
     H1_elastic_theory_p->Write("theory.track.p");
     H1_elastic_theory_pT->Write("theory.track.pT");
@@ -1004,7 +1044,7 @@ int main(int argc, char const *argv[]) {
     TCanvas* canvas2 = new TCanvas("c2_elastics", "real track vs theory");
     canvas2->Divide(2,2);
     canvas2->cd(1);
-    THStack* stack1 = new THStack("stack_p", "p #color[4]{reconstructed} vs #color[2]{theory}");
+    THStack* stack1 = new THStack("stack_p", "p #color[4]{reconstructed} vs #color[2]{theory}; p (GeV)");
     //TLegend* legend2 = new TLegend(0.1,0.7,0.35,0.9);
     //legend->AddEntry(H1_elastic_track_p, "reconstructed track");
     stack1->Add(H1_elastic_track_p);
@@ -1014,24 +1054,30 @@ int main(int argc, char const *argv[]) {
     //legend2->Draw();
     stack1->Draw("nostack");
     canvas2->cd(2);
-    THStack* stack2 = new THStack("stack_pT", "pT #color[4]{reconstructed} vs #color[2]{theory}");
+    THStack* stack2 = new THStack("stack_pT", "pT #color[4]{reconstructed} vs #color[2]{theory}; pT (GeV)");
     stack2->Add(H1_elastic_track_pT);
     H1_elastic_theory_pT->SetLineColor(kRed);
     stack2->Add(H1_elastic_theory_pT);
     stack2->Draw("nostack");
     canvas2->cd(3);
-    THStack* stack3 = new THStack("stack_theta", "theta #color[4]{reconstructed} vs #color[2]{theory}");
+    THStack* stack3 = new THStack("stack_theta", "theta #color[4]{reconstructed} vs #color[2]{theory}; theta (deg)");
     stack3->Add(H1_elastic_track_theta);
     H1_elastic_theory_theta->SetLineColor(kRed);
     stack3->Add(H1_elastic_theory_theta);
     stack3->Draw("nostack");
     canvas2->cd(4);
-    THStack* stack4 = new THStack("stack_phi", "phi #color[4]{reconstructed} vs #color[2]{theory}");
+    THStack* stack4 = new THStack("stack_phi", "phi #color[4]{reconstructed} vs #color[2]{theory}; phi (deg)");
     stack4->Add(H1_elastic_track_phi);
     H1_elastic_theory_phi->SetLineColor(kRed);
     stack4->Add(H1_elastic_theory_phi);
     stack4->Draw("nostack");
     canvas2->Write("do_real_track_theory?");
+    // select proton
+    H1_selection_theory_p->Write("selection.theory.track.p");
+    H1_selection_theory_pT->Write("selection.theory.track.pT");
+    H1_selection_theory_theta->Write("selection.theory.track.theta");
+    H1_selection_theory_phi->Write("selection_.theory.track.phi");
+    H1_selection_theory_adc->Write("selection_.theory.adc.phi");
 
     //////////////////////////////
     // Close file
