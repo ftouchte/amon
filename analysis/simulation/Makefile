@@ -48,8 +48,8 @@ test: test.o AhdcCCDB.o
 simu: simu.o
 	$(CXX) -o simu.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
-elastics: elastics.o futils.o
-	$(CXX) -o elastics.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+elastics: elastics.o futils.o AhdcCCDB.o
+	$(CXX) -o elastics.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CLHEPLIBS) $(CCDBLIBS)
 
 # $< représente la première de la cible, i.e histo.o
 # $^ représente la liste complète des dépendances
