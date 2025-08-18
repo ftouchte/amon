@@ -44,6 +44,8 @@
 #include "TStyle.h"
 #include "TLegend.h"
 #include "TGraphErrors.h"
+#include "THStack.h"
+
 
 // utilities
 void progressBar(int state, int bar_length = 100);
@@ -270,10 +272,10 @@ int main(int argc, char const *argv[]) {
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
     std::vector<TH2D*> H2_p_adc;
-    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000));
     std::vector<TH2D*> H2_vze_vz;
     H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
     H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
@@ -307,15 +309,19 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
     TH2D* H2_amp_tot = new TH2D("amp, tot", "amplitude vs timeOverThreshold;amp (adc); tot (ns)", 100, 0, 3700, 100, 150, 752); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
-    TH1D* H1_sim_track_p = new TH1D("sim_track_p", "p (GeV)", 100, 0.2, 1.6); 
-    TH1D* H1_sim_track_pT = new TH1D("sim_track_pT", "pT (GeV)", 100, 0, 1); 
-    TH1D* H1_sim_track_theta = new TH1D("sim_track_theta", "theta (deg)", 100, 0, 181); 
-    TH1D* H1_sim_track_phi = new TH1D("sim_track_phi", "theta (deg)", 100, 0, 361); 
-    TH1D* H1_sim_probe_p = new TH1D("sim_probe_p", "p (GeV)", 100, 2.16, 2.25); 
-    TH1D* H1_sim_probe_pT = new TH1D("sim_probe_pT", "p (GeV)", 100, 0.1, 0.5); 
-    TH1D* H1_sim_probe_theta = new TH1D("sim_probe_theta", "theta (deg)", 100, 0, 12); 
-    TH1D* H1_sim_probe_phi = new TH1D("sim_probe_phi", "theta (deg)", 100, 0, 361);
-    TH2D* H2_sim_pT_adc = new TH2D("sim_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.2, 0.45, 100, 0, 15000);
+    TH1D* H1_elastic_track_p = new TH1D("elastic_track_p", "p (GeV)", 100, 0.2, 1.6); 
+    TH1D* H1_elastic_track_pT = new TH1D("elastic_track_pT", "pT (GeV)", 100, 0, 1); 
+    TH1D* H1_elastic_track_theta = new TH1D("elastic_track_theta", "theta (deg)", 100, 0, 181); 
+    TH1D* H1_elastic_track_phi = new TH1D("elastic_track_phi", "theta (deg)", 100, 0, 361); 
+    TH1D* H1_elastic_probe_p = new TH1D("elastic_probe_p", "p (GeV)", 100, 2.16, 2.25); 
+    TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "p (GeV)", 100, 0.1, 0.5); 
+    TH1D* H1_elastic_probe_theta = new TH1D("elastic_probe_theta", "theta (deg)", 100, 0, 12); 
+    TH1D* H1_elastic_probe_phi = new TH1D("elastic_probe_phi", "theta (deg)", 100, 0, 361);
+    TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.05, 0.45, 100, 0, 15000);
+    TH1D* H1_elastic_theory_p = new TH1D("theory_track_p", "p (GeV)", 100, 0.2, 1.6); // what should be the track knowing it is an elastic and from theta_electron 
+    TH1D* H1_elastic_theory_pT = new TH1D("theory_track_pT", "pT (GeV)", 100, 0, 1); 
+    TH1D* H1_elastic_theory_theta = new TH1D("theory_track_theta", "theta (deg)", 100, 0, 181); 
+    TH1D* H1_elastic_theory_phi = new TH1D("theory_track_phi", "theta (deg)", 100, 0, 361); 
 
     // Loop over events
     while( reader.next()){
@@ -345,6 +351,10 @@ int main(int argc, char const *argv[]) {
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
                 S.pid = 11;
+                if (S.theta < 5) { // add a 15% correction on FT photons
+                    S.p = 1.155*S.p;
+                    S.pT = 1.155*S.pT;
+                }
                 Physics K(S, Mt, Ee);
                 Electrons.push_back(S);
                 ElectronKinematics.push_back(K);
@@ -363,6 +373,10 @@ int main(int argc, char const *argv[]) {
                 State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                         particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
                 S.pid = 22;
+                if (S.theta < 5) { // add a 15% correction on FT photons
+                    S.p = 1.155*S.p;
+                    S.pT = 1.155*S.pT;
+                }
                 Physics K(S, Ee, Mt);
                 Photons.push_back(S);
                 PhotonKinematics.push_back(K);
@@ -676,15 +690,26 @@ int main(int argc, char const *argv[]) {
                     H2_deltaTime_adc->Fill(timeMax-time, adc); 
                     // track and probe
                     HitId.push_back(hitBank.getInt("id",i)); // they correspond to the column index in AHDC::adc
-                    H1_sim_track_p->Fill(e.track.p);
-                    H1_sim_track_pT->Fill(e.track.pT);
-                    H1_sim_track_theta->Fill(e.track.theta);
-                    H1_sim_track_phi->Fill(e.track.phi);
-                    H1_sim_probe_p->Fill(e.probe.p);
-                    H1_sim_probe_pT->Fill(e.probe.pT);
-                    H1_sim_probe_theta->Fill(e.probe.theta);
-                    H1_sim_probe_phi->Fill(e.probe.phi);
-                    H2_sim_pT_adc->Fill(e.probe.pT, e.track.adc);
+                    H1_elastic_track_p->Fill(e.track.p);
+                    H1_elastic_track_pT->Fill(e.track.pT);
+                    H1_elastic_track_theta->Fill(e.track.theta);
+                    H1_elastic_track_phi->Fill(e.track.phi);
+                    H1_elastic_probe_p->Fill(e.probe.p);
+                    H1_elastic_probe_pT->Fill(e.probe.pT);
+                    H1_elastic_probe_theta->Fill(e.probe.theta);
+                    H1_elastic_probe_phi->Fill(e.probe.phi);
+                    H2_elastic_pT_adc->Fill(e.probe.pT, e.track.adc);
+                    // theoretical values of the track given the electron kinematics
+                    double theta = M_PI*e.probe.theta/180;
+                    double p = 2*Ee*sin(theta/2);
+                    double pT = Ee*sin(theta);
+                    double pz = Ee*(1-cos(theta));
+                    double theta_track = acos(pz/p)*180/M_PI;
+                    double phi_track = (e.probe.phi > 180) ? (e.probe.phi - 180) : (e.probe.phi + 180);
+                    H1_elastic_theory_p->Fill(p);
+                    H1_elastic_theory_pT->Fill(pT);
+                    H1_elastic_theory_theta->Fill(theta_track);
+                    H1_elastic_theory_phi->Fill(phi_track);
                 }
             } // end loop over elastics
         } // end loop over hits
@@ -703,13 +728,13 @@ int main(int argc, char const *argv[]) {
  * output
  * **********************************************************/
 
-    const char * output = "./new_elastics.root";
+    const char * output = "./output/corrected_elastics.root";
     TFile *f = new TFile(output, "RECREATE");
     TDirectory *probes_dir   = f->mkdir("electrons_photons");
     TDirectory *physics_dir  = f->mkdir("physics");
     TDirectory *tracks_dir  = f->mkdir("tracks");
     TDirectory *corr_dir     = f->mkdir("correlations");
-    TDirectory *simulation     = f->mkdir("simulation_calibration");
+    TDirectory *calibration     = f->mkdir("calibration");
     
     //////////////////////
     //  probes
@@ -919,9 +944,9 @@ int main(int argc, char const *argv[]) {
     H2_p_adc[3]->Write("corr_pT_adc");
     H2_pTe_pT[3]->Write("corr_pT");
     //////////////////////
-    //  simulation
+    //  calibration
     //////////////////////
-    simulation->cd(); 
+    calibration->cd(); 
     H1_leadingEdgeTime->Write("time"); 
     H1_timeMax->Write("timeMax");
     H1_deltaTime->Write("dt"); 
@@ -962,16 +987,51 @@ int main(int argc, char const *argv[]) {
     legend->Draw();
     // <<<<<<<<<<<<<< end process H2_deltaTime_adc
     canvas1->Write("c1_deltaTime_adc");
-    H1_sim_track_p->Write("e.track.p");
-    H1_sim_track_pT->Write("e.track.pT");
-    H1_sim_track_theta->Write("e.track.theta");
-    H1_sim_track_phi->Write("e.track.phi");
-    H1_sim_probe_p->Write("e.probe.p");
-    H1_sim_probe_pT->Write("e.probe.pT");
-    H1_sim_probe_theta->Write("e.probe.theta");
-    H1_sim_probe_phi->Write("e.probe.phi");
-    H2_sim_pT_adc->Write("e.pT_vs_adc");
+    H1_elastic_track_p->Write("e.track.p");
+    H1_elastic_track_pT->Write("e.track.pT");
+    H1_elastic_track_theta->Write("e.track.theta");
+    H1_elastic_track_phi->Write("e.track.phi");
+    H1_elastic_probe_p->Write("e.probe.p");
+    H1_elastic_probe_pT->Write("e.probe.pT");
+    H1_elastic_probe_theta->Write("e.probe.theta");
+    H1_elastic_probe_phi->Write("e.probe.phi");
+    H2_elastic_pT_adc->Write("e.pT_vs_adc");
     H1_nelastics->Write("nelastics");
+    H1_elastic_theory_p->Write("theory.track.p");
+    H1_elastic_theory_pT->Write("theory.track.pT");
+    H1_elastic_theory_theta->Write("theory.track.theta");
+    H1_elastic_theory_phi->Write("theory.track.phi");
+    TCanvas* canvas2 = new TCanvas("c2_elastics", "real track vs theory");
+    canvas2->Divide(2,2);
+    canvas2->cd(1);
+    THStack* stack1 = new THStack("stack_p", "p #color[4]{reconstructed} vs #color[2]{theory}");
+    //TLegend* legend2 = new TLegend(0.1,0.7,0.35,0.9);
+    //legend->AddEntry(H1_elastic_track_p, "reconstructed track");
+    stack1->Add(H1_elastic_track_p);
+    H1_elastic_theory_p->SetLineColor(kRed);
+    stack1->Add(H1_elastic_theory_p);
+    //legend->AddEntry(H1_elastic_theory_p, "theoretical track");
+    //legend2->Draw();
+    stack1->Draw("nostack");
+    canvas2->cd(2);
+    THStack* stack2 = new THStack("stack_pT", "pT #color[4]{reconstructed} vs #color[2]{theory}");
+    stack2->Add(H1_elastic_track_pT);
+    H1_elastic_theory_pT->SetLineColor(kRed);
+    stack2->Add(H1_elastic_theory_pT);
+    stack2->Draw("nostack");
+    canvas2->cd(3);
+    THStack* stack3 = new THStack("stack_theta", "theta #color[4]{reconstructed} vs #color[2]{theory}");
+    stack3->Add(H1_elastic_track_theta);
+    H1_elastic_theory_theta->SetLineColor(kRed);
+    stack3->Add(H1_elastic_theory_theta);
+    stack3->Draw("nostack");
+    canvas2->cd(4);
+    THStack* stack4 = new THStack("stack_phi", "phi #color[4]{reconstructed} vs #color[2]{theory}");
+    stack4->Add(H1_elastic_track_phi);
+    H1_elastic_theory_phi->SetLineColor(kRed);
+    stack4->Add(H1_elastic_theory_phi);
+    stack4->Draw("nostack");
+    canvas2->Write("do_real_track_theory?");
 
     //////////////////////////////
     // Close file
