@@ -28,9 +28,11 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <utility> // std::pair
+#include <filesystem>
 
-#include "reader.h"
+#include "../hipo4/reader.h"
+#include "../hipo4/writer.h"
+
 #include "futils.h"
 #include "elastics.h"
 #include "AhdcCCDB.h"
@@ -108,7 +110,7 @@ int main(int argc, char const *argv[]) {
     const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
 
     AhdcCCDB ahdcConstants; // load ccdb
-
+    // Input File
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -117,14 +119,37 @@ int main(int argc, char const *argv[]) {
     hipo::bank  particleBank(factory.getSchema("REC::Particle"));
     hipo::bank  recEventBank(factory.getSchema("REC::Event"));
     hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
     hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
     hipo::event event;
+    // Ouput file
+    hipo::writer writer;
+    //factory.getSchema("AHDC::adc").show(); 
+    //factory.getSchema("AHDC::wf").show(); 
+    //factory.getSchema("AHDC::kftrack").show();
+    hipo::schema schemaAdc("AHDC::adc", 22400, 11);
+    hipo::schema schemaWf("AHDC::wf", 22400, 10);
+    hipo::schema schemaTrack("AHDC::kftrack",23000, 26);
+    schemaAdc.parse("sector/B, layer/B, component/S, order/B, ADC/I, time/F, ped/F, windex/S, integral/I, leadingEdgeTime/F, timeOverThreshold/F, constantFractionTime/F, wfType/S");
+    schemaWf.parse("sector/B, layer/B, component/S, order/B, timestamp/L, s1/S, s2/S, s3/S, s4/S, s5/S, s6/S, s7/S, s8/S, s9/S, s10/S, s11/S, s12/S, s13/S, s14/S, s15/S, s16/S, s17/S, s18/S, s19/S, s20/S, s21/S, s22/S, s23/S, s24/S, s25/S, s26/S, s27/S, s28/S, s29/S, s30/S, time/I");
+    schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
+    writer.getDictionary().addSchema(schemaAdc);
+    writer.getDictionary().addSchema(schemaWf);
+    writer.getDictionary().addSchema(schemaTrack);
+    const char * outputFile = "elastics_events.hipo";
+    if (std::filesystem::exists(outputFile)) {
+        if (std::filesystem::remove(outputFile)) {
+            printf("Remove file before processing : %s\n", outputFile);
+        }
+    }
+    writer.open(outputFile);
+    hipo::event outEvent;
+
+    // Histograms
     long unsigned int nevents = 0;
     long unsigned int nelectrons = 0;
     long unsigned int nphotons = 0;
     long unsigned int ntracks = 0;
-    // Histograms
-    //TCanvas* canvas = new TCanvas("c1");
     TH1I* H1_mon_nprobes    = new TH1I("nprobes_with_cuts", "number of probes with the cuts", 15, 0, 15); 
     TH1I* H1_mon_ntracks    = new TH1I("ntracks_with_cuts", "number of tracks with the cuts", 15, 0, 15); 
     //////////////////////////////
@@ -353,6 +378,7 @@ int main(int argc, char const *argv[]) {
         event.getStructure(particleBank);
         event.getStructure(recEventBank);
         event.getStructure(adcBank);
+        event.getStructure(wfBank);
         event.getStructure(hitBank);
         
         //////////////////////
@@ -680,14 +706,16 @@ int main(int argc, char const *argv[]) {
         /***********************************************
          * for simulation calibration
          * ********************************************/
-        std::vector<int> HitId;
+        std::vector<int> AdcId;
+        std::vector<int> TrackId;
         H1_nelastics->Fill(Elastics.size());
-        for (int i = 0; i < hitBank.getRows(); i++) {
-            int trackid = hitBank.getInt("trackid",i);
-            for (ElasticsOutput e : Elastics) {
+        for (ElasticsOutput e : Elastics) {
+            TrackId.push_back(e.track.trackid); 
+            for (int i = 0; i < hitBank.getRows(); i++) {
+                int trackid = hitBank.getInt("trackid",i);
                 if (trackid == e.track.trackid) {
                     // hits
-                    int hit_id = hitBank.getInt("id",i);
+                    int hit_id = hitBank.getInt("id",i); // they are the column index in AHDC::adc bank
                     double sector    = adcBank.getInt("sector", hit_id);
                     double layer     = adcBank.getInt("layer", hit_id);
                     double component = adcBank.getInt("component", hit_id);
@@ -714,7 +742,6 @@ int main(int argc, char const *argv[]) {
                     H2_amp_tot->Fill(adc, tot);
                     H2_deltaTime_adc->Fill(timeMax-time, adc); 
                     // track and probe
-                    HitId.push_back(hitBank.getInt("id",i)); // they correspond to the column index in AHDC::adc
                     H1_elastic_track_p->Fill(e.track.p);
                     H1_elastic_track_pT->Fill(e.track.pT);
                     H1_elastic_track_theta->Fill(e.track.theta);
@@ -736,6 +763,7 @@ int main(int argc, char const *argv[]) {
                     H1_elastic_theory_theta->Fill(theta_track);
                     H1_elastic_theory_phi->Fill(phi_track);
                     if ((e.probe.pT > 0.230) && (e.probe.pT < 0.260) && (e.track.adc > 1000) && (e.track.adc < 3500)) {
+                        AdcId.push_back(hit_id); // they correspond to the column index in AHDC::adc
                         H1_selection_theory_p->Fill(p);
                         H1_selection_theory_pT->Fill(pT);
                         H1_selection_theory_theta->Fill(theta_track);
@@ -744,8 +772,99 @@ int main(int argc, char const *argv[]) {
                     }
                 }
             } // end loop over elastics
-        } // end loop over hits
+        } // end loop over elastics hits
+        // save those event in a hipo file
+        if (AdcId.size()*TrackId.size() > 0) { 
+            hipo::bank outAdcBank(schemaAdc, (int) AdcId.size());
+            hipo::bank outWfBank(schemaWf, (int) AdcId.size());
+            hipo::bank outTrackBank(schemaTrack, (int) TrackId.size());
+            for (int i = 0; i < outAdcBank.getRows(); i++) {
+                // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
+                int index = AdcId[i] - 1;
+                // AHDC::adc
+                outAdcBank.putInt("sector", i, adcBank.getInt("sector", index));
+                outAdcBank.putInt("layer", i, adcBank.getInt("layer", index));
+                outAdcBank.putInt("component", i, adcBank.getInt("component", index));
+                outAdcBank.putInt("order", i, adcBank.getInt("order", index));
+                outAdcBank.putInt("ADC", i, adcBank.getInt("ADC", index));
+                outAdcBank.putFloat("time", i, adcBank.getFloat("time", index));
+                outAdcBank.putFloat("ped", i, adcBank.getInt("ped", index));
+                outAdcBank.putInt("windex", i, adcBank.getInt("windex", index));
+                outAdcBank.putInt("integral", i, adcBank.getInt("integral", index));
+                outAdcBank.putFloat("leadingEdgeTime", i, adcBank.getFloat("leadingEdgeTime", index));
+                outAdcBank.putFloat("timeOverThreshold", i, adcBank.getFloat("timeOverThreshold", index));
+                outAdcBank.putFloat("constantFractionTime", i, adcBank.getFloat("constantFractionTime", index));
+                //outAdcBank.put("wfType", i, adcBank.getInt("ped", index));
+                outAdcBank.putInt("wfType", i, 0);
+                // AHDC::wf
+                outWfBank.putInt("sector", i, wfBank.getInt("sector", index));
+                outWfBank.putInt("layer", i, wfBank.getInt("layer", index));
+                outWfBank.putInt("component", i, wfBank.getInt("component", index));
+                outWfBank.putLong("timestamp", i, wfBank.getLong("timestamp", index));
+                outWfBank.putInt("time", i, wfBank.getInt("time", index));
+                outWfBank.putInt("s1", i, wfBank.getInt("s1", index));
+                outWfBank.putInt("s2", i, wfBank.getInt("s2", index));
+                outWfBank.putInt("s3", i, wfBank.getInt("s3", index));
+                outWfBank.putInt("s4", i, wfBank.getInt("s4", index));
+                outWfBank.putInt("s5", i, wfBank.getInt("s5", index));
+                outWfBank.putInt("s6", i, wfBank.getInt("s6", index));
+                outWfBank.putInt("s7", i, wfBank.getInt("s7", index));
+                outWfBank.putInt("s8", i, wfBank.getInt("s8", index));
+                outWfBank.putInt("s9", i, wfBank.getInt("s9", index));
+                outWfBank.putInt("s10", i, wfBank.getInt("s10", index));
+                outWfBank.putInt("s11", i, wfBank.getInt("s11", index));
+                outWfBank.putInt("s12", i, wfBank.getInt("s12", index));
+                outWfBank.putInt("s13", i, wfBank.getInt("s13", index));
+                outWfBank.putInt("s14", i, wfBank.getInt("s14", index));
+                outWfBank.putInt("s15", i, wfBank.getInt("s15", index));
+                outWfBank.putInt("s16", i, wfBank.getInt("s16", index));
+                outWfBank.putInt("s17", i, wfBank.getInt("s17", index));
+                outWfBank.putInt("s18", i, wfBank.getInt("s18", index));
+                outWfBank.putInt("s19", i, wfBank.getInt("s19", index));
+                outWfBank.putInt("s20", i, wfBank.getInt("s20", index));
+                outWfBank.putInt("s21", i, wfBank.getInt("s21", index));
+                outWfBank.putInt("s22", i, wfBank.getInt("s22", index));
+                outWfBank.putInt("s23", i, wfBank.getInt("s23", index));
+                outWfBank.putInt("s24", i, wfBank.getInt("s24", index));
+                outWfBank.putInt("s25", i, wfBank.getInt("s25", index));
+                outWfBank.putInt("s26", i, wfBank.getInt("s26", index));
+                outWfBank.putInt("s27", i, wfBank.getInt("s27", index));
+                outWfBank.putInt("s28", i, wfBank.getInt("s28", index));
+                outWfBank.putInt("s29", i, wfBank.getInt("s29", index));
+                outWfBank.putInt("s30", i, wfBank.getInt("s30", index));
+            } 
+            for (int i = 0; i < outTrackBank.getRows(); i++) {
+                // AHDC::track
+                // Attention: the track id numerotation starts at 1, the getter indexation starts at 0
+                int index = TrackId[i] - 1;
+                //printf("trackid: %d/%d ", TrackId[i], index);
+                outTrackBank.putInt("trackid", i, trackBank.getInt("trackid", index));
+                outTrackBank.putFloat("x", i, trackBank.getFloat("x", index));
+                outTrackBank.putFloat("y", i, trackBank.getFloat("y", index));
+                outTrackBank.putFloat("z", i, trackBank.getFloat("z", index));
+                outTrackBank.putFloat("px", i, trackBank.getFloat("px", index));
+                outTrackBank.putFloat("py", i, trackBank.getFloat("py", index));
+                //printf("pz: %lf ", trackBank.getFloat("pz", index));
+                outTrackBank.putFloat("pz", i, trackBank.getFloat("pz", index));
+                outTrackBank.putInt("n_hits", i, trackBank.getInt("n_hits", index));
+                //printf("sum_adc: %d ", trackBank.getInt("sum_adc", index));
+                outTrackBank.putInt("sum_adc", i, trackBank.getInt("sum_adc", index));
+                outTrackBank.putFloat("path", i, trackBank.getFloat("path", index));
+                //printf("path: %lf ", trackBank.getFloat("path", index));
+                outTrackBank.putFloat("dEdx", i, trackBank.getFloat("dEdx", index));
+                outTrackBank.putFloat("p_drift", i, trackBank.getFloat("p_drift", index));
+                outTrackBank.putFloat("chi2", i, trackBank.getFloat("chi2", index));
+                outTrackBank.putFloat("sum_residuals", i, trackBank.getFloat("sum_residuals", index));
+            } // end write selection from elastics in a hipo file
+            outEvent.reset();
+            outEvent.addStructure(outAdcBank);
+            outEvent.addStructure(outWfBank);
+            outEvent.addStructure(outTrackBank);
+            writer.addEvent(outEvent);
+        }
     } // and loop over events
+    writer.close();
+    printf("Create file : %s\n", outputFile);
 
     printf("nevents    : %ld \n", nevents);
     printf("nelectrons : %ld \n", nelectrons);
@@ -794,8 +913,8 @@ int main(int argc, char const *argv[]) {
     H1_probe_phi[1]->Write("phi");
     H1_nelectrons[1]->Write("nelectrons");
     H1_nphotons[1]->Write("nphotons");
-    // Level 2 -- delta_phi 
-    TDirectory* probes_delta_phi_dir = probes_dir->mkdir("cut_on_delta_phi");
+    // Level 2 -- cut_on_W2
+    TDirectory* probes_delta_phi_dir = probes_dir->mkdir("cut_on_W2");
     probes_delta_phi_dir->cd();
     H1_probe_p[2]->Write("p");
     H1_probe_pT[2]->Write("pT");
@@ -804,8 +923,8 @@ int main(int argc, char const *argv[]) {
     H1_probe_phi[2]->Write("phi");
     H1_nelectrons[2]->Write("nelectrons");
     H1_nphotons[2]->Write("nphotons");
-    // Level 3 -- cut_on_W2
-    TDirectory* probes_w2_cut_dir = probes_dir->mkdir("cut_on_W2");
+    // Level 3 -- cut_on_delta_phi
+    TDirectory* probes_w2_cut_dir = probes_dir->mkdir("cut_on_delta_phi");
     probes_w2_cut_dir->cd();
     H1_probe_p[3]->Write("p");
     H1_probe_pT[3]->Write("pT");
@@ -831,15 +950,15 @@ int main(int argc, char const *argv[]) {
     H1_Q2[1]->Write("Q2");
     H1_xB[1]->Write("xB");
     H1_nu[1]->Write("nu");
-    // Level 2 -- delta_phi
-    TDirectory* physics_delta_phi_dir = physics_dir->mkdir("cut_on_delta_phi");
+    // Level 2 -- cut_on_W2
+    TDirectory* physics_delta_phi_dir = physics_dir->mkdir("cut_on_W2");
     physics_delta_phi_dir->cd();
     H1_W2[2]->Write("W2");
     H1_Q2[2]->Write("Q2");
     H1_xB[2]->Write("xB");
     H1_nu[2]->Write("nu");
-    // Level 3 -- cut_on_W2
-    TDirectory* physics_w2_cut_dir = physics_dir->mkdir("cut_on_W2");
+    // Level 3 -- cut_on_delta_phi
+    TDirectory* physics_w2_cut_dir = physics_dir->mkdir("cut_on_delta_phi");
     physics_w2_cut_dir->cd();
     H1_W2[3]->Write("W2");
     H1_Q2[3]->Write("Q2");
@@ -884,8 +1003,8 @@ int main(int argc, char const *argv[]) {
     H1_track_residuals_per_nhits[1]->Write("residuals_per_hit");
     H1_track_chi2[1]->Write("chi2");
     H1_track_chi2_per_nhits[1]->Write("chi2_per_hit");
-    // Level 2 -- delta phi
-    TDirectory* tracks_delta_phi_dir = tracks_dir->mkdir("cut_on_delta_phi");
+    // Level 2 -- cut_on_W2
+    TDirectory* tracks_delta_phi_dir = tracks_dir->mkdir("cut_on_W2");
     tracks_delta_phi_dir->cd();
     H1_ntracks[2]->Write("ntracks");
     H1_track_vz[2]->Write("vz");
@@ -902,8 +1021,8 @@ int main(int argc, char const *argv[]) {
     H1_track_residuals_per_nhits[2]->Write("residuals_per_hit");
     H1_track_chi2[2]->Write("chi2");
     H1_track_chi2_per_nhits[2]->Write("chi2_per_hit");
-    // Level 3 -- cut_on_W2
-    TDirectory* tracks_w2_cut_dir = tracks_dir->mkdir("cut_on_W2");
+    // Level 3 -- cut_on_delta_phi
+    TDirectory* tracks_w2_cut_dir = tracks_dir->mkdir("cut_on_delta_phi");
     tracks_w2_cut_dir->cd();
     H1_ntracks[3]->Write("ntracks");
     H1_track_vz[3]->Write("vz");
@@ -957,8 +1076,8 @@ int main(int argc, char const *argv[]) {
     H2_p_dEdx[1]->Write("corr_pT_dEdx");
     H2_p_adc[1]->Write("corr_pT_adc");
     H2_pTe_pT[1]->Write("corr_pT");
-    // Level 2 -- delta phi
-    TDirectory* corr_delta_phi_dir = corr_dir->mkdir("cut_on_delta_phi");
+    // Level 2 -- cu_on_W2
+    TDirectory* corr_delta_phi_dir = corr_dir->mkdir("cut_on_W2");
     corr_delta_phi_dir->cd();
     H2_vze_vz[2]->Write("corr_vz"); 
     H1_delta_vz[2]->Write("delta_vz"); 
@@ -966,8 +1085,8 @@ int main(int argc, char const *argv[]) {
     H2_p_dEdx[2]->Write("corr_pT_dEdx");
     H2_p_adc[2]->Write("corr_pT_adc");
     H2_pTe_pT[2]->Write("corr_pT");
-    // Level 3 -- cut_on_W2
-    TDirectory* corr_w2_cut_dir = corr_dir->mkdir("cut_on_W2");
+    // Level 3 -- cut_on_delta_phi
+    TDirectory* corr_w2_cut_dir = corr_dir->mkdir("cut_on_delta_phi");
     corr_w2_cut_dir->cd();
     H2_vze_vz[3]->Write("corr_vz"); 
     H1_delta_vz[3]->Write("delta_vz"); 
