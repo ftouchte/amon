@@ -27,6 +27,9 @@
 #include "TF1.h"
 #include "Math/PdfFuncMathCore.h"
 #include "TApplication.h"
+#include "TText.h"
+
+#include "AhdcCCDB.h"
 
 // utilities
 void progressBar(int state, int bar_length = 100);
@@ -37,8 +40,6 @@ double breitwigner_pdf(double * x, double * par) {
 }
 
 int main(int argc, char const *argv[]) {
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/decoded_22092_20k.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/rec_clas_022712.evio.00001.hipo";
     // simu
     const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
     hipo::reader  reader(filename);
@@ -52,10 +53,11 @@ int main(int argc, char const *argv[]) {
     hipo::event event;
     long unsigned int nevents =0;
     // Histograms
+    TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
+    TH1D* H1_dt0 = new TH1D("dt0", "#Delta t_0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
     TH1D* H1_time = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
-    TH1D* H1_sigmaTime = new TH1D("sigmaTime", "(timeMax - leadingEdgeTime)/leadingEdgeTime (ns);(timeMax - leadingEdgeTime)/leadingEdgeTime (ns); count", 100, 0, 1); 
     TH1D* H1_tot = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
@@ -63,6 +65,7 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_amp_tot = new TH2D("amp, tot", "amplitude vs timeOverThreshold;amp (adc); tot (ns)", 100, 0, 3700, 100, 150, 752); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
 
+    AhdcCCDB ahdcConstants;
     // Loop over events
     while( reader.next()){
         nevents++;
@@ -77,50 +80,43 @@ int main(int argc, char const *argv[]) {
         event.getStructure(hitBank);
         event.getStructure(mcBank);
         
-        /*std::vector<int> TrackId;
-        for (int i = 0; i < trackBank.getRows(); i++) {
-            int trackid = trackBank.getInt("trackid", i);
-            if (trackid > 0) {
-                TrackId.push_back(trackid);
-            }
-        }
-        if ((int) TrackId.size() < 0) continue;*/
-        std::vector<int> HitId;
-        for (int i = 0; i < hitBank.getRows(); i++) {
-            int trackid = trackBank.getInt("trackid", i);
-            int id = hitBank.getInt("id", i);
-            if (trackid > 0) {
-                HitId.push_back(id);
-            }
-        }
-        if (((int) HitId.size() < 0) && !(mcBank.getRows() > 0)) continue; 
         // Loop over waveforms
         for (int i = 0; i < adcBank.getRows(); i++) {
-        //for (int i : HitId) {
-            //if (!(adcBank.getInt("wfType", i) <= 1) && !(mcBank.getRows() > 0)) continue;
+            double sector    = adcBank.getInt("sector", i);
+            double layer     = adcBank.getInt("layer", i);
+            double component = adcBank.getInt("component", i);
+            ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
+            double t0 = obj.t0;
             double time = adcBank.getFloat("leadingEdgeTime", i);
             double timeMax = adcBank.getFloat("time", i);
             double tot = adcBank.getFloat("timeOverThreshold", i);
-            //int wfType = adcBank.getInt("wfType", i);
+            int wfType = adcBank.getInt("wfType", i);
             int adc = adcBank.getInt("ADC", i);
-            //if ((time < 200) || (time > 450)) continue;
             H2_amp_tot->Fill(adc, tot);
             H1_time->Fill(time);
+            H1_t0->Fill(t0);
+            H1_dt0->Fill(time - t0);
             H1_timeMax->Fill(timeMax);
             H2_times->Fill(timeMax, time);
             H1_deltaTime->Fill(timeMax-time);
-            H1_sigmaTime->Fill((timeMax-time)/time);
             H1_tot->Fill(tot);
-            //H1_wfType->Fill(wfType);
+            H1_wfType->Fill(wfType);
             H1_adc->Fill(adc);
             H2_deltaTime_adc->Fill(timeMax-time, adc);
         }
         // end Loop over waveforms
     }
-    // Process H2_deltaTime_adc
-    TCanvas* canvas1 = new TCanvas("c1_deltaTime_amplitude", "deltaTime vs amplitude; deltaTime (ns); amplitude (adc)");
+    // output
+    const char * output = "./output/new_simu_data.root";
+    TFile *f = new TFile(output, "RECREATE");
+    
+// >>>>>>>>>   Process H2_deltaTime_adc
+    TCanvas* canvas1 = new TCanvas("c1_deltaTime_amplitude", "deltaTime vs amplitude; timeMax - leadingedgeTime (ns); amplitude (adc)");
     canvas1->SetLogz();
     H2_deltaTime_adc->Draw("colz");
+    TText* text1 = new TText();
+    text1->SetTextSize(0.02);
+    text1->SetTextColor(kRed);
     int nbins = H2_deltaTime_adc->GetXaxis()->GetNbins();
     printf("> Analyse correlation between deltaTime (ns) and amplitude (adc)\n");
     printf(">   nbins x axis : %d\n", nbins);
@@ -136,6 +132,7 @@ int main(int argc, char const *argv[]) {
         double y_bin_sup = H2_deltaTime_adc->GetYaxis()->GetBinCenter((i+1)*proj_nbins); // adc_sup this collection of bins
         gr->SetPoint(i, mean, 0.5*(y_bin_inf+y_bin_sup));
         gr->SetPointError(i, stdDev, 0);
+        text1->DrawText(mean + stdDev, 0.5*(y_bin_inf+y_bin_sup), TString::Format("%.2lf +/- %.2lf", mean, stdDev).Data());
     }
     gr->SetMarkerColor(kBlack);
     gr->SetMarkerStyle(21);
@@ -146,39 +143,21 @@ int main(int argc, char const *argv[]) {
     //legend->SetHeader("deltaTime projection","C");
     legend->AddEntry(gr, "deltaTime projection");
     legend->Draw();
-
-    // end H2_deltaTime_adc analysis 
-
-    // Analysis H1_tot
-    /*TCanvas* canvas2 = new TCanvas("c2_tot_fit", "timeOverThreshold (ns); timeOverThreshold (ns); count");
-    H1_tot->Draw();
-    TF1* func = new TF1("fit_bw_dist", &breitwigner_pdf, 0, 750, 3);
-    //TF1* func = new TF1("fit_bw_dist", [&](double*x, double *p){ return p[0]*ROOT::Math::breitwigner_pdf(x[0], p[1], p[2]); }, 0, 750, 3);
-    func->SetParameter(0, 18000);
-    func->SetParameter(1, 100);
-    func->SetParameter(2, 600);
-    H1_tot->Fit("fit_bw_dist", "R");*/
-    // end H1_tot analysis
-    
+    // <<<<<<<<<<<<<< end process H2_deltaTime_adc
 
     printf("nevents    : %ld \n", nevents);
-    // output
-    //const char * output = "./real_data.root";
-    const char * output = "./new_simu_data.root";
-    //const char * output = "./real_track_data_after_cuts.root";
-    TFile *f = new TFile(output, "RECREATE");
+    canvas1->Write("c1_deltaTime_adc");
+    H1_t0->Write("t0");
     H1_time->Write("leadingEdgeTime");
+    H1_dt0->Write("dt0");
     H1_timeMax->Write("timeMax");
     H1_deltaTime->Write("deltaTime");
-    H1_sigmaTime->Write("sigmaTime");
     H2_times->Write("timeMax_vs_leadingEdgeTime");
     H1_adc->Write("amplitude");
     H1_tot->Write("timeOverThreshold");
     H2_amp_tot->Write("amplitude_timeOverTheshold");
     H1_wfType->Write("wfType");
     H2_deltaTime_adc->Write("deltaTime_adc");
-    canvas1->Write("c1_deltaTime_adc");
-    //canvas2->Write("tot_fit");
     f->Close();
     printf("File created : %s\n", output);
 
