@@ -19,6 +19,7 @@
 #include <functional>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 
 #include "TString.h"
 #include "TCanvas.h"
@@ -2347,8 +2348,13 @@ void Window::restart_histograms() {
 /** Main function */
 int main (int argc, char * argv[]) {
 	std::cout << "Start GUi..." << std::endl;
+    
+    std::time_t t = std::time(nullptr);
+    long long t_int = static_cast<long long>(t);
+    std::string name = std::string("org.gtkmm.example.amon.time") + std::to_string(t_int);
 
-	auto app = Gtk::Application::create("org.gtkmm.example.amon");
+	auto app = Gtk::Application::create(name.c_str());
+	//auto app = Gtk::Application::create("org.gtkmm.example.amon");
 
 	return app->make_window_and_run<Window>(argc, argv);
 }
