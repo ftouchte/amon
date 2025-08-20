@@ -45,8 +45,8 @@ all: simu elastics test
 test: test.o AhdcCCDB.o
 	$(CXX) -o test.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CLHEPLIBS) $(CCDBLIBS)
 
-simu: simu.o
-	$(CXX) -o simu.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+simu: simu.o AhdcCCDB.o
+	$(CXX) -o simu.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 elastics: elastics.o futils.o AhdcCCDB.o
 	$(CXX) -o elastics.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CLHEPLIBS) $(CCDBLIBS)
