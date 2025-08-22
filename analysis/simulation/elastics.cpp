@@ -1,25 +1,12 @@
 /***********************************************
- * Analysis of tracks	
+ * Example of elastics applied to
+ * simulation calibration
+ * 
+ * cf. https://ftouchte.github.io/alert/simulation/ahdc_wf_simulation.pdf
  *
  * @author Felix Touchte Codjo
  * @date May 21, 2025
  * ********************************************/
-
-/** Notes on the cuts
- * 0) requires at least one track, startTime > 0, one electron 
- * Exclude 
- * 1) electron -> vz < -25 and vz > 10
- * 2) track -> theta < 10 and theta > 170 
- *      - no number of hits == 2
- *      - always nhits from 4
- *      - always path at 0
- *      - vz for track always above 15 cm
- * 3) track -> |vz| > 15 cm
- *      - always nhits from 4
- *      - almost no longer path at 0
- * 4) track -> nhits >= 6
- * 5) W2 < 14 and W2 > 13.85
- */
 
 #include <cstdlib>
 #include <cstdio>
@@ -145,7 +132,7 @@ int main(int argc, char const *argv[]) {
     writer.getDictionary().addSchema(schemaAdc);
     writer.getDictionary().addSchema(schemaWf);
     writer.getDictionary().addSchema(schemaTrack);
-    const char * outputFile = "elastics_events5.hipo";
+    const char * outputFile = "elastics_events.hipo";
     if (std::filesystem::exists(outputFile)) {
         if (std::filesystem::remove(outputFile)) {
             printf("Remove file before processing : %s\n", outputFile);
@@ -340,13 +327,13 @@ int main(int argc, char const *argv[]) {
     //////////////////////////////////////////////////////
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400); 
     TH1D* H1_dt0 = new TH1D("dt0", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
-    TH1D* H1_dt00 = new TH1D("dt0_before_cuts", "leadingEdgeTime - t0 before cuts; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
+    //TH1D* H1_dt00 = new TH1D("dt0_before_cuts", "leadingEdgeTime - t0 before cuts; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
     TH1I* H1_nelastics = new TH1I("nelastics", "#(e/g, track) per event; ; count;", 10, 0, 10); 
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
     TH1D* H1_timeOverThreshold = new TH1D("tot_0", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
-    TH1D* H1_tot0 = new TH1D("tot_1", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
+    //TH1D* H1_tot0 = new TH1D("tot_1", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
@@ -770,12 +757,12 @@ int main(int argc, char const *argv[]) {
                         double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
                         int adc        = adcBank.getInt("ADC", hit_id);
                         // hit cut on time
-                        H1_dt00->Fill(time-obj.t0);
+                        //H1_dt00->Fill(time-obj.t0);
                         //printf("%lf ", time);
                         //if (time < 200) continue;
                         //if (time - obj.t0 < 25) continue;
                         //if ((time - obj.t0 < 50) || (time - obj.t0 > 250)) continue;
-                        H1_tot0->Fill(tot);
+                        //H1_tot0->Fill(tot);
                         //if ((tot < 400) || (tot > 600)) continue;
                         AdcId.push_back(hit_id+1); // restore the real id
                         H1_t0->Fill(obj.t0);
@@ -1258,11 +1245,11 @@ int main(int argc, char const *argv[]) {
     // signal processing 
     TDirectory* signals_dir = calibration_dir->mkdir("signals_from_selected_hits");
     signals_dir->cd();
-    H1_dt00->Write("dt0_0"); 
-    H1_dt0->Write("dt0_1"); 
-    H1_tot0->Write("tot_0"); 
-    H1_timeOverThreshold->Write("tot_1");
+    //H1_dt00->Write("dt0_0"); 
+    H1_dt0->Write("dt0"); 
+    //H1_tot0->Write("tot_0"); 
     H1_leadingEdgeTime->Write("leadindEdgeTime"); 
+    H1_timeOverThreshold->Write("timeOverThreshold");
     H1_timeMax->Write("timeMax");
     H1_t0->Write("t0_distribution"); 
     H1_deltaTime->Write("dt"); 

@@ -125,6 +125,7 @@ int main(int argc, char const *argv[]) {
     TGraphErrors* gr = new TGraphErrors(Npts);
     for (int i = 0; i < Npts; i++) {
         TH1D* H1_projTime = H2_deltaTime_adc->ProjectionX(TString::Format("_px_%d", i).Data(), i*proj_nbins, (i+1)*proj_nbins);
+        H1_projTime->Write(TString::Format("_px_%d", i).Data());
         double mean = H1_projTime->GetMean();
         double stdDev = H1_projTime->GetStdDev();
         printf(">   mean : %lf, stdDev : %lf\n", mean, stdDev);
@@ -147,14 +148,14 @@ int main(int argc, char const *argv[]) {
 
     printf("nevents    : %ld \n", nevents);
     canvas1->Write("c1_deltaTime_adc");
-    H1_t0->Write("t0");
-    H1_time->Write("leadingEdgeTime");
     H1_dt0->Write("dt0");
+    H1_time->Write("leadingEdgeTime");
+    H1_tot->Write("timeOverThreshold");
+    H1_t0->Write("t0");
     H1_timeMax->Write("timeMax");
     H1_deltaTime->Write("deltaTime");
     H2_times->Write("timeMax_vs_leadingEdgeTime");
     H1_adc->Write("amplitude");
-    H1_tot->Write("timeOverThreshold");
     H2_amp_tot->Write("amplitude_timeOverTheshold");
     H1_wfType->Write("wfType");
     H2_deltaTime_adc->Write("deltaTime_adc");
