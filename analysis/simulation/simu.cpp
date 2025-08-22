@@ -11,6 +11,7 @@
 
 #include <vector>
 #include <string>
+#include <chrono>
 
 #include "reader.h"
 
@@ -28,20 +29,21 @@
 #include "Math/PdfFuncMathCore.h"
 #include "TApplication.h"
 #include "TText.h"
+#include "THStack.h"
 
 #include "AhdcCCDB.h"
+#include "futils.h"
 
 // utilities
 void progressBar(int state, int bar_length = 100);
 // end utilities
 
-double breitwigner_pdf(double * x, double * par) {
-    return par[0]*ROOT::Math::breitwigner_pdf(x[0], par[1], par[2]);
-}
-
 int main(int argc, char const *argv[]) {
+    auto start = std::chrono::high_resolution_clock::now();
     // simu
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -52,6 +54,8 @@ int main(int argc, char const *argv[]) {
     hipo::bank  mcBank(factory.getSchema("MC::Particle"));
     hipo::event event;
     long unsigned int nevents =0;
+    long unsigned int nMCtracks =0;
+    long unsigned int nKFtracks =0;
     // Histograms
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
     TH1D* H1_dt0 = new TH1D("dt0", "#Delta t_0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
@@ -64,6 +68,19 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
     TH2D* H2_amp_tot = new TH2D("amp, tot", "amplitude vs timeOverThreshold;amp (adc); tot (ns)", 100, 0, 3700, 100, 150, 752); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
+    // Physics
+    TH1D* H1_track_p = new TH1D("track_p", "p; p (GeV); #count", 100, 500, 5000); 
+    TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (GeV); #count", 100, 500, 5000); 
+    TH1D* H1_track_theta = new TH1D("track_theta", "theta; theta (deg); #count", 100, 0, 181); 
+    TH1D* H1_track_phi = new TH1D("track_phi", "phi; phi (deg); #count", 100, 0, 361); 
+    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (deg); #count", 100, -15, 15); 
+    TH1D* H1_mc_p = new TH1D("mc_p", "p; p (GeV); #count", 100, 230, 270); 
+    TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (GeV); #count", 100, 230, 270); 
+    TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.38, 87.24); 
+    TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
+    TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (deg); #count", 100, -6, 0); 
+    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -20, 16); 
+    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -40, 10); 
 
     AhdcCCDB ahdcConstants;
     // Loop over events
@@ -79,7 +96,10 @@ int main(int argc, char const *argv[]) {
         event.getStructure(trackBank);
         event.getStructure(hitBank);
         event.getStructure(mcBank);
-        
+
+        nMCtracks += mcBank.getRows();
+        nKFtracks += trackBank.getRows();
+
         // Loop over waveforms
         for (int i = 0; i < adcBank.getRows(); i++) {
             double sector    = adcBank.getInt("sector", i);
@@ -104,12 +124,58 @@ int main(int argc, char const *argv[]) {
             H1_adc->Fill(adc);
             H2_deltaTime_adc->Fill(timeMax-time, adc);
         }
-        // end Loop over waveforms
+        // AHDC::kftrack
+        // p, pT are already in MeV
+        // vz in mm to be converted in cm
+        if (trackBank.getRows() > 0) {
+            double track_px = trackBank.getFloat("px", 0);
+            double track_py = trackBank.getFloat("py", 0);
+            double track_pz = trackBank.getFloat("pz", 0);
+            double track_vz = trackBank.getFloat("z", 0)*0.1; 
+            double track_p, track_theta, track_phi;
+            double track_pT;
+            futils::cart2polar(track_px, track_py, track_pz, track_p, track_theta, track_phi);
+            track_pT = sqrt(pow(track_px,2.0) + pow(track_py, 2.0));
+            track_theta = track_theta*180/M_PI;
+            track_phi = track_phi*180/M_PI;
+            H1_track_p->Fill(track_p); 
+            H1_track_pT->Fill(track_pT);
+            H1_track_theta->Fill(track_theta);
+            H1_track_phi->Fill(track_phi);
+            H1_track_vz->Fill(track_vz);
+            // MC::Particle or AHDC::mc
+            // p, pT to be converted in MeV
+            // vz already in cm
+            double mc_px = 1000*mcBank.getFloat("px", 0);
+            double mc_py = 1000*mcBank.getFloat("py", 0);
+            double mc_pz = 1000*mcBank.getFloat("pz", 0);
+            double mc_vz = mcBank.getFloat("vz", 0); 
+            double mc_p, mc_theta, mc_phi;
+            double mc_pT;
+            futils::cart2polar(mc_px, mc_py, mc_pz, mc_p, mc_theta, mc_phi);
+            mc_pT = sqrt(pow(mc_px,2.0) + pow(mc_py, 2.0));
+            mc_theta = mc_theta*180/M_PI;
+            mc_phi = mc_phi*180/M_PI;
+            H1_mc_p->Fill(mc_p); 
+            H1_mc_pT->Fill(mc_pT);
+            H1_mc_theta->Fill(mc_theta);
+            H1_mc_phi->Fill(mc_phi);
+            H1_mc_vz->Fill(mc_vz);
+            // Correlation
+            H1_delta_vz->Fill(mc_vz - track_vz);
+            H1_delta_phi->Fill(mc_phi - track_phi);
+        }
     }
+    
+    printf("nevents    : %ld \n", nevents);
+    printf("nMCtrack    : %ld \n", nMCtracks);
+    printf("nKFtrack    : %ld \n", nKFtracks);
     // output
     const char * output = "./output/new_simu_data.root";
     TFile *f = new TFile(output, "RECREATE");
     
+    TDirectory *time_study = f->mkdir("time_study");
+    time_study->cd();
 // >>>>>>>>>   Process H2_deltaTime_adc
     TCanvas* canvas1 = new TCanvas("c1_deltaTime_amplitude", "deltaTime vs amplitude; timeMax - leadingedgeTime (ns); amplitude (adc)");
     canvas1->SetLogz();
@@ -144,9 +210,7 @@ int main(int argc, char const *argv[]) {
     //legend->SetHeader("deltaTime projection","C");
     legend->AddEntry(gr, "deltaTime projection");
     legend->Draw();
-    // <<<<<<<<<<<<<< end process H2_deltaTime_adc
-
-    printf("nevents    : %ld \n", nevents);
+// <<<<<<<<<<<<<< end process H2_deltaTime_adc
     canvas1->Write("c1_deltaTime_adc");
     H1_dt0->Write("dt0");
     H1_time->Write("leadingEdgeTime");
@@ -159,34 +223,64 @@ int main(int argc, char const *argv[]) {
     H2_amp_tot->Write("amplitude_timeOverTheshold");
     H1_wfType->Write("wfType");
     H2_deltaTime_adc->Write("deltaTime_adc");
+
+    // others
+    TDirectory *track_study = f->mkdir("track_study");
+    track_study->cd();
+    H1_track_p->Write("track_p");
+    H1_track_pT->Write("track_pT");
+    H1_track_theta->Write("track_theta");
+    H1_track_phi->Write("track_phi");
+    H1_track_vz->Write("track_vz");
+    H1_mc_p->Write("mc_p");
+    H1_mc_pT->Write("mc_pT");
+    H1_mc_theta->Write("mc_theta");
+    H1_mc_phi->Write("mc_phi");
+    H1_mc_vz->Write("mc_vz");
+// >>>>>>>>>   Compare track and simu
+    TCanvas* canvas2 = new TCanvas("c1_track_study", "Simulation vs Reconstruction");
+    canvas2->Divide(3,2);
+    canvas2->cd(1);
+    THStack* stack1 = new THStack("stack_p", "#bf{p} #color[4]{Reconstruction} vs #color[2]{Simulation}; p (GeV)");
+    stack1->Add(H1_track_p);
+    H1_mc_p->SetLineColor(kRed);
+    stack1->Add(H1_mc_p);
+    stack1->Draw("nostack");
+    canvas2->cd(2);
+    THStack* stack2 = new THStack("stack_pT", "#bf{pT} #color[4]{Reconstruction} vs #color[2]{Simulation}; pT (GeV)");
+    stack2->Add(H1_track_pT);
+    H1_mc_pT->SetLineColor(kRed);
+    stack2->Add(H1_mc_pT);
+    stack2->Draw("nostack");
+    canvas2->cd(3);
+    THStack* stack3 = new THStack("stack_theta", "#bf{theta} #color[4]{Reconstruction} vs #color[2]{Simulation}; theta (deg)");
+    stack3->Add(H1_track_theta);
+    H1_mc_theta->SetLineColor(kRed);
+    stack3->Add(H1_mc_theta);
+    stack3->Draw("nostack");
+    canvas2->cd(4);
+    THStack* stack4 = new THStack("stack_phi", "#bf{phi} #color[4]{Reconstruction} vs #color[2]{Simulation}; phi (deg)");
+    stack4->Add(H1_track_phi);
+    H1_mc_phi->SetLineColor(kRed);
+    stack4->Add(H1_mc_phi);
+    stack4->Draw("nostack");
+    canvas2->cd(5);
+    THStack* stack5 = new THStack("stack_vz", "#bf{vz} #color[4]{Reconstruction} vs #color[2]{Simulation}; vz (cm)");
+    stack5->Add(H1_track_vz);
+    H1_mc_vz->SetLineColor(kRed);
+    stack5->Add(H1_mc_vz);
+    stack5->Draw("nostack");
+    canvas2->Write("Side_by_side_comparaison");
+// <<<<<<<<<<<<<< Compare track and simu
+    H1_delta_vz->Write("delta_vz");
+    H1_delta_phi->Write("delta_phi");
+
     f->Close();
     printf("File created : %s\n", output);
 
-    ///////////////////////////////
-    // Test
-    ///////////////////////////////
-    /*TApplication app("ROOT App", nullptr, nullptr);
-    TCanvas* canvas3 = new TCanvas("c3_landau", "Landau standard; time; count");
-    TF1* f1 = new TF1("f1", [&](double*x, double *p){ return ROOT::Math::landau_pdf(x[0]); }, -5, 15, 0);
-    f1->Draw();
-    TF1 *f2 = new TF1("f2", "[0]", -5, 15);
-    double L_max = f1->GetMaximum(-5, 15);
-    f2->SetParameter(0, 0.5*L_max);
-    printf("L_max : %lf\n", L_max);
-    double t_max = f1->GetMaximumX();
-    double t1 = f1->GetX(0.5*L_max,-5, t_max);
-    double t2 = f1->GetX(0.5*L_max, t_max, 15);
-    printf("t_max : %lf\n", t_max);
-    printf("   t1 : %lf\n", t1);
-    printf("   t2 : %lf\n", t2);
-    printf("t2-t1 : %lf\n", t2-t1);
-    printf("t_max-t1 : %lf\n", t_max-t1);
-    f2->SetLineColor(kBlue);
-    f2->Draw("same l");
-    canvas3->Update();
-    app.Run();*/
-	
-
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration<double>(end - start);
+    printf("* time elapsed : %lf seconds\n", elapsed.count());
     return 0;
 }
 
