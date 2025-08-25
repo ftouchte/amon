@@ -50,6 +50,7 @@ int main(int argc, char const *argv[]) {
     hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
     hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
     hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+    //hipo::bank  trackBank(factory.getSchema("AHDC::track"));
     hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
     hipo::bank  mcBank(factory.getSchema("MC::Particle"));
     hipo::event event;
@@ -58,7 +59,7 @@ int main(int argc, char const *argv[]) {
     long unsigned int nKFtracks =0;
     // Histograms
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
-    TH1D* H1_dt0 = new TH1D("dt0", "#Delta t_0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
+    TH1D* H1_dt0 = new TH1D("dt0", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
     TH1D* H1_time = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
@@ -66,21 +67,34 @@ int main(int argc, char const *argv[]) {
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
-    TH2D* H2_amp_tot = new TH2D("amp, tot", "amplitude vs timeOverThreshold;amp (adc); tot (ns)", 100, 0, 3700, 100, 150, 752); 
-    TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
+    TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 350, 650, 100, 0, 3000); 
+    TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "timeMax - leadingEdgeTime vs amplitude;timeMax - leadingEdgeTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
     // Physics
-    TH1D* H1_track_p = new TH1D("track_p", "p; p (GeV); #count", 100, 500, 5000); 
-    TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (GeV); #count", 100, 500, 5000); 
+    TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 5000); 
+    TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 5000); 
+    //TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 100, 2000); 
+    //TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 100, 2000); 
     TH1D* H1_track_theta = new TH1D("track_theta", "theta; theta (deg); #count", 100, 0, 181); 
     TH1D* H1_track_phi = new TH1D("track_phi", "phi; phi (deg); #count", 100, 0, 361); 
-    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (deg); #count", 100, -15, 15); 
-    TH1D* H1_mc_p = new TH1D("mc_p", "p; p (GeV); #count", 100, 230, 270); 
-    TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (GeV); #count", 100, 230, 270); 
+    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -15, 15); 
+    //TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -50, 15); 
+    TH1D* H1_track_sum_adc = new TH1D("track_sum_adc", "#Sigma adc; #Sigma adc; #count", 100, 0, 5000); 
+    TH1D* H1_track_res = new TH1D("track_res", "residuals/nhits; residuals/nhits (mm); #count", 100, -100, 1); 
+    TH1D* H1_track_chi2 = new TH1D("track_chi2", "chi2ndf; chi2ndf (mm^{2}); #count", 100, 0, 10000); 
+    TH1I* H1_track_nhits = new TH1I("track_nhits", "nhits; nhits; #count", 9, 5, 14); 
+    TH1D* H1_hit_doca = new TH1D("hit_doca", "hit distance; distance (mm); #count", 100, 0, 2.5); 
+    TH1D* H1_mc_doca = new TH1D("mc_doca", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
+    TH1D* H1_mc_p = new TH1D("mc_p", "p; p (MeV); #count", 100, 230, 270); 
+    TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (MeV); #count", 100, 230, 270); 
     TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.38, 87.24); 
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
     TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (deg); #count", 100, -6, 0); 
     TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -20, 16); 
     TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -40, 10); 
+    TH2D* H2_pT_amp = new TH2D("corr_pT_amp", "#Sigma_{track} adc vs pT_{mc}; pT_{mc} (MeV); #Sigma_{track} adc", 100, 230, 270, 100, 0, 5000); 
+    TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
+    TH2D* H2_corr_doca = new TH2D("corr_doca", "D_{track} vs D_{mc}; D_{mc} (mm); D_{track} (mm)", 100, 0, 4, 100, 0, 4);
+
 
     AhdcCCDB ahdcConstants;
     // Loop over events
@@ -112,7 +126,7 @@ int main(int argc, char const *argv[]) {
             double tot = adcBank.getFloat("timeOverThreshold", i);
             int wfType = adcBank.getInt("wfType", i);
             int adc = adcBank.getInt("ADC", i);
-            H2_amp_tot->Fill(adc, tot);
+            H2_tot_amp->Fill(tot, adc);
             H1_time->Fill(time);
             H1_t0->Fill(t0);
             H1_dt0->Fill(time - t0);
@@ -143,6 +157,22 @@ int main(int argc, char const *argv[]) {
             H1_track_theta->Fill(track_theta);
             H1_track_phi->Fill(track_phi);
             H1_track_vz->Fill(track_vz);
+            int nhits = trackBank.getInt("n_hits", 0);
+            double res = trackBank.getFloat("sum_residuals", 0);
+            double chi2 = trackBank.getFloat("chi2", 0);
+            H1_track_nhits->Fill(nhits);
+            H1_track_res->Fill(res/nhits);
+            H1_track_chi2->Fill(chi2/nhits);
+            // for the simu, we know that we have only one track, a rapid hipo-utils...
+            for (int hit_row = 0; hit_row < hitBank.getRows(); hit_row++) {
+                double hit_doca = hitBank.getDouble("doca", hit_row);
+                double hit_time = hitBank.getDouble("time", hit_row);
+                //if (track_doca < 0) {printf("%lf ", track_doca);}
+                H1_hit_doca->Fill(hit_doca);
+                double mc_doca = -0.25 + 0.12*sqrt(hit_time) + 0.2767*pow(hit_time, 1.0/3);
+                H1_mc_doca->Fill(mc_doca);
+                H2_corr_doca->Fill(mc_doca, hit_doca);
+            }
             // MC::Particle or AHDC::mc
             // p, pT to be converted in MeV
             // vz already in cm
@@ -164,6 +194,9 @@ int main(int argc, char const *argv[]) {
             // Correlation
             H1_delta_vz->Fill(mc_vz - track_vz);
             H1_delta_phi->Fill(mc_phi - track_phi);
+            H2_pT_amp->Fill(mc_pT, trackBank.getInt("sum_adc", 0));
+            H1_track_sum_adc->Fill(trackBank.getInt("sum_adc", 0));
+            H2_corr_phi->Fill(mc_phi, track_phi);
         }
     }
     
@@ -191,7 +224,7 @@ int main(int argc, char const *argv[]) {
     TGraphErrors* gr = new TGraphErrors(Npts);
     for (int i = 0; i < Npts; i++) {
         TH1D* H1_projTime = H2_deltaTime_adc->ProjectionX(TString::Format("_px_%d", i).Data(), i*proj_nbins, (i+1)*proj_nbins);
-        H1_projTime->Write(TString::Format("_px_%d", i).Data());
+        //H1_projTime->Write(TString::Format("_px_%d", i).Data());
         double mean = H1_projTime->GetMean();
         double stdDev = H1_projTime->GetStdDev();
         printf(">   mean : %lf, stdDev : %lf\n", mean, stdDev);
@@ -217,12 +250,12 @@ int main(int argc, char const *argv[]) {
     H1_tot->Write("timeOverThreshold");
     H1_t0->Write("t0");
     H1_timeMax->Write("timeMax");
-    H1_deltaTime->Write("deltaTime");
-    H2_times->Write("timeMax_vs_leadingEdgeTime");
+    H1_deltaTime->Write("dt");
+    H2_times->Write("corr_timeMax_leadingEdgeTime");
     H1_adc->Write("amplitude");
-    H2_amp_tot->Write("amplitude_timeOverTheshold");
+    H2_tot_amp->Write("corr_tot_amp");
     H1_wfType->Write("wfType");
-    H2_deltaTime_adc->Write("deltaTime_adc");
+    H2_deltaTime_adc->Write("corr_dt_amp");
 
     // others
     TDirectory *track_study = f->mkdir("track_study");
@@ -232,6 +265,12 @@ int main(int argc, char const *argv[]) {
     H1_track_theta->Write("track_theta");
     H1_track_phi->Write("track_phi");
     H1_track_vz->Write("track_vz");
+    H1_track_nhits->Write("nhits");
+    H1_track_res->Write("residuals");
+    H1_track_chi2->Write("chi2ndf");
+    H1_hit_doca->Write("recon_hit_doca");
+    H1_mc_doca->Write("recon_mc_doca");
+    H2_corr_doca->Write("corr_doca");
     H1_mc_p->Write("mc_p");
     H1_mc_pT->Write("mc_pT");
     H1_mc_theta->Write("mc_theta");
@@ -241,13 +280,13 @@ int main(int argc, char const *argv[]) {
     TCanvas* canvas2 = new TCanvas("c1_track_study", "Simulation vs Reconstruction");
     canvas2->Divide(3,2);
     canvas2->cd(1);
-    THStack* stack1 = new THStack("stack_p", "#bf{p} #color[4]{Reconstruction} vs #color[2]{Simulation}; p (GeV)");
+    THStack* stack1 = new THStack("stack_p", "#bf{p} #color[4]{Reconstruction} vs #color[2]{Simulation}; p (MeV)");
     stack1->Add(H1_track_p);
     H1_mc_p->SetLineColor(kRed);
     stack1->Add(H1_mc_p);
     stack1->Draw("nostack");
     canvas2->cd(2);
-    THStack* stack2 = new THStack("stack_pT", "#bf{pT} #color[4]{Reconstruction} vs #color[2]{Simulation}; pT (GeV)");
+    THStack* stack2 = new THStack("stack_pT", "#bf{pT} #color[4]{Reconstruction} vs #color[2]{Simulation}; pT (MeV)");
     stack2->Add(H1_track_pT);
     H1_mc_pT->SetLineColor(kRed);
     stack2->Add(H1_mc_pT);
@@ -274,6 +313,9 @@ int main(int argc, char const *argv[]) {
 // <<<<<<<<<<<<<< Compare track and simu
     H1_delta_vz->Write("delta_vz");
     H1_delta_phi->Write("delta_phi");
+    H2_pT_amp->Write("corr_pT_ADC");
+    H1_track_sum_adc->Write("track_sum_adc");
+    H2_corr_phi->Write("corr_phi");
 
     f->Close();
     printf("File created : %s\n", output);

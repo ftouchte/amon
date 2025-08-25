@@ -119,6 +119,29 @@ int main(int argc, char const *argv[]) {
     printf("///////////////////////////////\n");
 
     canvas3->Update();
+///////////////////////////////////////
+/// Doca 
+//////////////////////////////////////
+    
+    TCanvas* canvas4 = new TCanvas("c4_doca", "Doca from simu");
+    TF1* f4 = new TF1("f4", "7*x + 7*x*x + 4*x*x*x", 0, 3);
+    f4->Draw();
+    canvas4->Update();
+    
+    TCanvas* canvas5 = new TCanvas("c5_inv_doca", "Doca from simu");
+    int Npts4 = 100;
+    TGraph* gr4 = new TGraph(Npts4);
+    for (int i = 0; i < Npts4; i++) {
+        double x = i*3.0/Npts4;
+        gr4->SetPoint(i, f4->Eval(x), x);
+    }
+    gr4->SetLineColor(kBlue);
+    gr4->Draw("APL");
+    TF1* f5 = new TF1("f5", [&](double*x, double *p){ return p[0] + p[1]*sqrt(x[0]) + p[2]*pow(x[0], 1.0/3); }, 0, 200, 3);
+    gr4->Fit("f5");
+    canvas5->Update();
+
+
     app.Run();
 	
 
