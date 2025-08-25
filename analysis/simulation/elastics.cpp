@@ -337,7 +337,7 @@ int main(int argc, char const *argv[]) {
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
-    TH2D* H2_amp_tot = new TH2D("amp, tot", "amplitude vs timeOverThreshold;amp (adc); tot (ns)", 100, 0, 3700, 100, 150, 752); 
+    TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 340, 610, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
     TH1D* H1_elastic_track_p = new TH1D("elastic_track_p", "p (GeV)", 100, 0.2, 1.6); 
     TH1D* H1_elastic_track_pT = new TH1D("elastic_track_pT", "pT (GeV)", 100, 0, 1); 
@@ -773,7 +773,7 @@ int main(int argc, char const *argv[]) {
                         H1_timeOverThreshold->Fill(tot);
                         H1_amplitude->Fill(adc); 
                         H2_times->Fill(timeMax, time);
-                        H2_amp_tot->Fill(adc, tot);
+                        H2_tot_amp->Fill(tot, adc);
                         H2_deltaTime_adc->Fill(timeMax-time, adc); 
                     }
                 }
@@ -1256,7 +1256,7 @@ int main(int argc, char const *argv[]) {
     H1_amplitude->Write("amplitude"); 
     H1_wfType->Write("wfType");
     H2_times->Write("corr_timeMax_leadingEdgeTime");
-    H2_amp_tot->Write("corr_amplitude_tot");
+    H2_tot_amp->Write("corr_tot_amp");
     H2_deltaTime_adc->Write("corr_dt_amp");
     // >>>>>>>>>   Process H2_deltaTime_adc
     TCanvas* canvas1 = new TCanvas("c1_deltaTime_amplitude", "deltaTime vs amplitude; timeMax - leadingedgeTime (ns); amplitude (adc)");
