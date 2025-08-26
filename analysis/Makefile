@@ -15,6 +15,8 @@ HIPOLIBS    := -L$(PATH2HIPO)/lib -lhipo4
 LZ4LIBS     := -L$(PATH2HIPO)/lz4/lib -llz4
 LZ4INCLUDES := -I$(PATH2HIPO)/lz4/lib
 
+CCDBLIBS = -L$(CCDB_HOME)/cpp/install/lib -lccdb
+CCDBFLAGS = -I$(CCDB_HOME)/cpp/install/include
 
 # ROOT libraries 
 ROOTLIBS = $(shell root-config --libs)
@@ -35,10 +37,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: hist1d empty_hv_sector 
+all: hist1d empty_hv_sector timestamp 
 
-timestamp: timestamp.o
-	$(CXX) -o timestamp.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+timestamp: timestamp.o AhdcCCDB.o
+	$(CXX) -o timestamp.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 track: track.o futils.o
 	$(CXX) -o track.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
@@ -67,6 +69,6 @@ clean:
 	@rm -rf *.o *~ *.exe example*hipo ./output/*.pdf
 
 %.o: %.cpp
-	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) 
+	$(CXX) -c $< -O2 $(CXXFLAGS) $(HIPOCFLAGS) $(LZ4INCLUDES) $(ROOTCFLAGS) $(GTKFLAGS) $(CAIROFLAGS) $(CCDBFLAGS)
 	
 
