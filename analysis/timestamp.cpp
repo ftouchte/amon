@@ -15,7 +15,7 @@
 
 #include "reader.h"
 #include "futils.h"
-#include "timeOffsets.h"
+#include "AhdcCCDB.h"
 
 #include "TH1.h"
 #include "TH2.h"
@@ -28,7 +28,7 @@ double fineTimestampCorrection(long timestamp, double dream_clock, bool verbose 
 	long long fineTimestamp = timestamp & 0x00000007;
 	if (verbose) {
 		printf("timestamp       : %ld\n", timestamp);
-		printf("fineTimestamp   : %d\n", fineTimestamp);
+		printf("fineTimestamp   : %lld\n", fineTimestamp);
 		printf("timeCorrection  : %lf\n", (fineTimestamp + 0.5)*dream_clock);
 	}
 	return (fineTimestamp + 0.5)*dream_clock;
@@ -54,7 +54,8 @@ int main(int argc, char const *argv[]) {
 		TH1D* H1_triggerTime	 = new TH1D("triggerTime", "triggerTime (ns)", 100, 0, 200); 
 		TH1D* H1_timeCorrected   = new TH1D("timeCorrected", "timeCorrected (ns)", 100, -180, 400); 
 		TGraph* gr_nevent   = new TGraph(); 
-		
+	    
+        AhdcCCDB ahdcc;
 		// Loop over events
 		while( reader.next()){
 			nevents++;
@@ -88,13 +89,7 @@ int main(int argc, char const *argv[]) {
 				int sector    = adcBank.getInt("sector", i);
 				int layer     = adcBank.getInt("layer", i);
 				int component = adcBank.getInt("component", i);
-				double t0 = -9999; // fancy value
-				for (int row = 0; row < timeOffsets::entries; row++) {
-					if ((sector == 1) && (layer == timeOffsets::layer.at(row)) && (component == timeOffsets::component.at(row))) {
-						t0 = timeOffsets::t0.at(row);
-						break;
-					}
-				}
+				double t0 = ahdcc.get_t0(sector, layer, component).t0;
 
 				double leadingEdgeTime  = adcBank.getFloat("leadingEdgeTime",i);
 				long   timestamp 	= wfBank.getLong("timestamp",i);
@@ -103,7 +98,7 @@ int main(int argc, char const *argv[]) {
 				// Raw hit cuts
 				double time = leadingEdgeTime - t0;
 				double tot  = adcBank.getFloat("timeOverThreshold",i);
-				double ped  = adcBank.getInt("ped",i);
+				double ped  = adcBank.getFloat("ped",i);
 				double adc  = adcBank.getInt("ADC",i);
 				if ((time >= 0) && (time <= 300) && (tot >= 300) && (tot <= 600) && (ped >= 180) && (ped <= 360) && (adc >= 0) && (adc <= 4095)) {
 					H1_leadingEdgeTime->Fill(leadingEdgeTime);
