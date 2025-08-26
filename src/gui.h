@@ -86,7 +86,8 @@ protected :
 	Gtk::Scale Scale_cut_timeOverThreshold_min, Scale_cut_timeOverThreshold_max;
 	Gtk::Scale Scale_cut_timeMax_min, Scale_cut_timeMax_max;
 	Gtk::Scale Scale_zpos;
-	Gtk::CheckButton CheckButton_mask_wires; // only show or not wires that satisfy all cuts
+	Gtk::CheckButton CheckButton_apply_wfType_cuts; 
+	Gtk::CheckButton CheckButton_apply_raw_cuts; 
 	Gtk::CheckButton CheckButton_wfType_0; 
 	Gtk::CheckButton CheckButton_wfType_1; 
 	Gtk::CheckButton CheckButton_wfType_2; 
@@ -120,7 +121,8 @@ protected :
 	double cut_timeOverThreshold_max = 950;
 	double cut_timeMax_min = 0;
 	double cut_timeMax_max = 950;
-	bool flag_mask_wires = false;
+	bool flag_apply_wfType_cuts = false;
+	bool flag_apply_raw_cuts = false;
 	bool flag_wfType_0 = false;
 	bool flag_wfType_1 = false;
 	bool flag_wfType_2 = false;
