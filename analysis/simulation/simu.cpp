@@ -42,8 +42,9 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     // simu
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output2.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -70,30 +71,32 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 350, 650, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "timeMax - leadingEdgeTime vs amplitude;timeMax - leadingEdgeTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
     // Physics
-    TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 5000); 
-    TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 5000); 
+    TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 2000); 
+    TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 2000); 
     //TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 100, 2000); 
     //TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 100, 2000); 
     TH1D* H1_track_theta = new TH1D("track_theta", "theta; theta (deg); #count", 100, 0, 181); 
     TH1D* H1_track_phi = new TH1D("track_phi", "phi; phi (deg); #count", 100, 0, 361); 
-    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -15, 15); 
+    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -30, 30); 
     //TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -50, 15); 
     TH1D* H1_track_sum_adc = new TH1D("track_sum_adc", "#Sigma adc; #Sigma adc; #count", 100, 0, 5000); 
-    TH1D* H1_track_res = new TH1D("track_res", "residuals/nhits; residuals/nhits (mm); #count", 100, -100, 1); 
-    TH1D* H1_track_chi2 = new TH1D("track_chi2", "chi2ndf; chi2ndf (mm^{2}); #count", 100, 0, 10000); 
+    TH1D* H1_track_res = new TH1D("track_res", "residuals/nhits; residuals/nhits (mm); #count", 100, -1.5, 1); 
+    TH2D* H2_track_res_distance = new TH2D("track_res_vs_dist", "residuals vs distance; distance (mm); residuals/nhits (mm)", 100, 0, 4, 100, -1.5, 1); 
+    TH1D* H1_track_chi2 = new TH1D("track_chi2", "chi2ndf; chi2ndf (mm^{2}); #count", 100, 0, 8); 
     TH1I* H1_track_nhits = new TH1I("track_nhits", "nhits; nhits; #count", 9, 5, 14); 
-    TH1D* H1_hit_doca = new TH1D("hit_doca", "hit distance; distance (mm); #count", 100, 0, 2.5); 
-    TH1D* H1_mc_doca = new TH1D("mc_doca", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
+    TH1D* H1_hit_distance = new TH1D("hit_distance", "hit distance; distance (mm); #count", 100, 0, 4); 
+    TH1D* H1_mc_distance = new TH1D("mc_distance", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
+    TH1I* H1_wfType_bad_distance = new TH1I("wfType_bad_type", "wfType; count;", 6, 0, 6); 
     TH1D* H1_mc_p = new TH1D("mc_p", "p; p (MeV); #count", 100, 230, 270); 
     TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (MeV); #count", 100, 230, 270); 
     TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.38, 87.24); 
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
-    TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (deg); #count", 100, -6, 0); 
+    TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (cm); #count", 100, -16, 16); 
     TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -20, 16); 
     TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -40, 10); 
     TH2D* H2_pT_amp = new TH2D("corr_pT_amp", "#Sigma_{track} adc vs pT_{mc}; pT_{mc} (MeV); #Sigma_{track} adc", 100, 230, 270, 100, 0, 5000); 
     TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
-    TH2D* H2_corr_doca = new TH2D("corr_doca", "D_{track} vs D_{mc}; D_{mc} (mm); D_{track} (mm)", 100, 0, 4, 100, 0, 4);
+    TH2D* H2_corr_distance = new TH2D("corr_distance", "D_{track} vs D_{mc}; D_{mc} (mm); D_{track} (mm)", 100, 0, 4, 100, 0, 4);
 
 
     AhdcCCDB ahdcConstants;
@@ -126,6 +129,7 @@ int main(int argc, char const *argv[]) {
             double tot = adcBank.getFloat("timeOverThreshold", i);
             int wfType = adcBank.getInt("wfType", i);
             int adc = adcBank.getInt("ADC", i);
+            //if (wfType == 5) { printf("%d -> %lf ", wfType, time - t0);}
             H2_tot_amp->Fill(tot, adc);
             H1_time->Fill(time);
             H1_t0->Fill(t0);
@@ -165,13 +169,18 @@ int main(int argc, char const *argv[]) {
             H1_track_chi2->Fill(chi2/nhits);
             // for the simu, we know that we have only one track, a rapid hipo-utils...
             for (int hit_row = 0; hit_row < hitBank.getRows(); hit_row++) {
-                double hit_doca = hitBank.getDouble("doca", hit_row);
+                double hit_distance = hitBank.getDouble("doca", hit_row);
                 double hit_time = hitBank.getDouble("time", hit_row);
-                //if (track_doca < 0) {printf("%lf ", track_doca);}
-                H1_hit_doca->Fill(hit_doca);
-                double mc_doca = -0.25 + 0.12*sqrt(hit_time) + 0.2767*pow(hit_time, 1.0/3);
-                H1_mc_doca->Fill(mc_doca);
-                H2_corr_doca->Fill(mc_doca, hit_doca);
+                int wfType = adcBank.getInt("wfType", hitBank.getInt("id", hit_row) - 1);
+                if (hit_distance < 0) {
+                    //printf("%d --> %lf ", wfType, hit_distance);
+                    H1_wfType_bad_distance->Fill(wfType);
+                }
+                H1_hit_distance->Fill(hit_time < 0 ? 0 : hit_distance);
+                double mc_distance = (hit_time < 0) ? 0 : -0.0497 -0.00667*hit_time + 0.389*sqrt(hit_time) - 0.189*pow(hit_time, 1.0/3);
+                H1_mc_distance->Fill(mc_distance);
+                H2_corr_distance->Fill(mc_distance, hit_distance);
+                H2_track_res_distance->Fill(hit_distance, res/nhits);
             }
             // MC::Particle or AHDC::mc
             // p, pT to be converted in MeV
@@ -268,9 +277,11 @@ int main(int argc, char const *argv[]) {
     H1_track_nhits->Write("nhits");
     H1_track_res->Write("residuals");
     H1_track_chi2->Write("chi2ndf");
-    H1_hit_doca->Write("recon_hit_doca");
-    H1_mc_doca->Write("recon_mc_doca");
-    H2_corr_doca->Write("corr_doca");
+    H1_hit_distance->Write("recon_hit_distance");
+    H1_mc_distance->Write("recon_mc_distance");
+    H2_corr_distance->Write("corr_distance");
+    H2_track_res_distance->Write("corr_residuals_distance");
+    H1_wfType_bad_distance->Write("wfType_bad_distance");
     H1_mc_p->Write("mc_p");
     H1_mc_pT->Write("mc_pT");
     H1_mc_theta->Write("mc_theta");
