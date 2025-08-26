@@ -340,28 +340,30 @@ void Window::on_button_settings_clicked(){
 	auto HBox_Scale_cut_timeOverThreshold_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_timeMax_min = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_Scale_cut_timeMax_max = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
-	auto HBox_CheckButton_mask_wires = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	//auto HBox_CheckButton_mask_wires = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_CheckButton_apply_wfType_cuts = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
+	auto HBox_CheckButton_apply_raw_cuts = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	auto HBox_CheckButton_wfTypes = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::HORIZONTAL,10);
 	// Window for settings
 	Window_settings->set_title("Settings");
 	Window_settings->set_default_size(500,300);
 	Window_settings->set_child(*VBox_settings);
 	// A lot of CheckButton(s)
-	VBox_settings->append(*HBox_CheckButton_mask_wires);
-	HBox_CheckButton_mask_wires->set_halign(Gtk::Align::CENTER);
-	HBox_CheckButton_mask_wires->set_margin_top(10);
-	HBox_CheckButton_mask_wires->set_margin_start(10);
-	HBox_CheckButton_mask_wires->set_margin_bottom(10);
-	auto Label_mask_wires = Gtk::make_managed<Gtk::Label>();
-    Label_mask_wires->set_markup("<span foreground='red'> <b> Apply these cuts (yes/no) </b> </span>");
-	HBox_CheckButton_mask_wires->append(*Label_mask_wires);
-	HBox_CheckButton_mask_wires->append(CheckButton_mask_wires);
-	CheckButton_mask_wires.signal_toggled().connect([this] () -> void {
-				flag_mask_wires = this->CheckButton_mask_wires.get_active();
-                printf("Mask wire : %s\n", flag_mask_wires ? "ON" : "OFF");
+	VBox_settings->append(*HBox_CheckButton_apply_wfType_cuts);
+	HBox_CheckButton_apply_wfType_cuts->set_halign(Gtk::Align::CENTER);
+	HBox_CheckButton_apply_wfType_cuts->set_margin_top(10);
+	HBox_CheckButton_apply_wfType_cuts->set_margin_start(10);
+	HBox_CheckButton_apply_wfType_cuts->set_margin_bottom(10);
+	auto Label_apply_wfType_cuts = Gtk::make_managed<Gtk::Label>();
+    Label_apply_wfType_cuts->set_markup("<span foreground='red'> <b> Apply wfType cuts (yes/no) </b> </span>");
+	HBox_CheckButton_apply_wfType_cuts->append(*Label_apply_wfType_cuts);
+	HBox_CheckButton_apply_wfType_cuts->append(CheckButton_apply_wfType_cuts);
+	CheckButton_apply_wfType_cuts.signal_toggled().connect([this] () -> void {
+				flag_apply_wfType_cuts = this->CheckButton_apply_wfType_cuts.get_active();
+                printf("Apply wfType cuts ? : %s\n", flag_apply_wfType_cuts ? "YES" : "NO");
                 update_gui();
 			});
-    CheckButton_mask_wires.set_active(false);
+    CheckButton_apply_wfType_cuts.set_active(false);
         // wfTypes
 	VBox_settings->append(*HBox_CheckButton_wfTypes);
 	HBox_CheckButton_wfTypes->set_margin_bottom(10);
@@ -423,10 +425,26 @@ void Window::on_button_settings_clicked(){
                 printf("wfType_5 : %s\n", flag_wfType_5 ? "ON" : "OFF");
 			});
     CheckButton_wfType_5.set_active(false);
+    // Apply raw cuts
+	VBox_settings->append(*HBox_CheckButton_apply_raw_cuts);
+	HBox_CheckButton_apply_raw_cuts->set_halign(Gtk::Align::CENTER);
+	HBox_CheckButton_apply_raw_cuts->set_margin_top(10);
+	HBox_CheckButton_apply_raw_cuts->set_margin_start(10);
+	HBox_CheckButton_apply_raw_cuts->set_margin_bottom(10);
+	auto Label_apply_raw_cuts = Gtk::make_managed<Gtk::Label>();
+    Label_apply_raw_cuts->set_markup("<span foreground='red'> <b> Apply raw cuts (yes/no) </b> </span>");
+	HBox_CheckButton_apply_raw_cuts->append(*Label_apply_raw_cuts);
+	HBox_CheckButton_apply_raw_cuts->append(CheckButton_apply_raw_cuts);
+	CheckButton_apply_raw_cuts.signal_toggled().connect([this] () -> void {
+				flag_apply_raw_cuts = this->CheckButton_apply_raw_cuts.get_active();
+                printf("Apply raw cuts ? : %s\n", flag_apply_raw_cuts ? "YES" : "NO");
+                update_gui();
+			});
+    CheckButton_apply_raw_cuts.set_active(false);
 
+	// Scale_amplitude_min
 	auto Separator4 = Gtk::make_managed<Gtk::Separator>();
 	VBox_settings->append(*Separator4);
-	// Scale_amplitude_min
 	auto Label0 = Gtk::make_managed<Gtk::Label>();
 	Label0->set_markup("<b> adcMax </b>");
 	VBox_settings->append(*Label0);
@@ -2282,37 +2300,44 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 }
 
 void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType) {
-    // require the user to select "apply these cuts"
-    if (!flag_mask_wires) {cut_flag = true; return;}
-    // priority on cut flag
-    std::vector<int> authorisedValues;
-    std::vector<bool> all_flags = {flag_wfType_0, flag_wfType_1, flag_wfType_2, flag_wfType_3, flag_wfType_4, flag_wfType_5};
-    for (int i = 0; i <= 5; i++) {
-        if (all_flags[i]) authorisedValues.push_back(i); 
-    }
-    if (authorisedValues.empty()) { cut_flag = true; } // no flag cuts to be applied
-    else {
-        bool is_good_wfType = false;
-        for (int i : authorisedValues) {
-            is_good_wfType = (wfType == i);
-            if (is_good_wfType) break;
+    cut_flag = false; 
+    // cut_flag = true means that the wire should be shown
+    // wfType cuts : have priority
+    if (flag_apply_wfType_cuts) {
+        std::vector<int> authorisedValues;
+        std::vector<bool> all_flags = {flag_wfType_0, flag_wfType_1, flag_wfType_2, flag_wfType_3, flag_wfType_4, flag_wfType_5};
+        for (int i = 0; i <= 5; i++) {
+            if (all_flags[i]) authorisedValues.push_back(i); 
         }
-        cut_flag = is_good_wfType;
+        if (authorisedValues.empty()) { cut_flag = true; } // no flag cuts to be applied
+        else {
+            bool is_good_wfType = false;
+            for (int i : authorisedValues) {
+                is_good_wfType = (wfType == i);
+                if (is_good_wfType) break;
+            }
+            cut_flag = is_good_wfType;
+        }
     }
     // raw cuts
-    if ((adcMax < 0) || (adcOffset < 0) || (leadingEdgeTime < 0) || (timeOverThreshold < 0) || (timeMax < 0)) {cut_flag = false; return;}
-    cut_flag = cut_flag && 
-            (adcMax >= cut_amplitude_min) && 
-            (adcMax <= cut_amplitude_max) && 
-            (adcOffset >= cut_adcOffset_min) && 
-            (adcOffset <= cut_adcOffset_max) && 
-            (leadingEdgeTime >= cut_leadingEdgeTime_min) &&
-            (leadingEdgeTime <= cut_leadingEdgeTime_max) &&
-            (timeOverThreshold >= cut_timeOverThreshold_min) && 
-            (timeOverThreshold <= cut_timeOverThreshold_max) &&
-            (timeMax >= cut_timeMax_min) &&
-            (timeMax <= cut_timeMax_max);
-    //printf("cut_flag : %s\n", cut_flag ? "True" : "False");
+    if (flag_apply_raw_cuts) {
+        if ((adcMax < 0) || (adcOffset < 0) || (leadingEdgeTime < 0) || (timeOverThreshold < 0) || (timeMax < 0)) {cut_flag = false; return;}
+        cut_flag = cut_flag && 
+                (adcMax >= cut_amplitude_min) && 
+                (adcMax <= cut_amplitude_max) && 
+                (adcOffset >= cut_adcOffset_min) && 
+                (adcOffset <= cut_adcOffset_max) && 
+                (leadingEdgeTime >= cut_leadingEdgeTime_min) &&
+                (leadingEdgeTime <= cut_leadingEdgeTime_max) &&
+                (timeOverThreshold >= cut_timeOverThreshold_min) && 
+                (timeOverThreshold <= cut_timeOverThreshold_max) &&
+                (timeMax >= cut_timeMax_min) &&
+                (timeMax <= cut_timeMax_max);
+        //printf("cut_flag : %s\n", cut_flag ? "True" : "False");
+    }
+    if (!flag_apply_wfType_cuts && !flag_apply_raw_cuts) {
+        cut_flag = true;
+    }
 }
 
 void Window::update_gui() {
