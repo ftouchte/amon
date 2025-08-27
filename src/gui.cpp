@@ -1195,18 +1195,21 @@ bool Window::dataEventAction() {
 		// loop over hits
 		clearAhdcData();
 		ListOfAdc.clear();
-		bool doIshowWF = false;
 		nWF = 0;
 		for (int col = 0; col < wfBank.getRows(); col++){
-			//int sector = wfBank.getInt("sector", col);	
+			int sector = wfBank.getInt("sector", col);	
 			int layer = wfBank.getInt("layer", col);
 			int component = wfBank.getInt("component", col);
-			std::vector<double> samples;
-			for (int bin=0; bin < NumberOfBins; bin++){
-				std::string binName = "s" + std::__cxx11::to_string(bin+1);
-				short value = wfBank.getInt(binName.c_str(), col);
-				samples.push_back(value);
-			}
+            int binOffset = wfBank.getInt("time", col);
+            std::vector<double> samples;
+            for (int bin=0; bin < binOffset; bin++){
+                samples.push_back(0.0);
+            }
+            for (int bin=0; bin < NumberOfBins - binOffset; bin++){
+                std::string binName = "s" + std::__cxx11::to_string(bin+1);
+                short value = wfBank.getInt(binName.c_str(), col);
+                samples.push_back(value);
+            }
 			// fill histograms
 			double factor = 1.0; // if == samplingTime, (the unit in bin number)
 			double timeMax = this->adcBank.getFloat("time", col)/factor;
@@ -1215,7 +1218,7 @@ bool Window::dataEventAction() {
             double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
             double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
             double adcOffset = this->adcBank.getFloat("ped", col);
-            //double integral = this->adcBank.getInt("integral", col);
+            double integral = this->adcBank.getInt("integral", col);
             int wfType = this->adcBank.getInt("wfType", col);
             update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
             if (cut_flag) {
@@ -1226,49 +1229,21 @@ bool Window::dataEventAction() {
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
 					hist2d_occupancy.fill(component, layer2number(layer));
-					doIshowWF = true; // at least one wire has reach the adc cut; so show the whole event (see next loop for)
-					//doIshowWF = true && (layer != 51) && (layer !=42); // prevent the last layer to trigger
-			}
-		}
-		// Criteria to show all the event 	
-		if (doIshowWF) {
-			for (int col = 0; col < wfBank.getRows(); col++){
-				int sector = wfBank.getInt("sector", col);	
-				int layer = wfBank.getInt("layer", col);
-				int component = wfBank.getInt("component", col);
-				int binOffset = wfBank.getInt("time", col);
-				std::vector<double> samples;
-				for (int bin=0; bin < binOffset; bin++){
-					samples.push_back(0.0);
-				}
-				for (int bin=0; bin < NumberOfBins - binOffset; bin++){
-					std::string binName = "s" + std::__cxx11::to_string(bin+1);
-					short value = wfBank.getInt(binName.c_str(), col);
-					samples.push_back(value);
-				}
-				double factor = 1.0; // if == samplingTime, (the unit in bin number)
-				double timeMax = this->adcBank.getFloat("time", col)/factor;
-				double leadingEdgeTime = this->adcBank.getFloat("leadingEdgeTime", col)/factor;
-				double timeOverThreshold = this->adcBank.getFloat("timeOverThreshold", col)/factor;
-				double constantFractionTime = this->adcBank.getFloat("constantFractionTime", col)/factor;
-				double adcMax = this->adcBank.getInt("ADC", col); // expected adcMax without adcOffset
-				double adcOffset = this->adcBank.getFloat("ped", col);
-				double integral = this->adcBank.getInt("integral", col);
-				int wfType = this->adcBank.getInt("wfType", col);
-				AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
-				wire->pulse.set_adcMax(adcMax);
-				wire->pulse.set_adcOffset(adcOffset);
-				wire->pulse.set_integral(integral);
-				wire->pulse.set_timeMax(timeMax);
-				wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
-				wire->pulse.set_timeOverThreshold(timeOverThreshold);
-				wire->pulse.set_constantFractionTime(constantFractionTime);
-				wire->pulse.set_binOffset(binOffset);
-				wire->pulse.set_samples(samples);
-				wire->pulse.set_wfType(wfType);
-				wire->occ += 1;
-				ListOfAdc.push_back(adcMax);
-				nWF++;
+                    ///////////////////
+                    AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
+                    wire->pulse.set_adcMax(adcMax);
+                    wire->pulse.set_adcOffset(adcOffset);
+                    wire->pulse.set_integral(integral);
+                    wire->pulse.set_timeMax(timeMax);
+                    wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
+                    wire->pulse.set_timeOverThreshold(timeOverThreshold);
+                    wire->pulse.set_constantFractionTime(constantFractionTime);
+                    wire->pulse.set_binOffset(binOffset);
+                    wire->pulse.set_samples(samples);
+                    wire->pulse.set_wfType(wfType);
+                    wire->occ += 1;
+                    ListOfAdc.push_back(adcMax);
+                    nWF++;
 			}
 		}
 		// Update drawings
