@@ -41,9 +41,10 @@ void progressBar(int state, int bar_length = 100);
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     // simu
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output2.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_extracted_new_simu.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_rec_output2.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_decoded_22092.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -65,11 +66,22 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
     TH1D* H1_tot = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
-    TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
+    TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; count", 6, 0, 6); 
     TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 350, 650, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "timeMax - leadingEdgeTime vs amplitude;timeMax - leadingEdgeTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
+    TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 100, 0, 400);
+    TH1D* H1_diff_mctime = new TH1D("diff_mctime", "mctime - rec_time; mctime - rec_time (ns); count", 100, -200, 200);
+    TH1I* H1_nsteps = new TH1I("nsteps", "nsteps in G4; count;", 20, 0, 20);
+    std::vector<TH1D*> VecH1_mctime;
+    VecH1_mctime.push_back(new TH1D("mctime_nsteps=1", "mctime_nsteps=1; mctime (ns); count", 100, 0, 400));
+    VecH1_mctime.push_back(new TH1D("mctime_nsteps=2", "mctime_nsteps=2; mctime (ns); count", 100, 0, 400));
+    VecH1_mctime.push_back(new TH1D("mctime_nsteps=3", "mctime_nsteps=3; mctime (ns); count", 100, 0, 400));
+    VecH1_mctime.push_back(new TH1D("mctime_nsteps>=4", "mctime_nsteps>=4; mctime (ns); count", 100, 0, 400));
+    TH2D* H2_diffMCtime_amp = new TH2D("corr_diffMCtime_amp", "mctime - rec_time vs amplitude;amp (adc); mctime - rec_time (ns)", 100, 0, 3000, 100, -100, 100); 
+    TH2D* H2_diffMCtime_tot = new TH2D("corr_diffMCtime_tot", "mctime - rec_time vs tot;tot (ns); mctime - rec_time (ns)", 100, 400, 700, 100, -100, 100); 
+    TH2D* H2_diffMCtime_dt0 = new TH2D("corr_diffMCtime_dt0", "mctime - rec_time vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rec_time (ns)", 100, 0, 400, 100, -100, 100); 
     // Physics
     TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 2000); 
     TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 2000); 
@@ -92,11 +104,15 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.38, 87.24); 
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
     TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (cm); #count", 100, -16, 16); 
-    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -20, 16); 
-    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -40, 10); 
     TH2D* H2_pT_amp = new TH2D("corr_pT_amp", "#Sigma_{track} adc vs pT_{mc}; pT_{mc} (MeV); #Sigma_{track} adc", 100, 230, 270, 100, 0, 5000); 
-    TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
     TH2D* H2_corr_distance = new TH2D("corr_distance", "D_{track} vs D_{mc}; D_{mc} (mm); D_{track} (mm)", 100, 0, 4, 100, 0, 4);
+    TH2D* H2_corr_p = new TH2D("corr_p", "p_{track} vs p_{mc}; p_{mc} (MeV); p_{track} (MeV)", 100, 230, 270, 100, 0, 2000);
+    TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 230, 270, 100, 0, 2000);
+    TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
+    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{track} vs #theta_{mc}; #theta_{mc} (deg); #theta_{track} (deg)", 100, 86.38, 87.24, 100, 0, 181);
+    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -30, 30);
+    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -15, 15); 
+    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -30, -5); 
 
 
     AhdcCCDB ahdcConstants;
@@ -141,6 +157,26 @@ int main(int argc, char const *argv[]) {
             H1_wfType->Fill(wfType);
             H1_adc->Fill(adc);
             H2_deltaTime_adc->Fill(timeMax-time, adc);
+            double mctime = 0.01*wfBank.getInt(std::string("s30").c_str(), i);
+            int nsteps = wfBank.getInt(std::string("s29").c_str(), i);
+            H1_mctime->Fill(mctime); 
+            H1_diff_mctime->Fill(mctime - (time - t0));
+            H1_nsteps->Fill(nsteps);
+            if (nsteps == 1) {
+                VecH1_mctime[0]->Fill(mctime);
+            }
+            else if (nsteps == 2) {
+                VecH1_mctime[1]->Fill(mctime);
+            }
+            else if (nsteps == 3) {
+                VecH1_mctime[2]->Fill(mctime);
+            }
+            else { // nsteps >= 4
+                VecH1_mctime[3]->Fill(mctime);
+            }
+            H2_diffMCtime_amp->Fill(adc, mctime - (time - t0));
+            H2_diffMCtime_tot->Fill(tot, mctime - (time - t0));
+            H2_diffMCtime_dt0->Fill(time - t0, mctime - (time - t0));
         }
         // AHDC::kftrack
         // p, pT are already in MeV
@@ -206,12 +242,17 @@ int main(int argc, char const *argv[]) {
             H2_pT_amp->Fill(mc_pT, trackBank.getInt("sum_adc", 0));
             H1_track_sum_adc->Fill(trackBank.getInt("sum_adc", 0));
             H2_corr_phi->Fill(mc_phi, track_phi);
+            H2_corr_theta->Fill(mc_theta, track_theta);
+            H2_corr_p->Fill(mc_p, track_p);
+            H2_corr_pT->Fill(mc_pT, track_pT);
+            H2_corr_vz->Fill(mc_vz, track_vz);
         }
     }
     
     printf("nevents    : %ld \n", nevents);
     printf("nMCtrack    : %ld \n", nMCtracks);
     printf("nKFtrack    : %ld \n", nKFtracks);
+    printf("percentage  : %.2lf %%\n", 100.0*nKFtracks/nMCtracks);
     // output
     const char * output = "./output/new_simu_data.root";
     TFile *f = new TFile(output, "RECREATE");
@@ -265,6 +306,16 @@ int main(int argc, char const *argv[]) {
     H2_tot_amp->Write("corr_tot_amp");
     H1_wfType->Write("wfType");
     H2_deltaTime_adc->Write("corr_dt_amp");
+    H1_mctime->Write("mctime");
+    H1_diff_mctime->Write("diff_mctime");
+    H1_nsteps->Write("nsteps_G4");
+    VecH1_mctime[0]->Write("mctime_nsteps=1");
+    VecH1_mctime[1]->Write("mctime_nsteps=2");
+    VecH1_mctime[2]->Write("mctime_nsteps=3");
+    VecH1_mctime[3]->Write("mctime_nsteps>=4");
+    H2_diffMCtime_amp->Write("corr_diffMCtime_amp");
+    H2_diffMCtime_tot->Write("corr_diffMCtime_tot");
+    H2_diffMCtime_dt0->Write("corr_diffMCtime_dt0");
 
     // others
     TDirectory *track_study = f->mkdir("track_study");
@@ -322,11 +373,15 @@ int main(int argc, char const *argv[]) {
     stack5->Draw("nostack");
     canvas2->Write("Side_by_side_comparaison");
 // <<<<<<<<<<<<<< Compare track and simu
-    H1_delta_vz->Write("delta_vz");
-    H1_delta_phi->Write("delta_phi");
     H2_pT_amp->Write("corr_pT_ADC");
     H1_track_sum_adc->Write("track_sum_adc");
+    H2_corr_p->Write("corr_p");
+    H2_corr_pT->Write("corr_pT");
+    H2_corr_theta->Write("corr_theta");
     H2_corr_phi->Write("corr_phi");
+    H2_corr_vz->Write("corr_vz");
+    H1_delta_phi->Write("delta_phi");
+    H1_delta_vz->Write("delta_vz");
 
     f->Close();
     printf("File created : %s\n", output);
