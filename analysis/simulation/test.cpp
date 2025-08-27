@@ -126,6 +126,9 @@ int main(int argc, char const *argv[]) {
     TCanvas* canvas4 = new TCanvas("c4_doca", "Doca from simu");
     TF1* f4 = new TF1("f4", "7*x + 7*x*x + 4*x*x*x", 0, 3);
     f4->Draw();
+    printf(">>>>  f4(2.28) = %lf ns\n", f4->Eval(2.28));
+    printf(">>>>  f4(2.28+0.21) = %lf ns\n", f4->Eval(2.28+0.21));
+    printf(">>>>  f4(2.28+0.21) - f4(2.22) = %lf ns\n", f4->Eval(2.28+0.21) - f4->Eval(2.28));
     canvas4->Update();
     
     TCanvas* canvas5 = new TCanvas("c5_inv_doca", "Doca from simu");
