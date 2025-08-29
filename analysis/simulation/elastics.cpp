@@ -335,7 +335,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_timeOverThreshold = new TH1D("tot_0", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
     //TH1D* H1_tot0 = new TH1D("tot_1", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
-    TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
+    TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 2000); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 340, 610, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
