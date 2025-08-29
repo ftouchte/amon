@@ -41,11 +41,13 @@ void progressBar(int state, int bar_length = 100);
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     // simu
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_extracted_new_simu.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_rec_output2.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_rec_output2.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output2.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_decoded_22092.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
+    printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
     reader.readDictionary(factory);
@@ -67,7 +69,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
     TH1D* H1_tot = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; count", 6, 0, 6); 
-    TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3700); 
+    TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 2000); 
     TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 350, 650, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "timeMax - leadingEdgeTime vs amplitude;timeMax - leadingEdgeTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
@@ -79,6 +81,21 @@ int main(int argc, char const *argv[]) {
     VecH1_mctime.push_back(new TH1D("mctime_nsteps=2", "mctime_nsteps=2; mctime (ns); count", 100, 0, 400));
     VecH1_mctime.push_back(new TH1D("mctime_nsteps=3", "mctime_nsteps=3; mctime (ns); count", 100, 0, 400));
     VecH1_mctime.push_back(new TH1D("mctime_nsteps>=4", "mctime_nsteps>=4; mctime (ns); count", 100, 0, 400));
+    std::vector<TH1D*> VecH1_tot;
+    VecH1_tot.push_back(new TH1D("tot_nsteps=1", "tot_nsteps=1; tot (ns); count", 100, 0, 750));
+    VecH1_tot.push_back(new TH1D("tot_nsteps=2", "tot_nsteps=2; tot (ns); count", 100, 0, 750));
+    VecH1_tot.push_back(new TH1D("tot_nsteps=3", "tot_nsteps=3; tot (ns); count", 100, 0, 750));
+    VecH1_tot.push_back(new TH1D("tot_nsteps>=4", "tot_nsteps>=4; tot (ns); count", 100, 300, 750));
+    std::vector<TH1D*> VecH1_amp;
+    VecH1_amp.push_back(new TH1D("amp_nsteps=1", "amp_nsteps=1; amp (ns); count", 100, 0, 250));
+    VecH1_amp.push_back(new TH1D("amp_nsteps=2", "amp_nsteps=2; amp (ns); count", 100, 0, 350));
+    VecH1_amp.push_back(new TH1D("amp_nsteps=3", "amp_nsteps=3; amp (ns); count", 100, 0, 500));
+    VecH1_amp.push_back(new TH1D("amp_nsteps>=4", "amp_nsteps>=4; amp (ns); count", 100, 0, 2000));
+    std::vector<TH1D*> VecH1_dt0;
+    VecH1_dt0.push_back(new TH1D("dt0_nsteps=1", "dt0_nsteps=1; dt0 (ns); count", 100, 0, 400));
+    VecH1_dt0.push_back(new TH1D("dt0_nsteps=2", "dt0_nsteps=2; dt0 (ns); count", 100, 0, 400));
+    VecH1_dt0.push_back(new TH1D("dt0_nsteps=3", "dt0_nsteps=3; dt0 (ns); count", 100, 0, 400));
+    VecH1_dt0.push_back(new TH1D("dt0_nsteps>=4", "dt0_nsteps>=4; dt0 (ns); count", 100, 0, 400));
     TH2D* H2_diffMCtime_amp = new TH2D("corr_diffMCtime_amp", "mctime - rec_time vs amplitude;amp (adc); mctime - rec_time (ns)", 100, 0, 3000, 100, -100, 100); 
     TH2D* H2_diffMCtime_tot = new TH2D("corr_diffMCtime_tot", "mctime - rec_time vs tot;tot (ns); mctime - rec_time (ns)", 100, 400, 700, 100, -100, 100); 
     TH2D* H2_diffMCtime_dt0 = new TH2D("corr_diffMCtime_dt0", "mctime - rec_time vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rec_time (ns)", 100, 0, 400, 100, -100, 100); 
@@ -164,15 +181,27 @@ int main(int argc, char const *argv[]) {
             H1_nsteps->Fill(nsteps);
             if (nsteps == 1) {
                 VecH1_mctime[0]->Fill(mctime);
+                VecH1_tot[0]->Fill(tot);
+                VecH1_amp[0]->Fill(adc);
+                VecH1_dt0[0]->Fill(time - t0);
             }
             else if (nsteps == 2) {
                 VecH1_mctime[1]->Fill(mctime);
+                VecH1_tot[1]->Fill(tot);
+                VecH1_amp[1]->Fill(adc);
+                VecH1_dt0[1]->Fill(time - t0);
             }
             else if (nsteps == 3) {
                 VecH1_mctime[2]->Fill(mctime);
+                VecH1_tot[2]->Fill(tot);
+                VecH1_amp[2]->Fill(adc);
+                VecH1_dt0[2]->Fill(time - t0);
             }
             else { // nsteps >= 4
                 VecH1_mctime[3]->Fill(mctime);
+                VecH1_tot[3]->Fill(tot);
+                VecH1_amp[3]->Fill(adc);
+                VecH1_dt0[3]->Fill(time - t0);
             }
             H2_diffMCtime_amp->Fill(adc, mctime - (time - t0));
             H2_diffMCtime_tot->Fill(tot, mctime - (time - t0));
@@ -208,12 +237,13 @@ int main(int argc, char const *argv[]) {
                 double hit_distance = hitBank.getDouble("doca", hit_row);
                 double hit_time = hitBank.getDouble("time", hit_row);
                 int wfType = adcBank.getInt("wfType", hitBank.getInt("id", hit_row) - 1);
+                double mctime = 0.01*wfBank.getInt(std::string("s30").c_str(), hitBank.getInt("id", hit_row) - 1);
                 if (hit_distance < 0) {
                     //printf("%d --> %lf ", wfType, hit_distance);
                     H1_wfType_bad_distance->Fill(wfType);
                 }
                 H1_hit_distance->Fill(hit_time < 0 ? 0 : hit_distance);
-                double mc_distance = (hit_time < 0) ? 0 : -0.0497 -0.00667*hit_time + 0.389*sqrt(hit_time) - 0.189*pow(hit_time, 1.0/3);
+                double mc_distance = (mctime < 0) ? 0 : -0.0497 -0.00667*mctime + 0.389*sqrt(mctime) - 0.189*pow(mctime, 1.0/3);
                 H1_mc_distance->Fill(mc_distance);
                 H2_corr_distance->Fill(mc_distance, hit_distance);
                 H2_track_res_distance->Fill(hit_distance, res/nhits);
@@ -295,14 +325,11 @@ int main(int argc, char const *argv[]) {
     legend->Draw();
 // <<<<<<<<<<<<<< end process H2_deltaTime_adc
     canvas1->Write("c1_deltaTime_adc");
-    H1_dt0->Write("dt0");
     H1_time->Write("leadingEdgeTime");
-    H1_tot->Write("timeOverThreshold");
     H1_t0->Write("t0");
     H1_timeMax->Write("timeMax");
     H1_deltaTime->Write("dt");
     H2_times->Write("corr_timeMax_leadingEdgeTime");
-    H1_adc->Write("amplitude");
     H2_tot_amp->Write("corr_tot_amp");
     H1_wfType->Write("wfType");
     H2_deltaTime_adc->Write("corr_dt_amp");
@@ -313,6 +340,21 @@ int main(int argc, char const *argv[]) {
     VecH1_mctime[1]->Write("mctime_nsteps=2");
     VecH1_mctime[2]->Write("mctime_nsteps=3");
     VecH1_mctime[3]->Write("mctime_nsteps>=4");
+    H1_tot->Write("tot");
+    VecH1_tot[0]->Write("tot_nsteps=1");
+    VecH1_tot[1]->Write("tot_nsteps=2");
+    VecH1_tot[2]->Write("tot_nsteps=3");
+    VecH1_tot[3]->Write("tot_nsteps>=4");
+    H1_adc->Write("amp");
+    VecH1_amp[0]->Write("amp_nsteps=1");
+    VecH1_amp[1]->Write("amp_nsteps=2");
+    VecH1_amp[2]->Write("amp_nsteps=3");
+    VecH1_amp[3]->Write("amp_nsteps>=4");
+    H1_dt0->Write("dt0");
+    VecH1_dt0[0]->Write("dt0_nsteps=1");
+    VecH1_dt0[1]->Write("dt0_nsteps=2");
+    VecH1_dt0[2]->Write("dt0_nsteps=3");
+    VecH1_dt0[3]->Write("dt0_nsteps>=4");
     H2_diffMCtime_amp->Write("corr_diffMCtime_amp");
     H2_diffMCtime_tot->Write("corr_diffMCtime_tot");
     H2_diffMCtime_dt0->Write("corr_diffMCtime_dt0");
