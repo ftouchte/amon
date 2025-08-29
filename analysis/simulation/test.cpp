@@ -143,6 +143,9 @@ int main(int argc, char const *argv[]) {
     TF1* f5 = new TF1("f5", [&](double*x, double *p){ return p[0] + p[1]*x[0] + p[2]*sqrt(x[0]) + p[3]*pow(x[0], 1.0/3); }, 0, 200, 4);
     gr4->Fit("f5");
     canvas5->Update();
+    printf(">>>> distance2time : f(62.44) = %lf\n", f5->Eval(62.44));
+    printf(">>>> distance2time : f(74.40) = %lf\n", f5->Eval(74.40));
+    printf(">>>> distance2time : f(174.0) = %lf\n", f5->Eval(174));
 
 
     app.Run();
