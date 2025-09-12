@@ -87,10 +87,10 @@ int main(int argc, char const *argv[]) {
     double W2_min = 3.46;
     double W2_max = 3.8;
     //double W2_max = 3.67;
-    double pT_min = 0.230;
-    double pT_max = 0.260;
-    double sum_adc_min = 1000;
-    double sum_adc_max = 3500;
+    double pT_min = 0.228;
+    double pT_max = 0.268;
+    double sum_adc_min = 5400;
+    double sum_adc_max = 9700;
     double DeltaPhi1 =-198;
     double DeltaPhi2 =162;
     double width_DeltaPhi = 20;
@@ -332,7 +332,12 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
-    TH1D* H1_timeOverThreshold = new TH1D("tot_0", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
+    TH1D* H1_timeOverThreshold = new TH1D("tot_0", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752);
+    std::vector<TH1D*> VecH1_noise;
+    VecH1_noise.push_back(new TH1D("noise s0", "s0; s0 (adc); count", 100, 0, 380));
+    VecH1_noise.push_back(new TH1D("noise s1", "s1; s1 (adc); count", 100, 0, 380));
+    VecH1_noise.push_back(new TH1D("noise s2", "s2; s2 (adc); count", 100, 0, 380));
+    VecH1_noise.push_back(new TH1D("noise s3", "s3; s3 (adc); count", 100, 0, 380));
     //TH1D* H1_tot0 = new TH1D("tot_1", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
     TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 2000); 
@@ -352,17 +357,17 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_elastics_expected_track_pT = new TH1D("expected_track_pT", "pT (GeV)", 100, 0, 1); 
     TH1D* H1_elastics_expected_track_theta = new TH1D("expected_track_theta", "theta (deg)", 100, 0, 181); 
     TH1D* H1_elastics_expected_track_phi = new TH1D("expected_track_phi", "phi (deg)", 100, 0, 361); 
-    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, 0.229, 0.271); 
-    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, 0.22, 0.27); 
-    TH1D* H1_selection_expected_track_theta = new TH1D("selection_expected_track_theta", "theta (deg)", 100, 86.55, 87.05); 
+    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, 0.21, 0.284); 
+    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, 0.21, 0.284); 
+    TH1D* H1_selection_expected_track_theta = new TH1D("selection_expected_track_theta", "theta (deg)", 100, 86.4, 87.2); 
     TH1D* H1_selection_expected_track_phi = new TH1D("selection_expected_track_phi", "phi (deg)", 100, 0, 361); 
-    TH1D* H1_selection_reconstructed_probe_pT = new TH1D("selection_reconstructed_probe_pT", "pT (GeV)", 100, 0.22, 0.27); 
-    TH1D* H1_selection_reconstructed_track_adc = new TH1D("selection_reconstructed_track_adc", "#Sum adc; #Sum adc; count", 100, 950, 3550); 
+    TH1D* H1_selection_reconstructed_probe_pT = new TH1D("selection_reconstructed_probe_pT", "pT (GeV)", 100, pT_min - 0.1*(pT_max-pT_min), pT_max + 0.1*(pT_max-pT_min)); 
+    TH1D* H1_selection_reconstructed_track_adc = new TH1D("selection_reconstructed_track_adc", "#Sum adc; #Sum adc; count", 100, sum_adc_min - 0.1*(sum_adc_max-sum_adc_min), sum_adc_max + 0.1*(sum_adc_max-sum_adc_min)); 
     // photons in FT
     TH1D* H1_photon_p = new TH1D("ft_photon_p", "FT/photon p (GeV); p (GeV); count", 100, 0, 2.5); 
     TH1D* H1_photon_pT = new TH1D("ft_photon_pT", "FT/photon pT (GeV); pT (GeV); count", 100, 0, 0.21); 
     TH1D* H1_photon_theta = new TH1D("ft_photon_theta", "FT/photon theta (deg); theta (deg); count", 100, 2, 5); 
-    TH1D* H1_photon_phi = new TH1D("ft_photon_phi", "FT/photon phi (deg); phi (deg); count", 100, 0, 361); 
+    TH1D* H1_photon_phi = new TH1D("ft_photon_phi", "FT/photon phi (deg); phi (deg); count", 100, 0, 361);
 
     // Loop over events
     while( reader.next()){
@@ -733,7 +738,7 @@ int main(int argc, char const *argv[]) {
                     H1_elastics_expected_track_pT->Fill(pT);
                     H1_elastics_expected_track_theta->Fill(theta_track);
                     H1_elastics_expected_track_phi->Fill(phi_track);
-                    // select protons
+                    // select particles (proton or deuterium)
                     if ((e.probe.pT > pT_min) && (e.probe.pT < pT_max) && (e.track.adc > sum_adc_min) && (e.track.adc < sum_adc_max)) {
                         H1_selection_expected_track_p->Fill(p);
                         H1_selection_expected_track_pT->Fill(pT);
@@ -774,7 +779,15 @@ int main(int argc, char const *argv[]) {
                         H1_amplitude->Fill(adc); 
                         H2_times->Fill(timeMax, time);
                         H2_tot_amp->Fill(tot, adc);
-                        H2_deltaTime_adc->Fill(timeMax-time, adc); 
+                        H2_deltaTime_adc->Fill(timeMax-time, adc);
+                        int s0 = wfBank.getShort("s1", hit_id);
+                        int s1 = wfBank.getShort("s2", hit_id);
+                        int s2 = wfBank.getShort("s3", hit_id);
+                        int s3 = wfBank.getShort("s4", hit_id);
+                        VecH1_noise[0]->Fill(s0);
+                        VecH1_noise[1]->Fill(s1);
+                        VecH1_noise[2]->Fill(s2);
+                        VecH1_noise[3]->Fill(s3);
                     }
                 }
             } // end loop over elastics
@@ -878,7 +891,7 @@ int main(int argc, char const *argv[]) {
  * output
  * **********************************************************/
 
-    const char * output = "./output/corrected_elastics.root";
+    const char * output = "./output/elastics_D2.root";
     TFile *f = new TFile(output, "RECREATE");
     TDirectory *count_dir   = f->mkdir("counts");
     TDirectory *probes_dir   = f->mkdir("electrons_photons");
@@ -1212,10 +1225,10 @@ int main(int argc, char const *argv[]) {
     stack4->Add(H1_elastics_expected_track_phi);
     stack4->Draw("nostack");
     canvas2->Write("match_real_and_expected_track?");
-    // select proton
-    TDirectory* selected_proton_dir = calibration_dir->mkdir("selected_proton_dir");
-    selected_proton_dir->cd();
-    TCanvas* canvas3 = new TCanvas("c3_selected_proton", "Selected proton");
+    // select particle
+    TDirectory* selected_particle_dir = calibration_dir->mkdir("selected_particle_dir");
+    selected_particle_dir->cd();
+    TCanvas* canvas3 = new TCanvas("c3_selected_particle", "Selected particle");
     H2_elastic_pT_adc->Draw();
     TGraph* gr3 = new TGraph(5);
     gr3->SetPoint(0, pT_min, sum_adc_min);
@@ -1246,13 +1259,13 @@ int main(int argc, char const *argv[]) {
     TDirectory* signals_dir = calibration_dir->mkdir("signals_from_selected_hits");
     signals_dir->cd();
     //H1_dt00->Write("dt0_0"); 
-    H1_dt0->Write("dt0"); 
+    H1_dt0->Write("time"); 
     //H1_tot0->Write("tot_0"); 
     H1_leadingEdgeTime->Write("leadindEdgeTime"); 
     H1_timeOverThreshold->Write("timeOverThreshold");
     H1_timeMax->Write("timeMax");
     H1_t0->Write("t0_distribution"); 
-    H1_deltaTime->Write("dt"); 
+    //H1_deltaTime->Write("dt"); 
     H1_amplitude->Write("amplitude"); 
     H1_wfType->Write("wfType");
     H2_times->Write("corr_timeMax_leadingEdgeTime");
@@ -1293,6 +1306,10 @@ int main(int argc, char const *argv[]) {
     legend->Draw();
     // <<<<<<<<<<<<<< end process H2_deltaTime_adc
     canvas1->Write("c1_deltaTime_adc");
+    VecH1_noise[0]->Write("wf_s0");
+    VecH1_noise[1]->Write("wf_s1");
+    VecH1_noise[2]->Write("wf_s2");
+    VecH1_noise[3]->Write("wf_s3");
 
     //////////////////////////////
     // Close file
