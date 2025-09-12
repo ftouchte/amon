@@ -40,13 +40,17 @@ void progressBar(int state, int bar_length = 100);
 
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
-    // simu
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/extracted_new_simu.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/test_rec_output2.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_output2.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/rec_decoded_22092.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/all_simu_rec_output.hipo";
+    
+    const char * output = "./output/simu_data_D2.root";
+    //const char * output = "./output/simu_data_proton.root";
+    
+    /////////////////////////
+    /// simu
+    /// /////////////////////
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/proton/extracted_new_simu.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/extracted_new_simu.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/proton/rec_output.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/rec_output.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -63,8 +67,8 @@ int main(int argc, char const *argv[]) {
     long unsigned int nKFtracks =0;
     // Histograms
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
-    TH1D* H1_dt0 = new TH1D("dt0", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
-    TH1D* H1_time = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
+    TH1D* H1_time = new TH1D("time", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
+    TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
     TH1D* H1_tot = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752); 
@@ -91,14 +95,14 @@ int main(int argc, char const *argv[]) {
     VecH1_amp.push_back(new TH1D("amp_nsteps=2", "amp_nsteps=2; amp (ns); count", 100, 0, 350));
     VecH1_amp.push_back(new TH1D("amp_nsteps=3", "amp_nsteps=3; amp (ns); count", 100, 0, 500));
     VecH1_amp.push_back(new TH1D("amp_nsteps>=4", "amp_nsteps>=4; amp (ns); count", 100, 0, 2000));
-    std::vector<TH1D*> VecH1_dt0;
-    VecH1_dt0.push_back(new TH1D("dt0_nsteps=1", "dt0_nsteps=1; dt0 (ns); count", 100, 0, 400));
-    VecH1_dt0.push_back(new TH1D("dt0_nsteps=2", "dt0_nsteps=2; dt0 (ns); count", 100, 0, 400));
-    VecH1_dt0.push_back(new TH1D("dt0_nsteps=3", "dt0_nsteps=3; dt0 (ns); count", 100, 0, 400));
-    VecH1_dt0.push_back(new TH1D("dt0_nsteps>=4", "dt0_nsteps>=4; dt0 (ns); count", 100, 0, 400));
+    std::vector<TH1D*> VecH1_time;
+    VecH1_time.push_back(new TH1D("time_nsteps=1", "time_nsteps=1; time (ns); count", 100, 0, 400));
+    VecH1_time.push_back(new TH1D("time_nsteps=2", "time_nsteps=2; time (ns); count", 100, 0, 400));
+    VecH1_time.push_back(new TH1D("time_nsteps=3", "time_nsteps=3; time (ns); count", 100, 0, 400));
+    VecH1_time.push_back(new TH1D("time_nsteps>=4", "time_nsteps>=4; time (ns); count", 100, 0, 400));
     TH2D* H2_diffMCtime_amp = new TH2D("corr_diffMCtime_amp", "mctime - rec_time vs amplitude;amp (adc); mctime - rec_time (ns)", 100, 0, 3000, 100, -100, 100); 
     TH2D* H2_diffMCtime_tot = new TH2D("corr_diffMCtime_tot", "mctime - rec_time vs tot;tot (ns); mctime - rec_time (ns)", 100, 400, 700, 100, -100, 100); 
-    TH2D* H2_diffMCtime_dt0 = new TH2D("corr_diffMCtime_dt0", "mctime - rec_time vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rec_time (ns)", 100, 0, 400, 100, -100, 100); 
+    TH2D* H2_diffMCtime_time = new TH2D("corr_diffMCtime_time", "mctime - rec_time vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rec_time (ns)", 100, 0, 400, 100, -100, 100); 
     // Physics
     TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 2000); 
     TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 2000); 
@@ -115,22 +119,28 @@ int main(int argc, char const *argv[]) {
     TH1I* H1_track_nhits = new TH1I("track_nhits", "nhits; nhits; #count", 9, 5, 14); 
     TH1D* H1_hit_distance = new TH1D("hit_distance", "hit distance; distance (mm); #count", 100, 0, 4); 
     TH1D* H1_mc_distance = new TH1D("mc_distance", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
+    TH1D* H1_delta_distance = new TH1D("delta_D", "#Delta D = D_{simu} - D_{track}; #Delta D (cm); #count", 100, -0.5, 0.5); 
     TH1I* H1_wfType_bad_distance = new TH1I("wfType_bad_type", "wfType; count;", 6, 0, 6); 
-    TH1D* H1_mc_p = new TH1D("mc_p", "p; p (MeV); #count", 100, 230, 270); 
-    TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (MeV); #count", 100, 230, 270); 
-    TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.38, 87.24); 
+    TH1D* H1_mc_p = new TH1D("mc_p", "p; p (MeV); #count", 100, 225, 280); 
+    TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (MeV); #count", 100, 225, 280); 
+    TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 86.5, 87.15); 
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
     TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (cm); #count", 100, -16, 16); 
-    TH2D* H2_pT_amp = new TH2D("corr_pT_amp", "#Sigma_{track} adc vs pT_{mc}; pT_{mc} (MeV); #Sigma_{track} adc", 100, 230, 270, 100, 0, 5000); 
+    TH2D* H2_pT_amp = new TH2D("corr_pT_amp", "#Sigma_{track} adc vs pT_{mc}; pT_{mc} (MeV); #Sigma_{track} adc", 100, 225, 275, 100, 5300, 9700); 
     TH2D* H2_corr_distance = new TH2D("corr_distance", "D_{track} vs D_{mc}; D_{mc} (mm); D_{track} (mm)", 100, 0, 4, 100, 0, 4);
-    TH2D* H2_corr_p = new TH2D("corr_p", "p_{track} vs p_{mc}; p_{mc} (MeV); p_{track} (MeV)", 100, 230, 270, 100, 0, 2000);
-    TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 230, 270, 100, 0, 2000);
+    TH2D* H2_corr_p = new TH2D("corr_p", "p_{track} vs p_{mc}; p_{mc} (MeV); p_{track} (MeV)", 100, 225, 280, 100, 0, 2000);
+    TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 225, 280, 100, 0, 2000);
     TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
     TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{track} vs #theta_{mc}; #theta_{mc} (deg); #theta_{track} (deg)", 100, 86.38, 87.24, 100, 0, 181);
     TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -30, 30);
     TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{simu} - vz_{track}; #Delta vz (cm); #count", 100, -15, 15); 
     TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{simu} - phi_{track}; #Delta phi (deg); #count", 100, -30, -5); 
 
+    std::vector<TH1D*> VecH1_noise;
+    VecH1_noise.push_back(new TH1D("noise s0", "s0; s0 (adc); count", 100, 250, 380));
+    VecH1_noise.push_back(new TH1D("noise s1", "s1; s1 (adc); count", 100, 250, 380));
+    VecH1_noise.push_back(new TH1D("noise s2", "s2; s2 (adc); count", 100, 250, 380));
+    VecH1_noise.push_back(new TH1D("noise s3", "s3; s3 (adc); count", 100, 250, 380));
 
     AhdcCCDB ahdcConstants;
     // Loop over events
@@ -151,62 +161,63 @@ int main(int argc, char const *argv[]) {
         nKFtracks += trackBank.getRows();
 
         // Loop over waveforms
-        for (int i = 0; i < adcBank.getRows(); i++) {
+        /*for (int i = 0; i < adcBank.getRows(); i++) {
             double sector    = adcBank.getInt("sector", i);
             double layer     = adcBank.getInt("layer", i);
             double component = adcBank.getInt("component", i);
             ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
             double t0 = obj.t0;
-            double time = adcBank.getFloat("leadingEdgeTime", i);
+            double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", i);
             double timeMax = adcBank.getFloat("time", i);
             double tot = adcBank.getFloat("timeOverThreshold", i);
             int wfType = adcBank.getInt("wfType", i);
             int adc = adcBank.getInt("ADC", i);
-            //if (wfType == 5) { printf("%d -> %lf ", wfType, time - t0);}
+            double time = leadingEdgeTime - t0;
+            //if (wfType == 5) { printf("%d -> %lf ", wfType, time);}
             H2_tot_amp->Fill(tot, adc);
-            H1_time->Fill(time);
+            H1_leadingEdgeTime->Fill(leadingEdgeTime);
             H1_t0->Fill(t0);
-            H1_dt0->Fill(time - t0);
+            H1_time->Fill(time);
             H1_timeMax->Fill(timeMax);
-            H2_times->Fill(timeMax, time);
-            H1_deltaTime->Fill(timeMax-time);
+            H2_times->Fill(timeMax, leadingEdgeTime);
+            H1_deltaTime->Fill(timeMax-leadingEdgeTime);
             H1_tot->Fill(tot);
             H1_wfType->Fill(wfType);
             H1_adc->Fill(adc);
-            H2_deltaTime_adc->Fill(timeMax-time, adc);
+            H2_deltaTime_adc->Fill(timeMax-leadingEdgeTime, adc);
             double mctime = 0.01*wfBank.getInt(std::string("s30").c_str(), i);
             int nsteps = wfBank.getInt(std::string("s29").c_str(), i);
             H1_mctime->Fill(mctime); 
-            H1_diff_mctime->Fill(mctime - (time - t0));
+            H1_diff_mctime->Fill(mctime - time);
             H1_nsteps->Fill(nsteps);
             if (nsteps == 1) {
                 VecH1_mctime[0]->Fill(mctime);
                 VecH1_tot[0]->Fill(tot);
                 VecH1_amp[0]->Fill(adc);
-                VecH1_dt0[0]->Fill(time - t0);
+                VecH1_time[0]->Fill(time);
             }
             else if (nsteps == 2) {
                 VecH1_mctime[1]->Fill(mctime);
                 VecH1_tot[1]->Fill(tot);
                 VecH1_amp[1]->Fill(adc);
-                VecH1_dt0[1]->Fill(time - t0);
+                VecH1_time[1]->Fill(time);
             }
             else if (nsteps == 3) {
                 VecH1_mctime[2]->Fill(mctime);
                 VecH1_tot[2]->Fill(tot);
                 VecH1_amp[2]->Fill(adc);
-                VecH1_dt0[2]->Fill(time - t0);
+                VecH1_time[2]->Fill(time);
             }
             else { // nsteps >= 4
                 VecH1_mctime[3]->Fill(mctime);
                 VecH1_tot[3]->Fill(tot);
                 VecH1_amp[3]->Fill(adc);
-                VecH1_dt0[3]->Fill(time - t0);
+                VecH1_time[3]->Fill(time);
             }
-            H2_diffMCtime_amp->Fill(adc, mctime - (time - t0));
-            H2_diffMCtime_tot->Fill(tot, mctime - (time - t0));
-            H2_diffMCtime_dt0->Fill(time - t0, mctime - (time - t0));
-        }
+            H2_diffMCtime_amp->Fill(adc, mctime - time);
+            H2_diffMCtime_tot->Fill(tot, mctime - time);
+            H2_diffMCtime_time->Fill(time, mctime - time);
+        }*/
         // AHDC::kftrack
         // p, pT are already in MeV
         // vz in mm to be converted in cm
@@ -226,27 +237,73 @@ int main(int argc, char const *argv[]) {
             H1_track_theta->Fill(track_theta);
             H1_track_phi->Fill(track_phi);
             H1_track_vz->Fill(track_vz);
-            int nhits = trackBank.getInt("n_hits", 0);
-            double res = trackBank.getFloat("sum_residuals", 0);
-            double chi2 = trackBank.getFloat("chi2", 0);
+            int    nhits = trackBank.getInt("n_hits", 0);
+            double res   = trackBank.getFloat("sum_residuals", 0);
+            double chi2  = trackBank.getFloat("chi2", 0);
             H1_track_nhits->Fill(nhits);
             H1_track_res->Fill(res/nhits);
             H1_track_chi2->Fill(chi2/nhits);
+            int trackid = trackBank.getInt("trackid", 0);
+            //printf("trackid : %d \n", trackid);
             // for the simu, we know that we have only one track, a rapid hipo-utils...
-            for (int hit_row = 0; hit_row < hitBank.getRows(); hit_row++) {
-                double hit_distance = hitBank.getDouble("doca", hit_row);
-                double hit_time = hitBank.getDouble("time", hit_row);
-                int wfType = adcBank.getInt("wfType", hitBank.getInt("id", hit_row) - 1);
-                double mctime = 0.01*wfBank.getInt(std::string("s30").c_str(), hitBank.getInt("id", hit_row) - 1);
+            for (int row = 0; row < hitBank.getRows(); row++) {
+                if (trackid != hitBank.getInt("trackid", row)) continue;
+                int adcId = hitBank.getInt("id", row) - 1;
+                int wfType = adcBank.getInt("wfType", adcId);
+                double mctime = 0.01*wfBank.getInt(std::string("s30").c_str(), adcId);
+                double mc_distance = (mctime < 0) ? 0 : -0.0497 -0.00667*mctime + 0.389*sqrt(mctime) - 0.189*pow(mctime, 1.0/3);
+                double hit_distance = hitBank.getDouble("doca", row);
                 if (hit_distance < 0) {
                     //printf("%d --> %lf ", wfType, hit_distance);
                     H1_wfType_bad_distance->Fill(wfType);
                 }
-                H1_hit_distance->Fill(hit_time < 0 ? 0 : hit_distance);
-                double mc_distance = (mctime < 0) ? 0 : -0.0497 -0.00667*mctime + 0.389*sqrt(mctime) - 0.189*pow(mctime, 1.0/3);
+                H1_hit_distance->Fill(hit_distance);
                 H1_mc_distance->Fill(mc_distance);
+                H1_delta_distance->Fill(mc_distance-hit_distance);
                 H2_corr_distance->Fill(mc_distance, hit_distance);
                 H2_track_res_distance->Fill(hit_distance, res/nhits);
+                ///////////////////
+                // AHDC::adc
+                // ////////////////
+                //printf("hit row : %d , adc id : %d\n", row, adcId);
+                double sector    = adcBank.getInt("sector", adcId);
+                double layer     = adcBank.getInt("layer", adcId);
+                double component = adcBank.getInt("component", adcId);
+                ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
+                double t0 = obj.t0;
+                double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcId);
+                double timeMax         = adcBank.getFloat("time", adcId);
+                double tot             = adcBank.getFloat("timeOverThreshold", adcId);
+                int    adc             = adcBank.getInt("ADC", adcId);
+                double time            = leadingEdgeTime - t0;
+                int nsteps = wfBank.getInt(std::string("s29").c_str(), adcId);
+                    // Histograms
+                H2_tot_amp->Fill(tot, adc);
+                H1_leadingEdgeTime->Fill(leadingEdgeTime);
+                H1_t0->Fill(t0);
+                H1_time->Fill(time);
+                H1_timeMax->Fill(timeMax);
+                H2_times->Fill(timeMax, leadingEdgeTime);
+                H1_deltaTime->Fill(timeMax-leadingEdgeTime);
+                H1_tot->Fill(tot);
+                H1_wfType->Fill(wfType);
+                H1_adc->Fill(adc);
+                H2_deltaTime_adc->Fill(timeMax-leadingEdgeTime, adc);
+                H1_mctime->Fill(mctime); 
+                H1_diff_mctime->Fill(mctime - time);
+                H1_nsteps->Fill(nsteps);
+                H2_diffMCtime_amp->Fill(adc, mctime - time);
+                H2_diffMCtime_tot->Fill(tot, mctime - time);
+                H2_diffMCtime_time->Fill(time, mctime - time);
+                    // Noise level
+                int s0 = wfBank.getShort("s1", adcId);
+                int s1 = wfBank.getShort("s2", adcId);
+                int s2 = wfBank.getShort("s3", adcId);
+                int s3 = wfBank.getShort("s4", adcId);
+                VecH1_noise[0]->Fill(s0);
+                VecH1_noise[1]->Fill(s1);
+                VecH1_noise[2]->Fill(s2);
+                VecH1_noise[3]->Fill(s3);
             }
             // MC::Particle or AHDC::mc
             // p, pT to be converted in MeV
@@ -284,7 +341,6 @@ int main(int argc, char const *argv[]) {
     printf("nKFtrack    : %ld \n", nKFtracks);
     printf("percentage  : %.2lf %%\n", 100.0*nKFtracks/nMCtracks);
     // output
-    const char * output = "./output/new_simu_data.root";
     TFile *f = new TFile(output, "RECREATE");
     
     TDirectory *time_study = f->mkdir("time_study");
@@ -324,40 +380,41 @@ int main(int argc, char const *argv[]) {
     legend->AddEntry(gr, "deltaTime projection");
     legend->Draw();
 // <<<<<<<<<<<<<< end process H2_deltaTime_adc
-    canvas1->Write("c1_deltaTime_adc");
-    H1_time->Write("leadingEdgeTime");
-    H1_t0->Write("t0");
+    //canvas1->Write("c1_deltaTime_adc");
+    H1_time->Write("time");
+    H1_leadingEdgeTime->Write("leadingEdgeTime");
     H1_timeMax->Write("timeMax");
-    H1_deltaTime->Write("dt");
+    H1_t0->Write("t0");
+    //H1_deltaTime->Write("dt");
     H2_times->Write("corr_timeMax_leadingEdgeTime");
     H2_tot_amp->Write("corr_tot_amp");
     H1_wfType->Write("wfType");
-    H2_deltaTime_adc->Write("corr_dt_amp");
+    H2_deltaTime_adc->Write("corr_time_amp");
     H1_mctime->Write("mctime");
     H1_diff_mctime->Write("diff_mctime");
     H1_nsteps->Write("nsteps_G4");
-    VecH1_mctime[0]->Write("mctime_nsteps=1");
-    VecH1_mctime[1]->Write("mctime_nsteps=2");
-    VecH1_mctime[2]->Write("mctime_nsteps=3");
-    VecH1_mctime[3]->Write("mctime_nsteps>=4");
+    //VecH1_mctime[0]->Write("mctime_nsteps=1");
+    //VecH1_mctime[1]->Write("mctime_nsteps=2");
+    //VecH1_mctime[2]->Write("mctime_nsteps=3");
+    //VecH1_mctime[3]->Write("mctime_nsteps>=4");
     H1_tot->Write("tot");
-    VecH1_tot[0]->Write("tot_nsteps=1");
-    VecH1_tot[1]->Write("tot_nsteps=2");
-    VecH1_tot[2]->Write("tot_nsteps=3");
-    VecH1_tot[3]->Write("tot_nsteps>=4");
+    //VecH1_tot[0]->Write("tot_nsteps=1");
+    //VecH1_tot[1]->Write("tot_nsteps=2");
+    //VecH1_tot[2]->Write("tot_nsteps=3");
+    //VecH1_tot[3]->Write("tot_nsteps>=4");
     H1_adc->Write("amp");
-    VecH1_amp[0]->Write("amp_nsteps=1");
-    VecH1_amp[1]->Write("amp_nsteps=2");
-    VecH1_amp[2]->Write("amp_nsteps=3");
-    VecH1_amp[3]->Write("amp_nsteps>=4");
-    H1_dt0->Write("dt0");
-    VecH1_dt0[0]->Write("dt0_nsteps=1");
-    VecH1_dt0[1]->Write("dt0_nsteps=2");
-    VecH1_dt0[2]->Write("dt0_nsteps=3");
-    VecH1_dt0[3]->Write("dt0_nsteps>=4");
+    //VecH1_amp[0]->Write("amp_nsteps=1");
+    //VecH1_amp[1]->Write("amp_nsteps=2");
+    //VecH1_amp[2]->Write("amp_nsteps=3");
+    //VecH1_amp[3]->Write("amp_nsteps>=4");
+    //H1_time->Write("time");
+    //VecH1_time[0]->Write("time_nsteps=1");
+    //VecH1_time[1]->Write("time_nsteps=2");
+    //VecH1_time[2]->Write("time_nsteps=3");
+    //VecH1_time[3]->Write("time_nsteps>=4");
     H2_diffMCtime_amp->Write("corr_diffMCtime_amp");
     H2_diffMCtime_tot->Write("corr_diffMCtime_tot");
-    H2_diffMCtime_dt0->Write("corr_diffMCtime_dt0");
+    H2_diffMCtime_time->Write("corr_diffMCtime_time");
 
     // others
     TDirectory *track_study = f->mkdir("track_study");
@@ -372,6 +429,7 @@ int main(int argc, char const *argv[]) {
     H1_track_chi2->Write("chi2ndf");
     H1_hit_distance->Write("recon_hit_distance");
     H1_mc_distance->Write("recon_mc_distance");
+    H1_delta_distance->Write("delta_distance");
     H2_corr_distance->Write("corr_distance");
     H2_track_res_distance->Write("corr_residuals_distance");
     H1_wfType_bad_distance->Write("wfType_bad_distance");
@@ -424,6 +482,14 @@ int main(int argc, char const *argv[]) {
     H2_corr_vz->Write("corr_vz");
     H1_delta_phi->Write("delta_phi");
     H1_delta_vz->Write("delta_vz");
+
+    TDirectory *noise_study = f->mkdir("noise_study");
+    noise_study->cd();
+    VecH1_noise[0]->Write("s0");
+    VecH1_noise[1]->Write("s1");
+    VecH1_noise[2]->Write("s2");
+    VecH1_noise[3]->Write("s3");
+
 
     f->Close();
     printf("File created : %s\n", output);
