@@ -58,7 +58,7 @@ class AhdcCCDB {
     ahdcT2d T2d;
 public:
     AhdcCCDB(std::string _connection = "mysql://clas12reader@clasdb.jlab.org/clas12", int _runNo = 22000, std::string _variation = "default", std::string timestamp = "no"); 
-    int wireUniqueId(int sector, int layer, int component);
+    static int wireUniqueId(int sector, int layer, int component);
     ahdcT0 get_t0(int sector, int layer, int component);
     ahdcT0 get_t0(int wire);
     ahdcRawCuts get_rawCuts(int sector, int layer, int component);
