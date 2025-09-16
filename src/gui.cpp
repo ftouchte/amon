@@ -47,7 +47,7 @@ Window::Window() :
 	HBox_info(Gtk::Orientation::HORIZONTAL,15),
 	// Decoding parameters	
 	ADC_LIMIT(4095),
-	NumberOfBins(30),
+	NumberOfBins(27),
 	samplingTime(50.0), // set at 50.0 if you want use measure in terms of bins
 	amplitudeFractionCFA(0.5),
 	binDelayCFD(5),
@@ -1142,6 +1142,7 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	double timeOverThreshold = wire->pulse.get_timeOverThreshold();
 	double adcMax = wire->pulse.get_adcMax();
 	double adcOffset = wire->pulse.get_adcOffset();
+	int wfType = wire->pulse.get_wfType();
 	
 	// Display leadingEdgeTime
 	cr->set_source_rgb(0.0, 1.0, 0.0); // green
@@ -1181,7 +1182,20 @@ void Window::cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int wi
 	cr->set_font_size(seff*0.1);
 	cr->move_to(weff*0.7, -heff*0.8);
 	cr->show_text(annotation);
-	
+    // Display decoded values
+    {
+        cr->set_source_rgb(0.0, 0.0, 0.0);
+        cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+	    cr->set_font_size(seff*0.05);
+        char buffer[200];
+        sprintf(buffer, "ADC = %.0lf, PED = %.*lf, TIME = %.*lf, TOT = %.*lf, wfType = %d", adcMax, 2, adcOffset, 2, leadingEdgeTime, 2, timeOverThreshold, wfType); 
+        Cairo::TextExtents te;
+        cr->get_text_extents(buffer, te);
+        int wpos = 0.5*weff - 0.5*te.width;
+        int hpos = -heff - seff*0.05;
+        cr->move_to(wpos, hpos);
+        cr->show_text(buffer);
+    }
 }
 
 bool Window::dataEventAction() {
