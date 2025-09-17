@@ -50,7 +50,8 @@ int main(int argc, char const *argv[]) {
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/proton/extracted_new_simu.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/extracted_new_simu.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/proton/rec_output.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/rec_output.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/rec_output.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/deuteron/180k-rec-output.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -66,6 +67,7 @@ int main(int argc, char const *argv[]) {
     long unsigned int nMCtracks =0;
     long unsigned int nKFtracks =0;
     // Histograms
+    TH1D* H1_occ = new TH1D("occupancy", "occupancy; wire; count [%]", 576, 0, 576);
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
     TH1D* H1_time = new TH1D("time", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400);
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
@@ -78,7 +80,7 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 350, 650, 100, 0, 3000); 
     TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "timeMax - leadingEdgeTime vs amplitude;timeMax - leadingEdgeTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
     TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 100, 0, 400);
-    TH1D* H1_diff_mctime = new TH1D("diff_mctime", "mctime - rec_time; mctime - rec_time (ns); count", 100, -200, 200);
+    TH1D* H1_diff_mctime = new TH1D("diff_mctime", "mctime - rectime; mctime - rectime (ns); count", 100, -40, 60);
     TH1I* H1_nsteps = new TH1I("nsteps", "nsteps in G4; count;", 20, 0, 20);
     std::vector<TH1D*> VecH1_mctime;
     VecH1_mctime.push_back(new TH1D("mctime_nsteps=1", "mctime_nsteps=1; mctime (ns); count", 100, 0, 400));
@@ -100,9 +102,9 @@ int main(int argc, char const *argv[]) {
     VecH1_time.push_back(new TH1D("time_nsteps=2", "time_nsteps=2; time (ns); count", 100, 0, 400));
     VecH1_time.push_back(new TH1D("time_nsteps=3", "time_nsteps=3; time (ns); count", 100, 0, 400));
     VecH1_time.push_back(new TH1D("time_nsteps>=4", "time_nsteps>=4; time (ns); count", 100, 0, 400));
-    TH2D* H2_diffMCtime_amp = new TH2D("corr_diffMCtime_amp", "mctime - rec_time vs amplitude;amp (adc); mctime - rec_time (ns)", 100, 0, 3000, 100, -100, 100); 
-    TH2D* H2_diffMCtime_tot = new TH2D("corr_diffMCtime_tot", "mctime - rec_time vs tot;tot (ns); mctime - rec_time (ns)", 100, 400, 700, 100, -100, 100); 
-    TH2D* H2_diffMCtime_time = new TH2D("corr_diffMCtime_time", "mctime - rec_time vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rec_time (ns)", 100, 0, 400, 100, -100, 100); 
+    TH2D* H2_diffMCtime_amp = new TH2D("corr_diffMCtime_amp", "mctime - rectime vs amplitude;amp (adc); mctime - rectime (ns)", 100, 0, 3000, 100, -40, 60); 
+    TH2D* H2_diffMCtime_tot = new TH2D("corr_diffMCtime_tot", "mctime - rectime vs tot;tot (ns); mctime - rectime (ns)", 100, 400, 700, 100, -40, 60); 
+    TH2D* H2_diffMCtime_time = new TH2D("corr_diffMCtime_time", "mctime - rectime vs leadingEdgeTime - t0;leadingEdgeTime - t0 (ns); mctime - rectime (ns)", 100, 0, 400, 100, -100, 100); 
     // Physics
     TH1D* H1_track_p = new TH1D("track_p", "p; p (MeV); #count", 100, 0, 2000); 
     TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 2000); 
@@ -112,14 +114,14 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_track_phi = new TH1D("track_phi", "phi; phi (deg); #count", 100, 0, 361); 
     TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -30, 30); 
     //TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -50, 15); 
-    TH1D* H1_track_sum_adc = new TH1D("track_sum_adc", "#Sigma adc; #Sigma adc; #count", 100, 0, 5000); 
+    TH1D* H1_track_sum_adc = new TH1D("track_sum_adc", "#Sigma adc; #Sigma adc; #count", 100, 5300, 9700); 
     TH1D* H1_track_res = new TH1D("track_res", "residuals/nhits; residuals/nhits (mm); #count", 100, -1.5, 1); 
     TH2D* H2_track_res_distance = new TH2D("track_res_vs_dist", "residuals vs distance; distance (mm); residuals/nhits (mm)", 100, 0, 4, 100, -1.5, 1); 
     TH1D* H1_track_chi2 = new TH1D("track_chi2", "chi2ndf; chi2ndf (mm^{2}); #count", 100, 0, 8); 
     TH1I* H1_track_nhits = new TH1I("track_nhits", "nhits; nhits; #count", 9, 5, 14); 
     TH1D* H1_hit_distance = new TH1D("hit_distance", "hit distance; distance (mm); #count", 100, 0, 4); 
     TH1D* H1_mc_distance = new TH1D("mc_distance", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
-    TH1D* H1_delta_distance = new TH1D("delta_D", "#Delta D = D_{simu} - D_{track}; #Delta D (cm); #count", 100, -0.5, 0.5); 
+    TH1D* H1_delta_distance = new TH1D("delta_D", "#Delta D = D_{simu} - D_{track}; #Delta D (mm); #count", 100, -0.5, 0.5); 
     TH1I* H1_wfType_bad_distance = new TH1I("wfType_bad_type", "wfType; count;", 6, 0, 6); 
     TH1D* H1_mc_p = new TH1D("mc_p", "p; p (MeV); #count", 100, 225, 280); 
     TH1D* H1_mc_pT = new TH1D("mc_pT", "pT; pT (MeV); #count", 100, 225, 280); 
@@ -278,6 +280,7 @@ int main(int argc, char const *argv[]) {
                 double time            = leadingEdgeTime - t0;
                 int nsteps = wfBank.getInt(std::string("s29").c_str(), adcId);
                     // Histograms
+                H1_occ->Fill(AhdcCCDB::wireUniqueId(sector, layer, component));
                 H2_tot_amp->Fill(tot, adc);
                 H1_leadingEdgeTime->Fill(leadingEdgeTime);
                 H1_t0->Fill(t0);
@@ -335,7 +338,7 @@ int main(int argc, char const *argv[]) {
             H2_corr_vz->Fill(mc_vz, track_vz);
         }
     }
-    
+    H1_occ->Scale(100.0/nKFtracks); 
     printf("nevents    : %ld \n", nevents);
     printf("nMCtrack    : %ld \n", nMCtracks);
     printf("nKFtrack    : %ld \n", nKFtracks);
@@ -419,6 +422,7 @@ int main(int argc, char const *argv[]) {
     // others
     TDirectory *track_study = f->mkdir("track_study");
     track_study->cd();
+    H1_occ->Write("occupancy");
     H1_track_p->Write("track_p");
     H1_track_pT->Write("track_pT");
     H1_track_theta->Write("track_theta");
