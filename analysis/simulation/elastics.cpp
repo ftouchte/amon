@@ -16,6 +16,7 @@
 #include <string>
 #include <chrono>
 #include <filesystem>
+#include <regex>
 
 #include "../hipo4/reader.h"
 #include "../hipo4/writer.h"
@@ -37,9 +38,11 @@
 #include "THStack.h"
 #include "TText.h"
 
+namespace fs = std::filesystem;
 
 // utilities
-void progressBar(int state, int bar_length = 100);
+void progressBar(int state, int nevents = -1);
+void wire2slcn(int wire, int & sector, int & layer, int & component, int & num_layer);
 // end utilities
 
 const double Ee = 2.23951; // incident energy if the electron, GeV
@@ -84,54 +87,71 @@ const double lim_track_vz_sup = 30;
 
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
-    double W2_min = 3.46;
-    double W2_max = 3.8;
-    //double W2_max = 3.67;
-    double pT_min = 0.228;
-    double pT_max = 0.268;
-    double sum_adc_min = 5400;
-    double sum_adc_max = 9700;
-    double DeltaPhi1 =-198;
-    double DeltaPhi2 =162;
-    double width_DeltaPhi = 20;
-    //double delta_W2 = W2_max - W2_min;
-    //////////////////////////////
-    // Open HIPO file
-    //////////////////////////////
-    // He4
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/half_det_lost/all_half_det_lost.hipo";
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/He4/22767/all_rec_clas_022767.hipo";
-    // D2
-    //const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/rec_clas_022712.evio.00000.hipo"; 
-    const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
-
     AhdcCCDB ahdcConstants; // load ccdb
-    // Input File
-    hipo::reader  reader(filename);
-    hipo::dictionary factory;
-    reader.readDictionary(factory);
-    hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
-    hipo::bank  track0Bank(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
-    hipo::bank  particleBank(factory.getSchema("REC::Particle"));
-    hipo::bank  recEventBank(factory.getSchema("REC::Event"));
-    hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
-    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
-    hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
-    hipo::event event;
-    // Ouput file
+    
+    //double W2_min = 3.46;
+    //double W2_max = 3.8;
+    double W2_min = 3.4;
+    double W2_max = 3.9;
+    //double delta_W2 = W2_max - W2_min;
+    double pT_min = 0.20;
+    double pT_max = 0.30;
+    double sum_adc_min = 3200;
+    double sum_adc_max = 9800;
+    double DeltaPhi1 =-210;
+    double DeltaPhi2 =150;
+    double width_DeltaPhi = 45;
+// ------------------------------------
+// Open HIPO file
+// ------------------------------------
+//    const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
+//    Process only one file
+//    hipo::reader  reader(filename);
+//    hipo::dictionary factory;
+//    reader.readDictionary(factory);
+//    hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+//    hipo::bank  track0Bank(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
+//    hipo::bank  particleBank(factory.getSchema("REC::Particle"));
+//    hipo::bank  recEventBank(factory.getSchema("REC::Event"));
+//    hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+//    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
+//    hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+//    hipo::event event;
+//    factory.getSchema("AHDC::adc").show(); 
+//    factory.getSchema("AHDC::wf").show(); 
+//    factory.getSchema("AHDC::kftrack").show();
+   
+
+    ///////////////////////////////////////////////
+    /// Filter input files
+    /// ///////////////////////////////////////////
+    std::vector<std::string> all_filenames;
+    std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
+    //std::string motif = ".*02299[0-9].*";
+    std::string motif = ".*";
+    std::regex re(motif.c_str());
+    for (const fs::directory_entry & entry : fs::directory_iterator(dir_name)) {
+        std::string onefile = entry.path().filename().c_str(); // the filename without the whole path
+        if (std::regex_match(onefile, re)) { // check with the filename match the motif
+            //printf("%s \n", onefile.c_str());
+            all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
+        }
+    }
+
+    // Ouput file to save only elastics events
     hipo::writer writer;
-    //factory.getSchema("AHDC::adc").show(); 
-    //factory.getSchema("AHDC::wf").show(); 
-    //factory.getSchema("AHDC::kftrack").show();
     hipo::schema schemaAdc("AHDC::adc", 22400, 11);
     hipo::schema schemaWf("AHDC::wf", 22400, 10);
-    hipo::schema schemaTrack("AHDC::kftrack",23000, 26);
+    hipo::schema schemaTrack("AHDC::kftrack", 23000, 26);
+    hipo::schema schemaRunConfig("RUN::config", 10000, 11);
     schemaAdc.parse("sector/B, layer/B, component/S, order/B, ADC/I, time/F, ped/F, windex/S, integral/I, leadingEdgeTime/F, timeOverThreshold/F, constantFractionTime/F, wfType/S");
     schemaWf.parse("sector/B, layer/B, component/S, order/B, timestamp/L, s1/S, s2/S, s3/S, s4/S, s5/S, s6/S, s7/S, s8/S, s9/S, s10/S, s11/S, s12/S, s13/S, s14/S, s15/S, s16/S, s17/S, s18/S, s19/S, s20/S, s21/S, s22/S, s23/S, s24/S, s25/S, s26/S, s27/S, s28/S, s29/S, s30/S, time/I");
     schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
+    schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
     writer.getDictionary().addSchema(schemaAdc);
     writer.getDictionary().addSchema(schemaWf);
     writer.getDictionary().addSchema(schemaTrack);
+    writer.getDictionary().addSchema(schemaRunConfig);
     const char * outputFile = "elastics_events.hipo";
     if (std::filesystem::exists(outputFile)) {
         if (std::filesystem::remove(outputFile)) {
@@ -369,162 +389,184 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_photon_theta = new TH1D("ft_photon_theta", "FT/photon theta (deg); theta (deg); count", 100, 2, 5); 
     TH1D* H1_photon_phi = new TH1D("ft_photon_phi", "FT/photon phi (deg); phi (deg); count", 100, 0, 361);
 
-    // Loop over events
-    while( reader.next()){
-        nevents++;
-        // Progress Bar
-        if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
-            progressBar(100.0*nevents/reader.getEntries());
-        }
-        reader.read(event);
-        event.getStructure(trackBank);
-        event.getStructure(track0Bank);
-        event.getStructure(particleBank);
-        event.getStructure(recEventBank);
-        event.getStructure(adcBank);
-        event.getStructure(wfBank);
-        event.getStructure(hitBank);
-        
-        //////////////////////
-        //  REC::Particle
-        //////////////////////
-        std::vector<State> Electrons; 
-        std::vector<State> Photons; 
-        std::vector<Physics> ElectronKinematics;
-        std::vector<Physics> PhotonKinematics;
-        for (int i = 0; i < particleBank.getRows(); i++) {
-            int pid = particleBank.getInt("pid", i);
-            if (pid == 11) { // electron (11)
-                State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
-                        particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
-                S.pid = 11;
-                Physics K(S, Mt, Ee);
-                Electrons.push_back(S);
-                ElectronKinematics.push_back(K);
-                // Histograms (0) no cuts
-                H1_probe_vz[0]->Fill(S.vz);
-                H1_probe_p[0]->Fill(S.p);
-                H1_probe_pT[0]->Fill(S.pT);
-                H1_probe_theta[0]->Fill(S.theta);
-                H1_probe_phi[0]->Fill(S.phi);
-                H1_Q2[0]->Fill(K.Q2);
-                H1_W2[0]->Fill(K.W2);
-                H1_xB[0]->Fill(K.xB);
-                H1_nu[0]->Fill(K.nu);
-            }
-            else if (pid == 22) { // photon (22)
-                State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
-                        particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
-                S.pid = 22;
-                if (S.theta < 5) { // photon distribution in the FT
-                    H1_photon_p->Fill(S.p);
-                    H1_photon_pT->Fill(S.pT);
-                    H1_photon_theta->Fill(S.theta);
-                    H1_photon_phi->Fill(S.phi);
-                }
-                Physics K(S, Ee, Mt);
-                Photons.push_back(S);
-                PhotonKinematics.push_back(K);
-                // Histograms (0) no cuts
-                H1_probe_vz[0]->Fill(S.vz);
-                H1_probe_p[0]->Fill(S.p);
-                H1_probe_pT[0]->Fill(S.pT);
-                H1_probe_theta[0]->Fill(S.theta);
-                H1_probe_phi[0]->Fill(S.phi);
-                H1_Q2[0]->Fill(K.Q2);
-                H1_W2[0]->Fill(K.W2);
-                H1_xB[0]->Fill(K.xB);
-                H1_nu[0]->Fill(K.nu);
-            }
-        }
-        nelectrons += Electrons.size();
-        nphotons += Photons.size();
-        H1_nelectrons[0]->Fill(Electrons.size());
-        H1_nphotons[0]->Fill(Photons.size());
-        H1_mon_nprobes->Fill(cut_names[0], (int) Electrons.size() + Photons.size());
-        //////////////////////
-        //  AHDC::kftrack
-        //////////////////////
-        std::vector<State> Tracks;
-        H1_ntracks[0]->Fill(trackBank.getRows()); 
-        H1_mon_ntracks->Fill(cut_names[0], (int) trackBank.getRows());
-        for (int i = 0; i < trackBank.getRows(); i++) {
-            State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
-                    trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
-            T.vz = T.vz*0.1; // convert mm to cm
-            T.p  = T.p*0.001; // convert MeV to GeV
-            T.pT = T.pT*0.001; // convert MeV to Gev
-            T.dEdx = track0Bank.getFloat("dEdx", i);
-            T.adc = trackBank.getInt("sum_adc", i);
-            T.trackid = trackBank.getInt("trackid", i);
-            Tracks.push_back(T);
-            // Histograms -- Level 0, no cuts on tracks
-            H1_track_vz[0]->Fill(T.vz); 
-            H1_track_p[0]->Fill(T.p); 
-            H1_track_pT[0]->Fill(T.pT);
-            H1_track_theta[0]->Fill(T.theta);
-            H1_track_phi[0]->Fill(T.phi);
-            H1_track_nhits[0]->Fill(trackBank.getInt("n_hits", i)); 
-            H1_track_adc[0]->Fill(trackBank.getInt("sum_adc", i));
-            H1_track_path[0]->Fill(trackBank.getFloat("path", i));   
-            H1_track_dEdx[0]->Fill(track0Bank.getFloat("dEdx", i));    
-            H1_track_residuals[0]->Fill(trackBank.getFloat("sum_residuals", i));
-            H1_track_residuals_per_nhits[0]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-            H1_track_chi2[0]->Fill(trackBank.getFloat("chi2", i));
-            H1_track_chi2_per_nhits[0]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-            H1_track_p_drift[0]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-        }
-        // Correlations -- level 0, no cuts
-        // loop over all configurations
-        for (State T : Tracks) {
-            for (State S : Electrons) {
-                H2_vze_vz[0]->Fill(S.vz, T.vz); 
-                H1_delta_vz[0]->Fill(S.vz - T.vz); 
-                H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
-                H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
-                H2_p_adc[0]->Fill(S.pT, T.adc);
-                H2_pTe_pT[0]->Fill(S.pT, T.pT);
-            }
-            for (State S : Photons) {
-                H2_vze_vz[0]->Fill(S.vz, T.vz); 
-                H1_delta_vz[0]->Fill(S.vz - T.vz); 
-                H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
-                H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
-                H2_p_adc[0]->Fill(S.pT, T.adc);
-                H2_pTe_pT[0]->Fill(S.pT, T.pT);
-            }
-        }
+    // Channels by channels
+    std::vector<TH1D*> H1_CHANNELS_time;
+    for (int i = 0; i < 576; i++) {
+        H1_CHANNELS_time.push_back(new TH1D(TString::Format("time_%d", i).Data(), "leadingEdgeTime - t0 (ns); time (ns); count", 100, 0, 400));
+    }
+    std::vector<TH1D*> H1_CHANNELS_tot;
+    for (int i = 0; i < 576; i++) {
+        H1_CHANNELS_tot.push_back(new TH1D(TString::Format("tot_%d", i).Data(), "timeOverThreshold (ns); tot (ns); count", 100, 100, 800));
+    }
+    std::vector<TH1D*> H1_CHANNELS_ped;
+    for (int i = 0; i < 576; i++) {
+        H1_CHANNELS_ped.push_back(new TH1D(TString::Format("ped_%d", i).Data(), "pedestal (adc); ped (adc); count", 100, 0, 400));
+    }
+    std::vector<TH1D*> H1_CHANNELS_adc;
+    for (int i = 0; i < 576; i++) {
+        H1_CHANNELS_adc.push_back(new TH1D(TString::Format("adc_%d", i).Data(), "amplitude (adc); adc; count", 100, 0, 2000));
+    }
 
-        /*******************************************
-         *  Define a priority order for the probes (cut level 1)
-         * *****************************************/
-        if (Electrons.size() > 0) {
-            // select all electrons if there are; ignore photons
-            H1_nelectrons[1]->Fill(Electrons.size());
-            H1_mon_nprobes->Fill(cut_names[1], Electrons.size());
-            for (int i = 0; i < (int) Electrons.size(); i++) {
-                State S = Electrons[i];
-                Physics K = ElectronKinematics[i];
-                H1_probe_vz[1]->Fill(S.vz);
-                H1_probe_p[1]->Fill(S.p);
-                H1_probe_pT[1]->Fill(S.pT);
-                H1_probe_theta[1]->Fill(S.theta);
-                H1_probe_phi[1]->Fill(S.phi);
-                H1_Q2[1]->Fill(K.Q2);
-                H1_W2[1]->Fill(K.W2);
-                H1_xB[1]->Fill(K.xB);
-                H1_nu[1]->Fill(K.nu);
+    ////////////////////////////////////
+    /// Loop over multiple files
+    /// ////////////////////////////////
+    int num_file = 0;
+    int nb_files = all_filenames.size();
+    for (std::string onefile : all_filenames) {
+        num_file++;
+        printf("# Process file \033[31m%d/%d\033[0m: %s\n", num_file, nb_files, onefile.c_str());
+        hipo::reader  reader(onefile.c_str());
+        hipo::dictionary factory;
+        reader.readDictionary(factory);
+        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+        hipo::bank  track0Bank(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
+        hipo::bank  particleBank(factory.getSchema("REC::Particle"));
+        hipo::bank  recEventBank(factory.getSchema("REC::Event"));
+        hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+        hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
+        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+        hipo::bank  runConfigBank(factory.getSchema("RUN::config"));
+        hipo::event event;
+        
+        long unsigned int nevents_per_file = 0;
+        // Loop over events
+        while( reader.next()){
+            nevents++;
+            nevents_per_file++;
+            // Progress Bar
+            if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
+                progressBar(100.0*nevents_per_file/reader.getEntries(), reader.getEntries());
             }
-            Photons.clear();
-            PhotonKinematics.clear();
-        }
-        else if (Photons.size() > 0) {
-            std::vector<State> NewPhotons;
-            std::vector<Physics> NewPhotonKinematics;
-            for (int i = 0; i < (int) Photons.size(); i++) {
-                State S = Photons[i];
-                Physics K = PhotonKinematics[i];
-                if (S.theta <= 5) { // keep only photons in the FT
+            reader.read(event);
+            event.getStructure(trackBank);
+            event.getStructure(track0Bank);
+            event.getStructure(particleBank);
+            event.getStructure(recEventBank);
+            event.getStructure(adcBank);
+            event.getStructure(wfBank);
+            event.getStructure(hitBank);
+            event.getStructure(runConfigBank);
+            
+            //////////////////////
+            //  REC::Particle
+            //////////////////////
+            std::vector<State> Electrons; 
+            std::vector<State> Photons; 
+            std::vector<Physics> ElectronKinematics;
+            std::vector<Physics> PhotonKinematics;
+            for (int i = 0; i < particleBank.getRows(); i++) {
+                int pid = particleBank.getInt("pid", i);
+                if (pid == 11) { // electron (11)
+                    State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
+                            particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                    S.pid = 11;
+                    Physics K(S, Mt, Ee);
+                    Electrons.push_back(S);
+                    ElectronKinematics.push_back(K);
+                    // Histograms (0) no cuts
+                    H1_probe_vz[0]->Fill(S.vz);
+                    H1_probe_p[0]->Fill(S.p);
+                    H1_probe_pT[0]->Fill(S.pT);
+                    H1_probe_theta[0]->Fill(S.theta);
+                    H1_probe_phi[0]->Fill(S.phi);
+                    H1_Q2[0]->Fill(K.Q2);
+                    H1_W2[0]->Fill(K.W2);
+                    H1_xB[0]->Fill(K.xB);
+                    H1_nu[0]->Fill(K.nu);
+                }
+                else if (pid == 22) { // photon (22)
+                    State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
+                            particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
+                    S.pid = 22;
+                    if (S.theta < 5) { // photon distribution in the FT
+                        H1_photon_p->Fill(S.p);
+                        H1_photon_pT->Fill(S.pT);
+                        H1_photon_theta->Fill(S.theta);
+                        H1_photon_phi->Fill(S.phi);
+                    }
+                    Physics K(S, Ee, Mt);
+                    Photons.push_back(S);
+                    PhotonKinematics.push_back(K);
+                    // Histograms (0) no cuts
+                    H1_probe_vz[0]->Fill(S.vz);
+                    H1_probe_p[0]->Fill(S.p);
+                    H1_probe_pT[0]->Fill(S.pT);
+                    H1_probe_theta[0]->Fill(S.theta);
+                    H1_probe_phi[0]->Fill(S.phi);
+                    H1_Q2[0]->Fill(K.Q2);
+                    H1_W2[0]->Fill(K.W2);
+                    H1_xB[0]->Fill(K.xB);
+                    H1_nu[0]->Fill(K.nu);
+                }
+            }
+            nelectrons += Electrons.size();
+            nphotons += Photons.size();
+            H1_nelectrons[0]->Fill(Electrons.size());
+            H1_nphotons[0]->Fill(Photons.size());
+            H1_mon_nprobes->Fill(cut_names[0], (int) Electrons.size() + Photons.size());
+            //////////////////////
+            //  AHDC::kftrack
+            //////////////////////
+            std::vector<State> Tracks;
+            H1_ntracks[0]->Fill(trackBank.getRows()); 
+            H1_mon_ntracks->Fill(cut_names[0], (int) trackBank.getRows());
+            for (int i = 0; i < trackBank.getRows(); i++) {
+                State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+                        trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+                T.vz = T.vz*0.1; // convert mm to cm
+                T.p  = T.p*0.001; // convert MeV to GeV
+                T.pT = T.pT*0.001; // convert MeV to Gev
+                T.dEdx = track0Bank.getFloat("dEdx", i);
+                T.adc = trackBank.getInt("sum_adc", i);
+                T.trackid = trackBank.getInt("trackid", i);
+                Tracks.push_back(T);
+                // Histograms -- Level 0, no cuts on tracks
+                H1_track_vz[0]->Fill(T.vz); 
+                H1_track_p[0]->Fill(T.p); 
+                H1_track_pT[0]->Fill(T.pT);
+                H1_track_theta[0]->Fill(T.theta);
+                H1_track_phi[0]->Fill(T.phi);
+                H1_track_nhits[0]->Fill(trackBank.getInt("n_hits", i)); 
+                H1_track_adc[0]->Fill(trackBank.getInt("sum_adc", i));
+                H1_track_path[0]->Fill(trackBank.getFloat("path", i));   
+                H1_track_dEdx[0]->Fill(track0Bank.getFloat("dEdx", i));    
+                H1_track_residuals[0]->Fill(trackBank.getFloat("sum_residuals", i));
+                H1_track_residuals_per_nhits[0]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                H1_track_chi2[0]->Fill(trackBank.getFloat("chi2", i));
+                H1_track_chi2_per_nhits[0]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                H1_track_p_drift[0]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+            }
+            // Correlations -- level 0, no cuts
+            // loop over all configurations
+            for (State T : Tracks) {
+                for (State S : Electrons) {
+                    H2_vze_vz[0]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[0]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
+                    H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[0]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[0]->Fill(S.pT, T.pT);
+                }
+                for (State S : Photons) {
+                    H2_vze_vz[0]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[0]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
+                    H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[0]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[0]->Fill(S.pT, T.pT);
+                }
+            }
+
+            /*******************************************
+             *  Define a priority order for the probes (cut level 1)
+             * *****************************************/
+            if (Electrons.size() > 0) {
+                // select all electrons if there are; ignore photons
+                H1_nelectrons[1]->Fill(Electrons.size());
+                H1_mon_nprobes->Fill(cut_names[1], Electrons.size());
+                for (int i = 0; i < (int) Electrons.size(); i++) {
+                    State S = Electrons[i];
+                    Physics K = ElectronKinematics[i];
                     H1_probe_vz[1]->Fill(S.vz);
                     H1_probe_p[1]->Fill(S.p);
                     H1_probe_pT[1]->Fill(S.pT);
@@ -534,350 +576,388 @@ int main(int argc, char const *argv[]) {
                     H1_W2[1]->Fill(K.W2);
                     H1_xB[1]->Fill(K.xB);
                     H1_nu[1]->Fill(K.nu);
-                    NewPhotons.push_back(S);
-                    NewPhotonKinematics.push_back(K);
                 }
+                Photons.clear();
+                PhotonKinematics.clear();
             }
-            H1_nphotons[1]->Fill(NewPhotons.size());
-            H1_mon_nprobes->Fill(cut_names[1], NewPhotons.size());
-            // keep only photons in the FT
-            Photons = NewPhotons;
-            PhotonKinematics = NewPhotonKinematics;
-        }
-        else {
-            continue; // ignore this event
-        }
-        // if the event is not ignored, let check the tracks
-        Tracks.clear(); // restart
-        H1_ntracks[1]->Fill(trackBank.getRows()); 
-        H1_mon_ntracks->Fill(cut_names[1], (int) trackBank.getRows());
-        for (int i = 0; i < trackBank.getRows(); i++) {
-            State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
-                    trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
-            T.vz = T.vz*0.1; // convert mm to cm
-            T.p  = T.p*0.001; // convert MeV to GeV
-            T.pT = T.pT*0.001; // convert MeV to Gev
-            T.dEdx = track0Bank.getFloat("dEdx", i);
-            T.adc = trackBank.getInt("sum_adc", i);
-            T.trackid = trackBank.getInt("trackid", i);
-            Tracks.push_back(T);
-            // Histograms -- Level 1
-            H1_track_vz[1]->Fill(T.vz);
-            H1_track_p[1]->Fill(T.p); 
-            H1_track_pT[1]->Fill(T.pT);
-            H1_track_theta[1]->Fill(T.theta);
-            H1_track_phi[1]->Fill(T.phi);
-            H1_track_nhits[1]->Fill(trackBank.getInt("n_hits", i)); 
-            H1_track_adc[1]->Fill(trackBank.getInt("sum_adc", i));
-            H1_track_path[1]->Fill(trackBank.getFloat("path", i));   
-            H1_track_dEdx[1]->Fill(track0Bank.getFloat("dEdx", i));    
-            H1_track_residuals[1]->Fill(trackBank.getFloat("sum_residuals", i));
-            H1_track_residuals_per_nhits[1]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-            H1_track_chi2[1]->Fill(trackBank.getFloat("chi2", i));
-            H1_track_chi2_per_nhits[1]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-            H1_track_p_drift[1]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-        }
-        // Now Combined Electrons and Photons
-        std::vector<State> Probes;
-        Probes.reserve(Electrons.size() + Photons.size());
-        Probes.insert(Probes.end(), Electrons.begin(), Electrons.end());
-        Probes.insert(Probes.end(), Photons.begin(), Photons.end());
-        std::vector<Physics> ProbeKinematics;
-        ProbeKinematics.reserve(ElectronKinematics.size() + PhotonKinematics.size());
-        ProbeKinematics.insert(ProbeKinematics.end(), ElectronKinematics.begin(), ElectronKinematics.end());
-        ProbeKinematics.insert(ProbeKinematics.end(), PhotonKinematics.begin(), PhotonKinematics.end());
-        // let check the correlations
-        for (State T : Tracks) {
-            for (State S : Probes) {
-                H2_vze_vz[1]->Fill(S.vz, T.vz); 
-                H1_delta_vz[1]->Fill(S.vz - T.vz); 
-                H1_delta_phi[1]->Fill(S.phi - T.phi);  
-                H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
-                H2_p_adc[1]->Fill(S.pT, T.adc);
-                H2_pTe_pT[1]->Fill(S.pT, T.pT);
-            }
-        }
-        /*******************************************
-         *  cut on W2 (cut level 2)
-         * *****************************************/
-        int count_electrons2 = 0;
-        int count_photons2 = 0;
-        int count_tracks2 = 0;
-        int count_electrons3 = 0; // level 3
-        int count_photons3 = 0;
-        int count_tracks3 = 0;
-        std::vector<ElasticsOutput> Elastics; // list of couples (e/gamma, track) for elastics
-        for (int i = 0; i < (int) Probes.size(); i++) {
-            State S = Probes[i];
-            Physics K = ProbeKinematics[i];
-            if ((K.W2 < W2_min) || (K.W2 > W2_max)) continue;
-            if (S.pid == 11) count_electrons2++;
-            if (S.pid == 22) count_photons2++;
-            for (State T : Tracks) {
-                count_tracks2++;
-                // corr
-                H2_vze_vz[2]->Fill(S.vz, T.vz); 
-                H1_delta_vz[2]->Fill(S.vz - T.vz); 
-                H1_delta_phi[2]->Fill(S.phi - T.phi);  
-                H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
-                H2_p_adc[2]->Fill(S.pT, T.adc);
-                H2_pTe_pT[2]->Fill(S.pT, T.pT);
-                // probe 
-                H1_probe_vz[2]->Fill(S.vz);
-                H1_probe_p[2]->Fill(S.p);
-                H1_probe_pT[2]->Fill(S.pT);
-                H1_probe_theta[2]->Fill(S.theta);
-                H1_probe_phi[2]->Fill(S.phi);
-                H1_Q2[2]->Fill(K.Q2);
-                H1_W2[2]->Fill(K.W2);
-                H1_xB[2]->Fill(K.xB);
-                H1_nu[2]->Fill(K.nu);
-                // track
-                H1_track_vz[2]->Fill(T.vz);
-                H1_track_p[2]->Fill(T.p);
-                H1_track_pT[2]->Fill(T.pT);
-                H1_track_theta[2]->Fill(T.theta);
-                H1_track_phi[2]->Fill(T.phi);
-                H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
-                H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
-                H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
-                H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
-                H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
-                H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
-                H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                /*******************************************
-                 *  delta_phi (cut level 3)
-                 * *****************************************/
-                double delta_phi = S.phi - T.phi;
-                if ((fabs(delta_phi-DeltaPhi1) < width_DeltaPhi) || (fabs(delta_phi-DeltaPhi2) < width_DeltaPhi)) {
-                    if (S.pid == 11) count_electrons3++;
-                    if (S.pid == 22) count_photons3++;
-                    count_tracks3++;
-                    // corr
-                    H2_vze_vz[3]->Fill(S.vz, T.vz); 
-                    H1_delta_vz[3]->Fill(S.vz - T.vz); 
-                    H1_delta_phi[3]->Fill(S.phi - T.phi);  
-                    H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
-                    H2_p_adc[3]->Fill(S.pT, T.adc);
-                    H2_pTe_pT[3]->Fill(S.pT, T.pT);
-                    // probe 
-                    H1_probe_vz[3]->Fill(S.vz);
-                    H1_probe_p[3]->Fill(S.p);
-                    H1_probe_pT[3]->Fill(S.pT);
-                    H1_probe_theta[3]->Fill(S.theta);
-                    H1_probe_phi[3]->Fill(S.phi);
-                    H1_Q2[3]->Fill(K.Q2);
-                    H1_W2[3]->Fill(K.W2);
-                    H1_xB[3]->Fill(K.xB);
-                    H1_nu[3]->Fill(K.nu);
-                    // track
-                    H1_track_vz[3]->Fill(T.vz);
-                    H1_track_p[3]->Fill(T.p); 
-                    H1_track_pT[3]->Fill(T.pT);
-                    H1_track_theta[3]->Fill(T.theta);
-                    H1_track_phi[3]->Fill(T.phi);
-                    H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
-                    H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
-                    H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
-                    H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
-                    H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
-                    H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
-                    H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
-                    H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
-                    H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
-                    /***********************************************
-                     * select these elestics for calibration
-                     * ********************************************/
-                    Elastics.push_back({S,T}); 
-                }
-            }
-        }
-        // level 2
-        H1_nelectrons[2]->Fill(count_electrons2);
-        H1_nphotons[2]->Fill(count_photons2);
-        H1_ntracks[2]->Fill(count_tracks2);
-        H1_mon_nprobes->Fill(cut_names[2], count_electrons2 + count_photons2);
-        H1_mon_ntracks->Fill(cut_names[2], count_tracks2);
-        // level 3
-        H1_nelectrons[3]->Fill(count_electrons3);
-        H1_nphotons[3]->Fill(count_photons3);
-        H1_ntracks[3]->Fill(count_tracks3);
-        H1_mon_nprobes->Fill(cut_names[3], count_electrons3 + count_photons3);
-        H1_mon_ntracks->Fill(cut_names[3], count_tracks3);
-        /***********************************************
-         * for simulation calibration
-         * ********************************************/
-        std::vector<int> AdcId;
-        std::vector<int> TrackId;
-        H1_nelastics->Fill(Elastics.size());
-        for (ElasticsOutput e : Elastics) {
-            TrackId.push_back(e.track.trackid); 
-            for (int i = 0; i < hitBank.getRows(); i++) {
-                int trackid = hitBank.getInt("trackid",i);
-                if (trackid == e.track.trackid) { // if this hit is from the track
-                    // track and probe before cuts
-                    H1_elastic_track_p->Fill(e.track.p);
-                    H1_elastic_track_pT->Fill(e.track.pT);
-                    H1_elastic_track_theta->Fill(e.track.theta);
-                    H1_elastic_track_phi->Fill(e.track.phi);
-                    H1_elastic_probe_p->Fill(e.probe.p);
-                    H1_elastic_probe_pT->Fill(e.probe.pT);
-                    H1_elastic_probe_theta->Fill(e.probe.theta);
-                    H1_elastic_probe_phi->Fill(e.probe.phi);
-                    H2_elastic_pT_adc->Fill(e.probe.pT, e.track.adc);
-                    // expected tracks given the electron kinematics
-                    double theta = M_PI*e.probe.theta/180;
-                    double p = 2*Ee*sin(theta/2);
-                    double pT = Ee*sin(theta);
-                    double pz = Ee*(1-cos(theta));
-                    double theta_track = acos(pz/p)*180/M_PI;
-                    double phi_track = (e.probe.phi > 180) ? (e.probe.phi - 180) : (e.probe.phi + 180);
-                    H1_elastics_expected_track_p->Fill(p);
-                    H1_elastics_expected_track_pT->Fill(pT);
-                    H1_elastics_expected_track_theta->Fill(theta_track);
-                    H1_elastics_expected_track_phi->Fill(phi_track);
-                    // select particles (proton or deuterium)
-                    if ((e.probe.pT > pT_min) && (e.probe.pT < pT_max) && (e.track.adc > sum_adc_min) && (e.track.adc < sum_adc_max)) {
-                        H1_selection_expected_track_p->Fill(p);
-                        H1_selection_expected_track_pT->Fill(pT);
-                        H1_selection_expected_track_theta->Fill(theta_track);
-                        H1_selection_expected_track_phi->Fill(phi_track);
-                        H1_selection_reconstructed_track_adc->Fill(e.track.adc);
-                        H1_selection_reconstructed_probe_pT->Fill(e.probe.pT);
-                        // hits 
-                        // they are the column index in AHDC::adc bank 
-                        // Attention, the numerotation starts at 1
-                        // there is also the notion of trueIndex due to the notion of Filtered Bank (only available in Java)
-                        // the the hit id is defined make we don't need to use the trueIndex, actually, there is equivalent in c++
-                        // but it is confusing to use it in coatjava/*/rec/ahdc/Hit/HitReader.java
-                        int hit_id = hitBank.getInt("id",i) - 1; 
-                        double sector    = adcBank.getInt("sector", hit_id);
-                        double layer     = adcBank.getInt("layer", hit_id);
-                        double component = adcBank.getInt("component", hit_id);
-                        ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
-                        double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
-                        double timeMax = adcBank.getFloat("time", hit_id);
-                        double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
-                        int adc        = adcBank.getInt("ADC", hit_id);
-                        // hit cut on time
-                        //H1_dt00->Fill(time-obj.t0);
-                        //printf("%lf ", time);
-                        //if (time < 200) continue;
-                        //if (time - obj.t0 < 25) continue;
-                        //if ((time - obj.t0 < 50) || (time - obj.t0 > 250)) continue;
-                        //H1_tot0->Fill(tot);
-                        //if ((tot < 400) || (tot > 600)) continue;
-                        AdcId.push_back(hit_id+1); // restore the real id
-                        H1_t0->Fill(obj.t0);
-                        H1_dt0->Fill(time-obj.t0);
-                        H1_leadingEdgeTime->Fill(time); 
-                        H1_timeMax->Fill(timeMax);
-                        H1_deltaTime->Fill(timeMax-time); 
-                        H1_timeOverThreshold->Fill(tot);
-                        H1_amplitude->Fill(adc); 
-                        H2_times->Fill(timeMax, time);
-                        H2_tot_amp->Fill(tot, adc);
-                        H2_deltaTime_adc->Fill(timeMax-time, adc);
-                        int s0 = wfBank.getShort("s1", hit_id);
-                        int s1 = wfBank.getShort("s2", hit_id);
-                        int s2 = wfBank.getShort("s3", hit_id);
-                        int s3 = wfBank.getShort("s4", hit_id);
-                        VecH1_noise[0]->Fill(s0);
-                        VecH1_noise[1]->Fill(s1);
-                        VecH1_noise[2]->Fill(s2);
-                        VecH1_noise[3]->Fill(s3);
+            else if (Photons.size() > 0) {
+                std::vector<State> NewPhotons;
+                std::vector<Physics> NewPhotonKinematics;
+                for (int i = 0; i < (int) Photons.size(); i++) {
+                    State S = Photons[i];
+                    Physics K = PhotonKinematics[i];
+                    if (S.theta <= 5) { // keep only photons in the FT
+                        H1_probe_vz[1]->Fill(S.vz);
+                        H1_probe_p[1]->Fill(S.p);
+                        H1_probe_pT[1]->Fill(S.pT);
+                        H1_probe_theta[1]->Fill(S.theta);
+                        H1_probe_phi[1]->Fill(S.phi);
+                        H1_Q2[1]->Fill(K.Q2);
+                        H1_W2[1]->Fill(K.W2);
+                        H1_xB[1]->Fill(K.xB);
+                        H1_nu[1]->Fill(K.nu);
+                        NewPhotons.push_back(S);
+                        NewPhotonKinematics.push_back(K);
                     }
                 }
-            } // end loop over elastics
-        } // end loop over elastics hits
-        // save those event in a hipo file
-        if (AdcId.size()*TrackId.size() > 0) { 
-            hipo::bank outAdcBank(schemaAdc, (int) AdcId.size());
-            hipo::bank outWfBank(schemaWf, (int) AdcId.size());
-            hipo::bank outTrackBank(schemaTrack, (int) TrackId.size());
-            for (int i = 0; i < outAdcBank.getRows(); i++) {
-                // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
-                int index = AdcId[i] - 1;
-                // AHDC::adc
-                outAdcBank.putByte("sector", i, adcBank.getInt("sector", index));
-                outAdcBank.putByte("layer", i, adcBank.getInt("layer", index));
-                outAdcBank.putShort("component", i, adcBank.getInt("component", index));
-                outAdcBank.putByte("order", i, adcBank.getInt("order", index));
-                outAdcBank.putInt("ADC", i, adcBank.getInt("ADC", index));
-                outAdcBank.putFloat("time", i, adcBank.getFloat("time", index));
-                outAdcBank.putFloat("ped", i, adcBank.getInt("ped", index));
-                outAdcBank.putInt("windex", i, adcBank.getInt("windex", index));
-                outAdcBank.putInt("integral", i, adcBank.getInt("integral", index));
-                outAdcBank.putFloat("leadingEdgeTime", i, adcBank.getFloat("leadingEdgeTime", index));
-                outAdcBank.putFloat("timeOverThreshold", i, adcBank.getFloat("timeOverThreshold", index));
-                outAdcBank.putFloat("constantFractionTime", i, adcBank.getFloat("constantFractionTime", index));
-                //outAdcBank.put("wfType", i, adcBank.getInt("ped", index));
-                outAdcBank.putInt("wfType", i, 0);
-                // AHDC::wf
-                outWfBank.putByte("sector", i, wfBank.getInt("sector", index));
-                outWfBank.putByte("layer", i, wfBank.getInt("layer", index));
-                outWfBank.putShort("component", i, wfBank.getInt("component", index));
-                outWfBank.putLong("timestamp", i, wfBank.getLong("timestamp", index));
-                outWfBank.putInt("time", i, wfBank.getInt("time", index));
-                outWfBank.putShort("s1", i, wfBank.getInt("s1", index));
-                outWfBank.putShort("s2", i, wfBank.getInt("s2", index));
-                outWfBank.putShort("s3", i, wfBank.getInt("s3", index));
-                outWfBank.putShort("s4", i, wfBank.getInt("s4", index));
-                outWfBank.putShort("s5", i, wfBank.getInt("s5", index));
-                outWfBank.putShort("s6", i, wfBank.getInt("s6", index));
-                outWfBank.putShort("s7", i, wfBank.getInt("s7", index));
-                outWfBank.putShort("s8", i, wfBank.getInt("s8", index));
-                outWfBank.putShort("s9", i, wfBank.getInt("s9", index));
-                outWfBank.putShort("s10", i, wfBank.getInt("s10", index));
-                outWfBank.putShort("s11", i, wfBank.getInt("s11", index));
-                outWfBank.putShort("s12", i, wfBank.getInt("s12", index));
-                outWfBank.putShort("s13", i, wfBank.getInt("s13", index));
-                outWfBank.putShort("s14", i, wfBank.getInt("s14", index));
-                outWfBank.putShort("s15", i, wfBank.getInt("s15", index));
-                outWfBank.putShort("s16", i, wfBank.getInt("s16", index));
-                outWfBank.putShort("s17", i, wfBank.getInt("s17", index));
-                outWfBank.putShort("s18", i, wfBank.getInt("s18", index));
-                outWfBank.putShort("s19", i, wfBank.getInt("s19", index));
-                outWfBank.putShort("s20", i, wfBank.getInt("s20", index));
-                outWfBank.putShort("s21", i, wfBank.getInt("s21", index));
-                outWfBank.putShort("s22", i, wfBank.getInt("s22", index));
-                outWfBank.putShort("s23", i, wfBank.getInt("s23", index));
-                outWfBank.putShort("s24", i, wfBank.getInt("s24", index));
-                outWfBank.putShort("s25", i, wfBank.getInt("s25", index));
-                outWfBank.putShort("s26", i, wfBank.getInt("s26", index));
-                outWfBank.putShort("s27", i, wfBank.getInt("s27", index));
-                outWfBank.putShort("s28", i, wfBank.getInt("s28", index));
-                outWfBank.putShort("s29", i, wfBank.getInt("s29", index));
-                outWfBank.putShort("s30", i, wfBank.getInt("s30", index));
-            } 
-            for (int i = 0; i < outTrackBank.getRows(); i++) {
-                // AHDC::track
-                // Attention: the track id numerotation starts at 1, the getter indexation starts at 0
-                int index = TrackId[i] - 1;
-                outTrackBank.putInt("trackid", i, trackBank.getInt("trackid", index));
-                outTrackBank.putFloat("x", i, trackBank.getFloat("x", index));
-                outTrackBank.putFloat("y", i, trackBank.getFloat("y", index));
-                outTrackBank.putFloat("z", i, trackBank.getFloat("z", index));
-                outTrackBank.putFloat("px", i, trackBank.getFloat("px", index));
-                outTrackBank.putFloat("py", i, trackBank.getFloat("py", index));
-                outTrackBank.putFloat("pz", i, trackBank.getFloat("pz", index));
-                outTrackBank.putInt("n_hits", i, trackBank.getInt("n_hits", index));
-                outTrackBank.putInt("sum_adc", i, trackBank.getInt("sum_adc", index));
-                outTrackBank.putFloat("path", i, trackBank.getFloat("path", index));
-                outTrackBank.putFloat("dEdx", i, trackBank.getFloat("dEdx", index));
-                outTrackBank.putFloat("p_drift", i, trackBank.getFloat("p_drift", index));
-                outTrackBank.putFloat("chi2", i, trackBank.getFloat("chi2", index));
-                outTrackBank.putFloat("sum_residuals", i, trackBank.getFloat("sum_residuals", index));
-            } // end write selection from elastics in a hipo file
-            outEvent.reset();
-            outEvent.addStructure(outAdcBank);
-            outEvent.addStructure(outWfBank);
-            outEvent.addStructure(outTrackBank);
-            writer.addEvent(outEvent);
-        }
-    } // and loop over events
+                H1_nphotons[1]->Fill(NewPhotons.size());
+                H1_mon_nprobes->Fill(cut_names[1], NewPhotons.size());
+                // keep only photons in the FT
+                Photons = NewPhotons;
+                PhotonKinematics = NewPhotonKinematics;
+            }
+            else {
+                continue; // ignore this event
+            }
+            // if the event is not ignored, let check the tracks
+            Tracks.clear(); // restart
+            H1_ntracks[1]->Fill(trackBank.getRows()); 
+            H1_mon_ntracks->Fill(cut_names[1], (int) trackBank.getRows());
+            for (int i = 0; i < trackBank.getRows(); i++) {
+                State T(trackBank.getFloat("px",i), trackBank.getFloat("py",i), trackBank.getFloat("pz",i), 
+                        trackBank.getFloat("x",i), trackBank.getFloat("y",i), trackBank.getFloat("z",i));
+                T.vz = T.vz*0.1; // convert mm to cm
+                T.p  = T.p*0.001; // convert MeV to GeV
+                T.pT = T.pT*0.001; // convert MeV to Gev
+                T.dEdx = track0Bank.getFloat("dEdx", i);
+                T.adc = trackBank.getInt("sum_adc", i);
+                T.trackid = trackBank.getInt("trackid", i);
+                Tracks.push_back(T);
+                // Histograms -- Level 1
+                H1_track_vz[1]->Fill(T.vz);
+                H1_track_p[1]->Fill(T.p); 
+                H1_track_pT[1]->Fill(T.pT);
+                H1_track_theta[1]->Fill(T.theta);
+                H1_track_phi[1]->Fill(T.phi);
+                H1_track_nhits[1]->Fill(trackBank.getInt("n_hits", i)); 
+                H1_track_adc[1]->Fill(trackBank.getInt("sum_adc", i));
+                H1_track_path[1]->Fill(trackBank.getFloat("path", i));   
+                H1_track_dEdx[1]->Fill(track0Bank.getFloat("dEdx", i));    
+                H1_track_residuals[1]->Fill(trackBank.getFloat("sum_residuals", i));
+                H1_track_residuals_per_nhits[1]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                H1_track_chi2[1]->Fill(trackBank.getFloat("chi2", i));
+                H1_track_chi2_per_nhits[1]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                H1_track_p_drift[1]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+            }
+            // Now Combined Electrons and Photons
+            std::vector<State> Probes;
+            Probes.reserve(Electrons.size() + Photons.size());
+            Probes.insert(Probes.end(), Electrons.begin(), Electrons.end());
+            Probes.insert(Probes.end(), Photons.begin(), Photons.end());
+            std::vector<Physics> ProbeKinematics;
+            ProbeKinematics.reserve(ElectronKinematics.size() + PhotonKinematics.size());
+            ProbeKinematics.insert(ProbeKinematics.end(), ElectronKinematics.begin(), ElectronKinematics.end());
+            ProbeKinematics.insert(ProbeKinematics.end(), PhotonKinematics.begin(), PhotonKinematics.end());
+            // let check the correlations
+            for (State T : Tracks) {
+                for (State S : Probes) {
+                    H2_vze_vz[1]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[1]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[1]->Fill(S.phi - T.phi);  
+                    H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[1]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[1]->Fill(S.pT, T.pT);
+                }
+            }
+            /*******************************************
+             *  cut on W2 (cut level 2)
+             * *****************************************/
+            int count_electrons2 = 0;
+            int count_photons2 = 0;
+            int count_tracks2 = 0;
+            int count_electrons3 = 0; // level 3
+            int count_photons3 = 0;
+            int count_tracks3 = 0;
+            std::vector<ElasticsOutput> Elastics; // list of couples (e/gamma, track) for elastics
+            for (int i = 0; i < (int) Probes.size(); i++) {
+                State S = Probes[i];
+                Physics K = ProbeKinematics[i];
+                if ((K.W2 < W2_min) || (K.W2 > W2_max)) continue;
+                if (S.pid == 11) count_electrons2++;
+                if (S.pid == 22) count_photons2++;
+                for (State T : Tracks) {
+                    count_tracks2++;
+                    // corr
+                    H2_vze_vz[2]->Fill(S.vz, T.vz); 
+                    H1_delta_vz[2]->Fill(S.vz - T.vz); 
+                    H1_delta_phi[2]->Fill(S.phi - T.phi);  
+                    H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
+                    H2_p_adc[2]->Fill(S.pT, T.adc);
+                    H2_pTe_pT[2]->Fill(S.pT, T.pT);
+                    // probe 
+                    H1_probe_vz[2]->Fill(S.vz);
+                    H1_probe_p[2]->Fill(S.p);
+                    H1_probe_pT[2]->Fill(S.pT);
+                    H1_probe_theta[2]->Fill(S.theta);
+                    H1_probe_phi[2]->Fill(S.phi);
+                    H1_Q2[2]->Fill(K.Q2);
+                    H1_W2[2]->Fill(K.W2);
+                    H1_xB[2]->Fill(K.xB);
+                    H1_nu[2]->Fill(K.nu);
+                    // track
+                    H1_track_vz[2]->Fill(T.vz);
+                    H1_track_p[2]->Fill(T.p);
+                    H1_track_pT[2]->Fill(T.pT);
+                    H1_track_theta[2]->Fill(T.theta);
+                    H1_track_phi[2]->Fill(T.phi);
+                    H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
+                    H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
+                    H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
+                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
+                    H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
+                    H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                    H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
+                    H1_track_chi2_per_nhits[2]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                    H1_track_p_drift[2]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                    /*******************************************
+                     *  delta_phi (cut level 3)
+                     * *****************************************/
+                    double delta_phi = S.phi - T.phi;
+                    if ((fabs(delta_phi-DeltaPhi1) < width_DeltaPhi) || (fabs(delta_phi-DeltaPhi2) < width_DeltaPhi)) {
+                        if (S.pid == 11) count_electrons3++;
+                        if (S.pid == 22) count_photons3++;
+                        count_tracks3++;
+                        // corr
+                        H2_vze_vz[3]->Fill(S.vz, T.vz); 
+                        H1_delta_vz[3]->Fill(S.vz - T.vz); 
+                        H1_delta_phi[3]->Fill(S.phi - T.phi);  
+                        H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
+                        H2_p_adc[3]->Fill(S.pT, T.adc);
+                        H2_pTe_pT[3]->Fill(S.pT, T.pT);
+                        // probe 
+                        H1_probe_vz[3]->Fill(S.vz);
+                        H1_probe_p[3]->Fill(S.p);
+                        H1_probe_pT[3]->Fill(S.pT);
+                        H1_probe_theta[3]->Fill(S.theta);
+                        H1_probe_phi[3]->Fill(S.phi);
+                        H1_Q2[3]->Fill(K.Q2);
+                        H1_W2[3]->Fill(K.W2);
+                        H1_xB[3]->Fill(K.xB);
+                        H1_nu[3]->Fill(K.nu);
+                        // track
+                        H1_track_vz[3]->Fill(T.vz);
+                        H1_track_p[3]->Fill(T.p); 
+                        H1_track_pT[3]->Fill(T.pT);
+                        H1_track_theta[3]->Fill(T.theta);
+                        H1_track_phi[3]->Fill(T.phi);
+                        H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
+                        H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
+                        H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
+                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
+                        H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
+                        H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
+                        H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
+                        H1_track_chi2_per_nhits[3]->Fill(trackBank.getFloat("chi2", i)/trackBank.getInt("n_hits", i));
+                        H1_track_p_drift[3]->Fill(0.001*trackBank.getFloat("p_drift", i)); // convert MeV to GeV
+                        /***********************************************
+                         * select these elestics for calibration
+                         * ********************************************/
+                        Elastics.push_back({S,T}); 
+                    }
+                }
+            }
+            // level 2
+            H1_nelectrons[2]->Fill(count_electrons2);
+            H1_nphotons[2]->Fill(count_photons2);
+            H1_ntracks[2]->Fill(count_tracks2);
+            H1_mon_nprobes->Fill(cut_names[2], count_electrons2 + count_photons2);
+            H1_mon_ntracks->Fill(cut_names[2], count_tracks2);
+            // level 3
+            H1_nelectrons[3]->Fill(count_electrons3);
+            H1_nphotons[3]->Fill(count_photons3);
+            H1_ntracks[3]->Fill(count_tracks3);
+            H1_mon_nprobes->Fill(cut_names[3], count_electrons3 + count_photons3);
+            H1_mon_ntracks->Fill(cut_names[3], count_tracks3);
+            /***********************************************
+             * for simulation calibration
+             * ********************************************/
+            std::vector<int> AdcId;
+            std::vector<int> TrackId;
+            H1_nelastics->Fill(Elastics.size());
+            for (ElasticsOutput e : Elastics) {
+                TrackId.push_back(e.track.trackid); 
+                for (int i = 0; i < hitBank.getRows(); i++) {
+                    int trackid = hitBank.getInt("trackid",i);
+                    if (trackid == e.track.trackid) { // if this hit is from the track
+                        // track and probe before cuts
+                        H1_elastic_track_p->Fill(e.track.p);
+                        H1_elastic_track_pT->Fill(e.track.pT);
+                        H1_elastic_track_theta->Fill(e.track.theta);
+                        H1_elastic_track_phi->Fill(e.track.phi);
+                        H1_elastic_probe_p->Fill(e.probe.p);
+                        H1_elastic_probe_pT->Fill(e.probe.pT);
+                        H1_elastic_probe_theta->Fill(e.probe.theta);
+                        H1_elastic_probe_phi->Fill(e.probe.phi);
+                        H2_elastic_pT_adc->Fill(e.probe.pT, e.track.adc);
+                        // expected tracks given the electron kinematics
+                        double theta = M_PI*e.probe.theta/180;
+                        double p = 2*Ee*sin(theta/2);
+                        double pT = Ee*sin(theta);
+                        double pz = Ee*(1-cos(theta));
+                        double theta_track = acos(pz/p)*180/M_PI;
+                        double phi_track = (e.probe.phi > 180) ? (e.probe.phi - 180) : (e.probe.phi + 180);
+                        H1_elastics_expected_track_p->Fill(p);
+                        H1_elastics_expected_track_pT->Fill(pT);
+                        H1_elastics_expected_track_theta->Fill(theta_track);
+                        H1_elastics_expected_track_phi->Fill(phi_track);
+                        // select particles (proton or deuterium)
+                        if ((e.probe.pT > pT_min) && (e.probe.pT < pT_max) && (e.track.adc > sum_adc_min) && (e.track.adc < sum_adc_max)) {
+                            H1_selection_expected_track_p->Fill(p);
+                            H1_selection_expected_track_pT->Fill(pT);
+                            H1_selection_expected_track_theta->Fill(theta_track);
+                            H1_selection_expected_track_phi->Fill(phi_track);
+                            H1_selection_reconstructed_track_adc->Fill(e.track.adc);
+                            H1_selection_reconstructed_probe_pT->Fill(e.probe.pT);
+                            // hits 
+                            // they are the column index in AHDC::adc bank 
+                            // Attention, the numerotation starts at 1
+                            // there is also the notion of trueIndex due to the notion of Filtered Bank (only available in Java)
+                            // the the hit id is defined make we don't need to use the trueIndex, actually, there is equivalent in c++
+                            // but it is confusing to use it in coatjava/*/rec/ahdc/Hit/HitReader.java
+                            int hit_id = hitBank.getInt("id",i) - 1; 
+                            double sector    = adcBank.getInt("sector", hit_id);
+                            double layer     = adcBank.getInt("layer", hit_id);
+                            double component = adcBank.getInt("component", hit_id);
+                            ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
+                            double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
+                            double timeMax = adcBank.getFloat("time", hit_id);
+                            double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
+                            int adc        = adcBank.getInt("ADC", hit_id);
+                            int ped        = adcBank.getInt("ped", hit_id);
+                            AdcId.push_back(hit_id+1); // restore the real id
+                            H1_t0->Fill(obj.t0);
+                            H1_dt0->Fill(time-obj.t0);
+                            H1_leadingEdgeTime->Fill(time); 
+                            H1_timeMax->Fill(timeMax);
+                            H1_deltaTime->Fill(timeMax-time); 
+                            H1_timeOverThreshold->Fill(tot);
+                            H1_amplitude->Fill(adc); 
+                            H2_times->Fill(timeMax, time);
+                            H2_tot_amp->Fill(tot, adc);
+                            H2_deltaTime_adc->Fill(timeMax-time, adc);
+                            int s0 = wfBank.getShort("s1", hit_id);
+                            int s1 = wfBank.getShort("s2", hit_id);
+                            int s2 = wfBank.getShort("s3", hit_id);
+                            int s3 = wfBank.getShort("s4", hit_id);
+                            VecH1_noise[0]->Fill(s0);
+                            VecH1_noise[1]->Fill(s1);
+                            VecH1_noise[2]->Fill(s2);
+                            VecH1_noise[3]->Fill(s3);
+                            // Fill specific wires / channels
+                            H1_CHANNELS_time[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(time-obj.t0);
+                            H1_CHANNELS_tot[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(tot);
+                            H1_CHANNELS_adc[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(adc);
+                            H1_CHANNELS_ped[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(ped);
+                        }
+                    }
+                } // end loop over elastics
+            } // end loop over elastics hits
+            // save those event in a hipo file
+            if (AdcId.size()*TrackId.size() > 0) { 
+                hipo::bank outAdcBank(schemaAdc, (int) AdcId.size());
+                hipo::bank outWfBank(schemaWf, (int) AdcId.size());
+                hipo::bank outTrackBank(schemaTrack, (int) TrackId.size());
+                hipo::bank outRunConfigBank(schemaRunConfig, 1);
+                for (int i = 0; i < outAdcBank.getRows(); i++) {
+                    // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
+                    int index = AdcId[i] - 1;
+                    // AHDC::adc
+                    outAdcBank.putByte("sector", i, adcBank.getInt("sector", index));
+                    outAdcBank.putByte("layer", i, adcBank.getInt("layer", index));
+                    outAdcBank.putShort("component", i, adcBank.getInt("component", index));
+                    outAdcBank.putByte("order", i, adcBank.getInt("order", index));
+                    outAdcBank.putInt("ADC", i, adcBank.getInt("ADC", index));
+                    outAdcBank.putFloat("time", i, adcBank.getFloat("time", index));
+                    outAdcBank.putFloat("ped", i, adcBank.getInt("ped", index));
+                    outAdcBank.putInt("windex", i, adcBank.getInt("windex", index));
+                    outAdcBank.putInt("integral", i, adcBank.getInt("integral", index));
+                    outAdcBank.putFloat("leadingEdgeTime", i, adcBank.getFloat("leadingEdgeTime", index));
+                    outAdcBank.putFloat("timeOverThreshold", i, adcBank.getFloat("timeOverThreshold", index));
+                    outAdcBank.putFloat("constantFractionTime", i, adcBank.getFloat("constantFractionTime", index));
+                    //outAdcBank.put("wfType", i, adcBank.getInt("ped", index));
+                    outAdcBank.putInt("wfType", i, 0);
+                    // AHDC::wf
+                    outWfBank.putByte("sector", i, wfBank.getInt("sector", index));
+                    outWfBank.putByte("layer", i, wfBank.getInt("layer", index));
+                    outWfBank.putShort("component", i, wfBank.getInt("component", index));
+                    outWfBank.putLong("timestamp", i, wfBank.getLong("timestamp", index));
+                    outWfBank.putInt("time", i, wfBank.getInt("time", index));
+                    outWfBank.putShort("s1", i, wfBank.getInt("s1", index));
+                    outWfBank.putShort("s2", i, wfBank.getInt("s2", index));
+                    outWfBank.putShort("s3", i, wfBank.getInt("s3", index));
+                    outWfBank.putShort("s4", i, wfBank.getInt("s4", index));
+                    outWfBank.putShort("s5", i, wfBank.getInt("s5", index));
+                    outWfBank.putShort("s6", i, wfBank.getInt("s6", index));
+                    outWfBank.putShort("s7", i, wfBank.getInt("s7", index));
+                    outWfBank.putShort("s8", i, wfBank.getInt("s8", index));
+                    outWfBank.putShort("s9", i, wfBank.getInt("s9", index));
+                    outWfBank.putShort("s10", i, wfBank.getInt("s10", index));
+                    outWfBank.putShort("s11", i, wfBank.getInt("s11", index));
+                    outWfBank.putShort("s12", i, wfBank.getInt("s12", index));
+                    outWfBank.putShort("s13", i, wfBank.getInt("s13", index));
+                    outWfBank.putShort("s14", i, wfBank.getInt("s14", index));
+                    outWfBank.putShort("s15", i, wfBank.getInt("s15", index));
+                    outWfBank.putShort("s16", i, wfBank.getInt("s16", index));
+                    outWfBank.putShort("s17", i, wfBank.getInt("s17", index));
+                    outWfBank.putShort("s18", i, wfBank.getInt("s18", index));
+                    outWfBank.putShort("s19", i, wfBank.getInt("s19", index));
+                    outWfBank.putShort("s20", i, wfBank.getInt("s20", index));
+                    outWfBank.putShort("s21", i, wfBank.getInt("s21", index));
+                    outWfBank.putShort("s22", i, wfBank.getInt("s22", index));
+                    outWfBank.putShort("s23", i, wfBank.getInt("s23", index));
+                    outWfBank.putShort("s24", i, wfBank.getInt("s24", index));
+                    outWfBank.putShort("s25", i, wfBank.getInt("s25", index));
+                    outWfBank.putShort("s26", i, wfBank.getInt("s26", index));
+                    outWfBank.putShort("s27", i, wfBank.getInt("s27", index));
+                    outWfBank.putShort("s28", i, wfBank.getInt("s28", index));
+                    outWfBank.putShort("s29", i, wfBank.getInt("s29", index));
+                    outWfBank.putShort("s30", i, wfBank.getInt("s30", index));
+                } 
+                for (int i = 0; i < outTrackBank.getRows(); i++) {
+                    // AHDC::track
+                    // Attention: the track id numerotation starts at 1, the getter indexation starts at 0
+                    int index = TrackId[i] - 1;
+                    outTrackBank.putInt("trackid", i, trackBank.getInt("trackid", index));
+                    outTrackBank.putFloat("x", i, trackBank.getFloat("x", index));
+                    outTrackBank.putFloat("y", i, trackBank.getFloat("y", index));
+                    outTrackBank.putFloat("z", i, trackBank.getFloat("z", index));
+                    outTrackBank.putFloat("px", i, trackBank.getFloat("px", index));
+                    outTrackBank.putFloat("py", i, trackBank.getFloat("py", index));
+                    outTrackBank.putFloat("pz", i, trackBank.getFloat("pz", index));
+                    outTrackBank.putInt("n_hits", i, trackBank.getInt("n_hits", index));
+                    outTrackBank.putInt("sum_adc", i, trackBank.getInt("sum_adc", index));
+                    outTrackBank.putFloat("path", i, trackBank.getFloat("path", index));
+                    outTrackBank.putFloat("dEdx", i, trackBank.getFloat("dEdx", index));
+                    outTrackBank.putFloat("p_drift", i, trackBank.getFloat("p_drift", index));
+                    outTrackBank.putFloat("chi2", i, trackBank.getFloat("chi2", index));
+                    outTrackBank.putFloat("sum_residuals", i, trackBank.getFloat("sum_residuals", index));
+                } // end write selection from elastics in a hipo file
+                  // RUN::config
+                {
+                    // We save this bank in order to re-run the reconstruction on the ouput hipo file
+                    // As we can process multiple files, different events may have differents run number!
+                    // Example re-decode AHDC::wf to AHDC::adc
+                    // Main reason: In order to run the org.jlab.clas.service.PulseExtractorEngine using recon-util, I need the existence of the RUN::config
+                    //              if this bank does not exist or if the run nulber is < 0, it will ignore the event
+                    outRunConfigBank.putInt("run", 0, runConfigBank.getInt("run", 0));
+                    outRunConfigBank.putInt("event", 0, runConfigBank.getInt("event", 0));
+                    outRunConfigBank.putInt("unixtime", 0, runConfigBank.getInt("unixtime", 0));
+                    outRunConfigBank.putLong("trigger", 0, runConfigBank.getLong("trigger", 0));
+                    outRunConfigBank.putLong("timestamp", 0, runConfigBank.getLong("timestamp", 0));
+                    outRunConfigBank.putByte("type", 0, runConfigBank.getByte("type", 0));
+                    outRunConfigBank.putByte("mode", 0, runConfigBank.getByte("mode", 0));
+                    outRunConfigBank.putFloat("torus", 0, runConfigBank.getFloat("torus", 0));
+                    outRunConfigBank.putFloat("solenoid", 0, runConfigBank.getFloat("solenoid", 0));
+                }
+                outEvent.reset();
+                outEvent.addStructure(outAdcBank);
+                outEvent.addStructure(outWfBank);
+                outEvent.addStructure(outTrackBank);
+                outEvent.addStructure(outRunConfigBank);
+                writer.addEvent(outEvent);
+            }
+        } // and loop over events
+    } // and loop over files
     writer.close();
     printf("Create file : %s\n", outputFile);
 
@@ -891,7 +971,7 @@ int main(int argc, char const *argv[]) {
  * output
  * **********************************************************/
 
-    const char * output = "./output/elastics_D2.root";
+    const char * output = "./output/multiple_files_elastics.root";
     TFile *f = new TFile(output, "RECREATE");
     TDirectory *count_dir   = f->mkdir("counts");
     TDirectory *probes_dir   = f->mkdir("electrons_photons");
@@ -1310,6 +1390,34 @@ int main(int argc, char const *argv[]) {
     VecH1_noise[1]->Write("wf_s1");
     VecH1_noise[2]->Write("wf_s2");
     VecH1_noise[3]->Write("wf_s3");
+    TDirectory* channels_dir = calibration_dir->mkdir("signals_channels_by_channels");
+    channels_dir->cd();
+    std::vector<TDirectory*> layers_dir;
+    layers_dir.push_back(channels_dir->mkdir("layer_11"));
+    layers_dir.push_back(channels_dir->mkdir("layer_21"));
+    layers_dir.push_back(channels_dir->mkdir("layer_22"));
+    layers_dir.push_back(channels_dir->mkdir("layer_31"));
+    layers_dir.push_back(channels_dir->mkdir("layer_32"));
+    layers_dir.push_back(channels_dir->mkdir("layer_41"));
+    layers_dir.push_back(channels_dir->mkdir("layer_42"));
+    layers_dir.push_back(channels_dir->mkdir("layer_51"));
+    std::vector<TDirectory*> components_dir;
+    for (int i = 0; i < 576; i++) {
+        int sector = -1;
+        int layer = -1;
+        int component = -1;
+        int num_layer = -1;
+        wire2slcn(i, sector, layer, component, num_layer);
+        components_dir.push_back(layers_dir[num_layer-1]->mkdir(TString::Format("wire_%d", component).Data()));
+    }
+
+    for (int i = 0; i < 576; i++) {
+        components_dir[i]->cd();
+        H1_CHANNELS_time[i]->Write("time");
+        H1_CHANNELS_tot[i]->Write("tot");
+        H1_CHANNELS_adc[i]->Write("adc");
+        H1_CHANNELS_ped[i]->Write("ped");
+    }
 
     //////////////////////////////
     // Close file
@@ -1324,23 +1432,67 @@ int main(int argc, char const *argv[]) {
     return 0;
 }
 
-void progressBar(int state, int bar_length) { // state is a number between 0 and 100
+void progressBar(int state, int nevents) { // state is a number between 0 and 100
     // for the moment the bar length is not variable
-    if (state > bar_length) {return ;}
+    if (state > 100) {return ;}
     printf("\rProgress \033[32m\[");
     for (int i = 0; i <= state; i++) {
         printf("#");
     }
     printf("\033[0m");
-    for (int i = state+1; i < bar_length; i++) {
+    for (int i = state+1; i < 100; i++) {
         printf(".");
     }
     if (state == 100) {
-        printf("\033[32m] \033[1m %d %%\033[0m\n", state);
+        printf("\033[32m] \033[1m %d %% \033[0m \033[31m (evts: %d) \033[0m\n", state, nevents);
     } else {
         printf("] %d %%", state);
     }
     fflush(stdout);
+}
+
+void wire2slcn(int wire, int & sector, int & layer, int & component, int & num_layer) {
+        sector = 1;
+        if (wire < 47) {
+            layer = 11;
+            component = wire + 1;
+            num_layer = 1;
+        }
+        else if ((47 <= wire) && (wire < 47 + 56)) {
+            layer = 21;
+            component = wire - 47 + 1;
+            num_layer = 2;
+        }
+        else if ((47 + 56 <= wire) && (wire < 47 + 56 + 56)) {
+            layer = 22;
+            component = wire - 47 - 56 + 1;
+            num_layer = 3;
+        }
+        else if ((47 + 56 + 56 <= wire) && (wire < 47 + 56 + 56 + 72)) {
+            layer = 31;
+            component = wire - 47 - 56 - 56 + 1;
+            num_layer = 4;
+        }
+        else if ((47 + 56 + 56 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72)) {
+            layer = 32;
+            component = wire - 47 - 56 - 56 - 72 + 1;
+            num_layer = 5;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87)) {
+            layer = 41;
+            component = wire - 47 - 56 - 56 - 72 - 72 + 1;
+            num_layer = 6;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87)) {
+            layer = 42;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 + 1;
+            num_layer = 7;
+        }
+        else { // ((47 + 56 + 56 + 72 + 72 + 87 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87 + 99)) {
+            layer = 51;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 - 87 + 1;
+            num_layer = 8;
+        }
 }
 
 State::State(double _px, double _py, double _pz, double _vx, double _vy, double _vz) 
