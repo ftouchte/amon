@@ -21,6 +21,8 @@ class AhdcPulse {
 	double timeOverThreshold;
 	double constantFractionTime;
 	int binOffset;
+    bool mask;
+    int nhits; // it may happen that we have several hits on this wires, in that case we should have vectors of waveforms, wfType, integral, ... TO BE DONE later
 public :
 	AhdcPulse();
 	void reset();
@@ -34,6 +36,8 @@ public :
 	void set_binOffset(int _binOffset);
 	void set_samples(std::vector<double> _samples);
 	void set_wfType(int _type);
+    void set_mask(bool _mask);
+    void triggered();
 
 	double get_integral() const;
 	double get_adcMax() const;
@@ -45,6 +49,9 @@ public :
 	int get_binOffset() const;
 	std::vector<double> get_samples() const;
     int get_wfType() const;
+    bool get_mask() const;
+    bool is_masked() const;
+    int get_nhits() const;
 };
 
 #endif
