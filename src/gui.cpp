@@ -928,16 +928,16 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 	}
 		
 	// Draw color palette
-	double zmin = 0.0;
-	double zmax = 4095.0;
-	if (ListOfAdc.size() > 0) {
+	double zmin = minADC;
+	double zmax = maxADC;
+	/*if (ListOfAdc.size() > 0) {
 		zmin = ListOfAdc[0];
 		zmax = zmin;
 	}
 	for (double adc : ListOfAdc) {
 		zmin = (zmin < adc) ? zmin : adc;
 		zmax = (zmax > adc) ? zmax : adc;	
-	}
+	}*/
 	//printf("zmin : %.0lf, zmax : %.0lf\n", zmin, zmax);
 	fColorPalette Palette(5, 1);
 	cr->set_source_rgb(0.0, 0.0, 0.0);
@@ -1020,13 +1020,7 @@ void Window::on_draw_event(const Cairo::RefPtr<Cairo::Context>& cr, int width, i
 					// show activated wires
 					double adcMax            = wire->pulse.get_adcMax();
 					if (adcMax > 0) {
-						double adcOffset         = wire->pulse.get_adcOffset();
-						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
-						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
-						double timeMax           = wire->pulse.get_timeMax();
-                        int wfType = wire->pulse.get_wfType();
-                        update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
-						if (!cut_flag) continue;
+						if (wire->pulse.is_masked()) continue;
 						if (zmin != zmax) {
 							int ncolors = Palette.get_ncolors();
 							double slope = (1.0*(ncolors-1))/(zmax-zmin);
@@ -1209,6 +1203,7 @@ bool Window::dataEventAction() {
 		// loop over hits
 		clearAhdcData();
 		ListOfAdc.clear();
+        ntracks = trackBank.getRows();
 		nWF = 0;
 		for (int col = 0; col < wfBank.getRows(); col++){
 			int sector = wfBank.getInt("sector", col);	
@@ -1234,8 +1229,22 @@ bool Window::dataEventAction() {
             double adcOffset = this->adcBank.getFloat("ped", col);
             double integral = this->adcBank.getInt("integral", col);
             int wfType = this->adcBank.getInt("wfType", col);
-            update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
-            if (cut_flag) {
+            ///////////////////
+            AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
+            wire->pulse.triggered();
+            wire->pulse.set_adcMax(adcMax);
+            wire->pulse.set_adcOffset(adcOffset);
+            wire->pulse.set_integral(integral);
+            wire->pulse.set_timeMax(timeMax);
+            wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
+            wire->pulse.set_timeOverThreshold(timeOverThreshold);
+            wire->pulse.set_constantFractionTime(constantFractionTime);
+            wire->pulse.set_binOffset(binOffset);
+            wire->pulse.set_samples(samples);
+            wire->pulse.set_wfType(wfType);
+            bool status = update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+            wire->pulse.set_mask(status);
+            if (status) {
 					hist1d_adcMax.fill(adcMax);
 					hist1d_leadingEdgeTime.fill(leadingEdgeTime);
 					hist1d_timeOverThreshold.fill(timeOverThreshold);
@@ -1243,18 +1252,7 @@ bool Window::dataEventAction() {
 					hist1d_adcOffset.fill(adcOffset);
 					hist1d_constantFractionTime.fill(constantFractionTime);
 					hist2d_occupancy.fill(component, layer2number(layer));
-                    ///////////////////
-                    AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
-                    wire->pulse.set_adcMax(adcMax);
-                    wire->pulse.set_adcOffset(adcOffset);
-                    wire->pulse.set_integral(integral);
-                    wire->pulse.set_timeMax(timeMax);
-                    wire->pulse.set_leadingEdgeTime(leadingEdgeTime);
-                    wire->pulse.set_timeOverThreshold(timeOverThreshold);
-                    wire->pulse.set_constantFractionTime(constantFractionTime);
-                    wire->pulse.set_binOffset(binOffset);
-                    wire->pulse.set_samples(samples);
-                    wire->pulse.set_wfType(wfType);
+                    // ????
                     wire->occ += 1;
                     ListOfAdc.push_back(adcMax);
                     nWF++;
@@ -1262,7 +1260,6 @@ bool Window::dataEventAction() {
 		}
 		// Update drawings
         update_gui();
-		Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent, hipo_nEventMax, nWF, trackBank.getRows()).Data());
 		return true;
 	}
 	else {return false;}
@@ -1284,16 +1281,10 @@ void Window::drawWaveforms() {
 				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
 					double adcMax            = wire->pulse.get_adcMax();
-					double adcOffset         = wire->pulse.get_adcOffset();
-					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
-					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
-					double timeMax           = wire->pulse.get_timeMax();
-					int    wfType            = wire->pulse.get_wfType();
 					if (adcMax > 0) {
 						if (num >= 10) {break;}
-						    update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
-                        if (!cut_flag) continue;
-						std::vector<double> samples = wire->pulse.get_samples();
+						if (wire->pulse.is_masked()) continue;
+                        std::vector<double> samples = wire->pulse.get_samples();
 						// 0 or 1
 						col = (num % 2) + 1;
  						row = (num / 2) + 1;
@@ -1310,7 +1301,6 @@ void Window::drawWaveforms() {
 			}
 		}
 	}
-	//nWF = num;
 }
 
 void Window::drawWaveformsPerLayer() {
@@ -1327,15 +1317,9 @@ void Window::drawWaveformsPerLayer() {
 				int nhits = 0;
 				for (int w = 0; w < layer->GetNumberOfWires(); w++){
 					AhdcWire* wire = layer->GetWire(w);
-					double adcMax            = wire->pulse.get_adcMax();
-					double adcOffset         = wire->pulse.get_adcOffset();
-					double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
-					double timeOverThreshold = wire->pulse.get_timeOverThreshold();
-					double timeMax           = wire->pulse.get_timeMax();
-                    int wfType = wire->pulse.get_wfType();
+					double adcMax  = wire->pulse.get_adcMax();
 					if (adcMax > 0) {
-						update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
-						if (!cut_flag) continue;
+                        if (wire->pulse.is_masked()) continue;
 						nhits++;
 						std::vector<double> samples = wire->pulse.get_samples();
 						for (int i = 0; i < NumberOfBins; i++) {
@@ -1377,15 +1361,9 @@ void Window::drawWaveformsPerLayer() {
 					int nth = 0;
 					for (int w = 0; w < layer->GetNumberOfWires(); w++){
 						AhdcWire* wire = layer->GetWire(w);
-						double adcMax            = wire->pulse.get_adcMax();
-						double adcOffset         = wire->pulse.get_adcOffset();
-						double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
-						double timeOverThreshold = wire->pulse.get_timeOverThreshold();
-						double timeMax           = wire->pulse.get_timeMax();
-                        int wfType = wire->pulse.get_wfType();
+						double adcMax  = wire->pulse.get_adcMax();
 						if (adcMax > 0) {
-							update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
-                            if (!cut_flag) continue;
+                            if (wire->pulse.is_masked()) continue;
 							std::vector<double> samples = wire->pulse.get_samples();
 							double r1 = 0.0, g1 = 0.0, b1 = 1.0;
 							double r2 = 0.0, g2 = 1.0, b2 = 0.0;
@@ -1759,6 +1737,41 @@ void Window::clearAhdcData() {
 					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
 					wire->pulse.reset();
 					if (is_reset) wire->occ = 0;
+				}
+			}
+		}
+	}
+}
+
+void Window::updateWireStatus() {
+    nWF = 0;
+    minADC = 0;
+    maxADC = 0;
+    bool is_first = true;
+	for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+                    double adcMax            = wire->pulse.get_adcMax();
+                    double adcOffset         = wire->pulse.get_adcOffset();
+                    double leadingEdgeTime   = wire->pulse.get_leadingEdgeTime();
+                    double timeOverThreshold = wire->pulse.get_timeOverThreshold();
+                    double timeMax           = wire->pulse.get_timeMax();
+                    int wfType = wire->pulse.get_wfType();
+                    int nhits = wire->pulse.get_nhits();
+                    bool status = update_cut_flag(adcMax, adcOffset, leadingEdgeTime, timeOverThreshold, timeMax, wfType);
+                    wire->pulse.set_mask(status);
+                    if (nhits > 0 && status) nWF++;
+                    if ((nhits > 0) && status && is_first) {
+                        is_first = false;
+                        minADC = adcMax;
+                        maxADC = adcMax;
+                    }
+                    if (status) {
+                        if (minADC > adcMax) minADC = adcMax;
+                        if (maxADC < adcMax) maxADC = adcMax;
+                    }
 				}
 			}
 		}
@@ -2288,9 +2301,9 @@ void Window::Get_HV_sector(int sector, int layer, int component, int & crate, in
 	}
 }
 
-void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType) {
-    cut_flag = false; 
-    // cut_flag = true means that the wire should be shown
+bool Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType) {
+    bool flag = false; 
+    // flag = true means that the wire should be shown
     // wfType cuts : have priority
     if (flag_apply_wfType_cuts) {
         std::vector<int> authorisedValues;
@@ -2298,20 +2311,20 @@ void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdge
         for (int i = 0; i <= 5; i++) {
             if (all_flags[i]) authorisedValues.push_back(i); 
         }
-        if (authorisedValues.empty()) { cut_flag = true; } // no flag cuts to be applied
+        if (authorisedValues.empty()) { flag = true; } // no flag cuts to be applied
         else {
             bool is_good_wfType = false;
             for (int i : authorisedValues) {
                 is_good_wfType = (wfType == i);
                 if (is_good_wfType) break;
             }
-            cut_flag = is_good_wfType;
+            flag = is_good_wfType;
         }
     }
     // raw cuts
     if (flag_apply_raw_cuts) {
-        if ((adcMax < 0) || (adcOffset < 0) || (leadingEdgeTime < 0) || (timeOverThreshold < 0) || (timeMax < 0)) {cut_flag = false; return;}
-        cut_flag = cut_flag && 
+        if ((adcMax < 0) || (adcOffset < 0) || (leadingEdgeTime < 0) || (timeOverThreshold < 0) || (timeMax < 0)) {return false;}
+        flag = flag && 
                 (adcMax >= cut_amplitude_min) && 
                 (adcMax <= cut_amplitude_max) && 
                 (adcOffset >= cut_adcOffset_min) && 
@@ -2322,14 +2335,17 @@ void Window::update_cut_flag(double adcMax, double adcOffset, double leadingEdge
                 (timeOverThreshold <= cut_timeOverThreshold_max) &&
                 (timeMax >= cut_timeMax_min) &&
                 (timeMax <= cut_timeMax_max);
-        //printf("cut_flag : %s\n", cut_flag ? "True" : "False");
+        //printf("flag : %s\n", flag ? "True" : "False");
     }
     if (!flag_apply_wfType_cuts && !flag_apply_raw_cuts) {
-        cut_flag = true;
+        flag = true;
     }
+    return flag;
 }
 
 void Window::update_gui() {
+    updateWireStatus();
+	Label_info.set_text(TString::Format("Progress : %.2lf %%, Event number : %lu/%lu, Number of WF : %d ..., ntracks : %d", 100.0*hipo_nEvent/hipo_nEventMax, hipo_nEvent, hipo_nEventMax, nWF, ntracks).Data());
     int tab_number = Book.get_current_page();
     if      (tab_number == 0) {
         DrawingArea_event.queue_draw();

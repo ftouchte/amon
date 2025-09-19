@@ -108,8 +108,11 @@ protected :
 	long unsigned int hipo_nEvent = 0;
 	long unsigned int hipo_nEventMax = 1;
 	int nWF; ///< number of waveforms	
+	int ntracks; ///< number of tracks	
 	AhdcDetector *ahdc; ///< AHDC detector
 	std::vector<double> ListOfAdc;		///< List of adcMax
+    int minADC = 0;
+    int maxADC = 4095;
 	// Define variable for cut
 	double cut_amplitude_min = 0;
 	double cut_amplitude_max = 4095;
@@ -129,7 +132,6 @@ protected :
 	bool flag_wfType_3 = false;
 	bool flag_wfType_4 = false;
 	bool flag_wfType_5 = false;
-	bool cut_flag = true;
 	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
 	int HV_SECTOR = -1;
 	Gtk::TextView TextView_occupancy;
@@ -159,9 +161,10 @@ public :
 	int getNumberOfWaveforms();
 	bool is_oscillating(std::vector<double> samples);
 	void getStats(double & MIN_ADC, double & MAX_ADC, int & MIN_OCC, int & MAX_OCC);
-    void update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType);
+    bool update_cut_flag(double adcMax, double adcOffset, double leadingEdgeTime, double timeOverThreshold, double timeMax, int wfType);
     void update_gui();
     void restart_histograms();
+    void updateWireStatus();
 	// Signals
 	void on_button_settings_clicked();
 	void on_button_prev_clicked();
