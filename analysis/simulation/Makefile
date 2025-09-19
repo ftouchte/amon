@@ -40,10 +40,13 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark simu
-all: simu elastics test
+all: simu elastics test wfType
 
 test: test.o AhdcCCDB.o
 	$(CXX) -o test.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CLHEPLIBS) $(CCDBLIBS)
+
+wfType: wfType.o AhdcCCDB.o futils.o
+	$(CXX) -o wfType.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 simu: simu.o AhdcCCDB.o futils.o
 	$(CXX) -o simu.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
