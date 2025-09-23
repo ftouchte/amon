@@ -48,7 +48,7 @@ Window::Window() :
 	// Decoding parameters	
 	ADC_LIMIT(4095),
 	NumberOfBins(27),
-	samplingTime(50.0), // set at 50.0 if you want use measure in terms of bins
+	samplingTime(48.0), // set at 50.0 if you want use measure in terms of bins
 	amplitudeFractionCFA(0.5),
 	binDelayCFD(5),
 	fractionCFD(0.3),
@@ -1229,6 +1229,11 @@ bool Window::dataEventAction() {
             double adcOffset = this->adcBank.getFloat("ped", col);
             double integral = this->adcBank.getInt("integral", col);
             int wfType = this->adcBank.getInt("wfType", col);
+            // remove fineTimeStampCorrection
+            long timestamp = wfBank.getLong("timestamp", col);
+            timestamp = timestamp & 0x00000007;
+            double timeCorrection = (timestamp + 0.5)*8.0;
+            leadingEdgeTime -= timeCorrection;
             ///////////////////
             AhdcWire *wire = ahdc->GetSector(sector-1)->GetSuperLayer((layer/10)-1)->GetLayer((layer%10)-1)->GetWire(component-1);	
             wire->pulse.triggered();
