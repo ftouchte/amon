@@ -60,9 +60,9 @@ public:
     AhdcCCDB(std::string _connection = "mysql://clas12reader@clasdb.jlab.org/clas12", int _runNo = 22000, std::string _variation = "default", std::string timestamp = "no"); 
     static int wireUniqueId(int sector, int layer, int component);
     ahdcT0 get_t0(int sector, int layer, int component);
-    ahdcT0 get_t0(int wire);
+    ahdcT0 get_t0(int wire); // numbering starts at 0
     ahdcRawCuts get_rawCuts(int sector, int layer, int component);
-    ahdcRawCuts get_rawCuts(int wire);
+    ahdcRawCuts get_rawCuts(int wire); // numbering starts at 0
     ahdcT2d get_t2d();
 };
 
