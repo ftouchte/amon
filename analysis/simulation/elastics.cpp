@@ -96,6 +96,8 @@ int main(int argc, char const *argv[]) {
     //double delta_W2 = W2_max - W2_min;
     double pT_min = 0.20;
     double pT_max = 0.30;
+    //double sum_adc_min = 430;
+    //double sum_adc_max = 2800;
     double sum_adc_min = 3200;
     double sum_adc_max = 9800;
     double DeltaPhi1 =-210;
@@ -126,7 +128,7 @@ int main(int argc, char const *argv[]) {
     /// Filter input files
     /// ///////////////////////////////////////////
     std::vector<std::string> all_filenames;
-    std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
+    /*std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
     //std::string motif = ".*02299[0-9].*";
     std::string motif = ".*";
     std::regex re(motif.c_str());
@@ -136,7 +138,10 @@ int main(int argc, char const *argv[]) {
             //printf("%s \n", onefile.c_str());
             all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
         }
-    }
+    }*/
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003-v2.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -352,7 +357,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
     TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
     TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
-    TH1D* H1_timeOverThreshold = new TH1D("tot_0", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752);
+    TH1D* H1_timeOverThreshold = new TH1D("tot_tot", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752);
     std::vector<TH1D*> VecH1_noise;
     VecH1_noise.push_back(new TH1D("noise s1", "s0; s0 (adc); count", 100, 0, 380));
     VecH1_noise.push_back(new TH1D("noise s2", "s1; s1 (adc); count", 100, 0, 380));
@@ -459,6 +464,8 @@ int main(int argc, char const *argv[]) {
             std::vector<Physics> PhotonKinematics;
             for (int i = 0; i < particleBank.getRows(); i++) {
                 int pid = particleBank.getInt("pid", i);
+                int status = particleBank.getInt("status", i);
+                if (status > 0) continue;
                 if (pid == 11) { // electron (11)
                     State S(particleBank.getFloat("px",i), particleBank.getFloat("py",i), particleBank.getFloat("pz",i), 
                             particleBank.getFloat("vx",i), particleBank.getFloat("vy",i), particleBank.getFloat("vz",i));
@@ -672,13 +679,28 @@ int main(int argc, char const *argv[]) {
             int count_photons3 = 0;
             int count_tracks3 = 0;
             std::vector<ElasticsOutput> Elastics; // list of couples (e/gamma, track) for elastics
+            // Only porbes (electrons) with status < 0 are kept. They are the trigger electrons (we should ONE)
             for (int i = 0; i < (int) Probes.size(); i++) {
                 State S = Probes[i];
                 Physics K = ProbeKinematics[i];
                 if ((K.W2 < W2_min) || (K.W2 > W2_max)) continue;
                 if (S.pid == 11) count_electrons2++;
                 if (S.pid == 22) count_photons2++;
-                for (State T : Tracks) {
+                ///////////////////////////////////////////////
+                // Select the best track (the bast delta_phi) 
+                // ////////////////////////////////////////////
+                if (Tracks.size() < 1) continue;
+                State T = Tracks[0];
+                double delta_phi = S.phi - T.phi;
+                double width = std::min(fabs(delta_phi-DeltaPhi1), fabs(delta_phi-DeltaPhi2));
+                for (State Tbis : Tracks) {
+                    double dphi = S.phi - Tbis.phi;
+                    double w = std::min(fabs(dphi-DeltaPhi1), fabs(dphi-DeltaPhi2));
+                    if (w < width) T = Tbis;
+                }
+                //for (State T : Tracks) {
+                // Here the best track is T
+                {
                     count_tracks2++;
                     // corr
                     H2_vze_vz[2]->Fill(S.vz, T.vz); 
@@ -779,19 +801,24 @@ int main(int argc, char const *argv[]) {
             H1_nelastics->Fill(Elastics.size());
             for (ElasticsOutput e : Elastics) {
                 TrackId.push_back(e.track.trackid); 
+                bool isUsed = false; // this track id is not used yet
+                //int count = 0;
                 for (int i = 0; i < hitBank.getRows(); i++) {
                     int trackid = hitBank.getInt("trackid",i);
                     if (trackid == e.track.trackid) { // if this hit is from the track
+                        //count++;
                         // track and probe before cuts
-                        H1_elastic_track_p->Fill(e.track.p);
-                        H1_elastic_track_pT->Fill(e.track.pT);
-                        H1_elastic_track_theta->Fill(e.track.theta);
-                        H1_elastic_track_phi->Fill(e.track.phi);
-                        H1_elastic_probe_p->Fill(e.probe.p);
-                        H1_elastic_probe_pT->Fill(e.probe.pT);
-                        H1_elastic_probe_theta->Fill(e.probe.theta);
-                        H1_elastic_probe_phi->Fill(e.probe.phi);
-                        H2_elastic_pT_adc->Fill(e.probe.pT, e.track.adc);
+                        if (!isUsed) { // if the track is not used // count track only once!
+                            H1_elastic_track_p->Fill(e.track.p);
+                            H1_elastic_track_pT->Fill(e.track.pT);
+                            H1_elastic_track_theta->Fill(e.track.theta);
+                            H1_elastic_track_phi->Fill(e.track.phi);
+                            H1_elastic_probe_p->Fill(e.probe.p);
+                            H1_elastic_probe_pT->Fill(e.probe.pT);
+                            H1_elastic_probe_theta->Fill(e.probe.theta);
+                            H1_elastic_probe_phi->Fill(e.probe.phi);
+                            H2_elastic_pT_adc->Fill(e.probe.pT, e.track.adc);
+                        }
                         // expected tracks given the electron kinematics
                         double theta = M_PI*e.probe.theta/180;
                         double p = 2*Ee*sin(theta/2);
@@ -799,18 +826,22 @@ int main(int argc, char const *argv[]) {
                         double pz = Ee*(1-cos(theta));
                         double theta_track = acos(pz/p)*180/M_PI;
                         double phi_track = (e.probe.phi > 180) ? (e.probe.phi - 180) : (e.probe.phi + 180);
-                        H1_elastics_expected_track_p->Fill(p);
-                        H1_elastics_expected_track_pT->Fill(pT);
-                        H1_elastics_expected_track_theta->Fill(theta_track);
-                        H1_elastics_expected_track_phi->Fill(phi_track);
+                        if (!isUsed) { // if the track is not used // count track only once!
+                            H1_elastics_expected_track_p->Fill(p);
+                            H1_elastics_expected_track_pT->Fill(pT);
+                            H1_elastics_expected_track_theta->Fill(theta_track);
+                            H1_elastics_expected_track_phi->Fill(phi_track);
+                        }
                         // select particles (proton or deuterium)
                         if ((e.probe.pT > pT_min) && (e.probe.pT < pT_max) && (e.track.adc > sum_adc_min) && (e.track.adc < sum_adc_max)) {
-                            H1_selection_expected_track_p->Fill(p);
-                            H1_selection_expected_track_pT->Fill(pT);
-                            H1_selection_expected_track_theta->Fill(theta_track);
-                            H1_selection_expected_track_phi->Fill(phi_track);
-                            H1_selection_reconstructed_track_adc->Fill(e.track.adc);
-                            H1_selection_reconstructed_probe_pT->Fill(e.probe.pT);
+                            if (!isUsed) { // if the track is not used // count track only once!
+                                H1_selection_expected_track_p->Fill(p);
+                                H1_selection_expected_track_pT->Fill(pT);
+                                H1_selection_expected_track_theta->Fill(theta_track);
+                                H1_selection_expected_track_phi->Fill(phi_track);
+                                H1_selection_reconstructed_track_adc->Fill(e.track.adc);
+                                H1_selection_reconstructed_probe_pT->Fill(e.probe.pT);
+                            }
                             // hits 
                             // they are the column index in AHDC::adc bank 
                             // Attention, the numerotation starts at 1
@@ -825,8 +856,9 @@ int main(int argc, char const *argv[]) {
                             double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
                             double timeMax = adcBank.getFloat("time", hit_id);
                             double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
-                            int adc        = adcBank.getInt("ADC", hit_id);
-                            int ped        = adcBank.getInt("ped", hit_id);
+                            double adc        = adcBank.getInt("ADC", hit_id);
+                            //int ped        = adcBank.getInt("ped", hit_id);
+                            double ped        = adcBank.getFloat("ped", hit_id);
                             AdcId.push_back(hit_id+1); // restore the real id
                             H1_t0->Fill(obj.t0);
                             H1_dt0->Fill(time-obj.t0);
@@ -855,9 +887,12 @@ int main(int argc, char const *argv[]) {
                             H1_CHANNELS_adc[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(adc);
                             H1_CHANNELS_ped[AhdcCCDB::wireUniqueId(sector, layer, component)]->Fill(ped);
                         }
-                    }
-                } // end loop over elastics
-            } // end loop over elastics hits
+                        // it is definitively used
+                        isUsed = true;
+                    } // hit that match track id
+                } // end loop over elastics hits
+                //if (count == 0) printf("count : %d --> trackid : %d --> evt : %d --> nAhdcHits : %d --> nAhdcAdc : %d\n", count, e.track.trackid, runConfigBank.getInt("event", 0), hitBank.getRows(), adcBank.getRows());
+            } // end loop over elastics
             // save those event in a hipo file
             if (AdcId.size()*TrackId.size() > 0) { 
                 hipo::bank outAdcBank(schemaAdc, (int) AdcId.size());
@@ -874,14 +909,15 @@ int main(int argc, char const *argv[]) {
                     outAdcBank.putByte("order", i, adcBank.getInt("order", index));
                     outAdcBank.putInt("ADC", i, adcBank.getInt("ADC", index));
                     outAdcBank.putFloat("time", i, adcBank.getFloat("time", index));
-                    outAdcBank.putFloat("ped", i, adcBank.getInt("ped", index));
+                    //outAdcBank.putFloat("ped", i, adcBank.getInt("ped", index));
+                    outAdcBank.putFloat("ped", i, adcBank.getFloat("ped", index));
                     outAdcBank.putInt("windex", i, adcBank.getInt("windex", index));
                     outAdcBank.putInt("integral", i, adcBank.getInt("integral", index));
                     outAdcBank.putFloat("leadingEdgeTime", i, adcBank.getFloat("leadingEdgeTime", index));
                     outAdcBank.putFloat("timeOverThreshold", i, adcBank.getFloat("timeOverThreshold", index));
                     outAdcBank.putFloat("constantFractionTime", i, adcBank.getFloat("constantFractionTime", index));
-                    //outAdcBank.put("wfType", i, adcBank.getInt("ped", index));
-                    outAdcBank.putInt("wfType", i, 0);
+                    outAdcBank.put("wfType", i, adcBank.getInt("wfType", index));
+                    //outAdcBank.putInt("wfType", i, -1);
                     // AHDC::wf
                     outWfBank.putByte("sector", i, wfBank.getInt("sector", index));
                     outWfBank.putByte("layer", i, wfBank.getInt("layer", index));
