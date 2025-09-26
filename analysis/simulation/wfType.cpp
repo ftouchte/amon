@@ -37,12 +37,23 @@
 // utilities
 void progressBar(int state, int bar_length = 100);
 // end utilities
+void stats();
 
 int main(int argc, char const *argv[]) {
+    /////////////////////////
+    //stats();
+    /////////////////////////
     auto start = std::chrono::high_resolution_clock::now();
     
     const char* output = "./output/wfType_study.root";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/new-classification.hipo";
+    printf("argc : %d\n", argc);
+    if (argc < 2) { 
+        return printf("Please, provide a filename...\n");
+    }
+    const char* filename = argv[1];
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/raw-D2-run-23003.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/redecoded-elastics-proton.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/redecoded-elastics-deuteron.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -53,110 +64,125 @@ int main(int argc, char const *argv[]) {
     long unsigned int nevents =0;
     // Histograms
     std::vector<TH1D*> VecH1_wfType;
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=0", "wfType_wfType=0; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=1", "wfType_wfType=1; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=2", "wfType_wfType=2; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=3", "wfType_wfType=3; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=4", "wfType_wfType=4; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=5", "wfType_wfType=5; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType=6", "wfType_wfType=6; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=0", "wfType_wfType<=0; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=1", "wfType_wfType<=1; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=2", "wfType_wfType<=2; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=3", "wfType_wfType<=3; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=4", "wfType_wfType<=4; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=5", "wfType_wfType<=5; wfType (ns); count", 7, 0, 7));
-    VecH1_wfType.push_back(new TH1D("wfType_wfType<=6", "wfType_wfType<=6; wfType (ns); count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=0", "wfType_wfType=0; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=1", "wfType_wfType=1; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=2", "wfType_wfType=2; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=3", "wfType_wfType=3; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=4", "wfType_wfType=4; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=5", "wfType_wfType=5; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType=6", "wfType_wfType=6; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=0", "wfType_wfType<=0; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=1", "wfType_wfType<=1; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=2", "wfType_wfType<=2; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=3", "wfType_wfType<=3; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=4", "wfType_wfType<=4; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=5", "wfType_wfType<=5; wfType ; count", 7, 0, 7));
+    VecH1_wfType.push_back(new TH1D("wfType_wfType<=6", "wfType_wfType<=6; wfType ; count", 7, 0, 7));
     std::vector<TH1D*> VecH1_time;
-    VecH1_time.push_back(new TH1D("time_wfType=0", "time_wfType=0; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=1", "time_wfType=1; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=2", "time_wfType=2; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=3", "time_wfType=3; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=4", "time_wfType=4; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=5", "time_wfType=5; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType=6", "time_wfType=6; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=0", "time_wfType<=0; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=1", "time_wfType<=1; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=2", "time_wfType<=2; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=3", "time_wfType<=3; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=4", "time_wfType<=4; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=5", "time_wfType<=5; time (ns); count", 100, 0, 400));
-    VecH1_time.push_back(new TH1D("time_wfType<=6", "time_wfType<=6; time (ns); count", 100, 0, 400));
+    VecH1_time.push_back(new TH1D("time_wfType=0", "time_wfType=0; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=1", "time_wfType=1; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=2", "time_wfType=2; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=3", "time_wfType=3; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=4", "time_wfType=4; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=5", "time_wfType=5; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType=6", "time_wfType=6; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=0", "time_wfType<=0; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=1", "time_wfType<=1; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=2", "time_wfType<=2; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=3", "time_wfType<=3; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=4", "time_wfType<=4; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=5", "time_wfType<=5; time (ns); count", 100, 0, 700));
+    VecH1_time.push_back(new TH1D("time_wfType<=6", "time_wfType<=6; time (ns); count", 100, 0, 700));
     std::vector<TH1D*> VecH1_leadingEdgeTime;
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=0", "leadingEdgeTime_wfType=0; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=1", "leadingEdgeTime_wfType=1; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=2", "leadingEdgeTime_wfType=2; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=3", "leadingEdgeTime_wfType=3; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=4", "leadingEdgeTime_wfType=4; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=5", "leadingEdgeTime_wfType=5; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=6", "leadingEdgeTime_wfType=6; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=0", "leadingEdgeTime_wfType<=0; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=1", "leadingEdgeTime_wfType<=1; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=2", "leadingEdgeTime_wfType<=2; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=3", "leadingEdgeTime_wfType<=3; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=4", "leadingEdgeTime_wfType<=4; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=5", "leadingEdgeTime_wfType<=5; leadingEdgeTime (ns); count", 100, 200, 500));
-    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=6", "leadingEdgeTime_wfType<=6; leadingEdgeTime (ns); count", 100, 200, 500));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=0", "leadingEdgeTime_wfType=0; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=1", "leadingEdgeTime_wfType=1; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=2", "leadingEdgeTime_wfType=2; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=3", "leadingEdgeTime_wfType=3; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=4", "leadingEdgeTime_wfType=4; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=5", "leadingEdgeTime_wfType=5; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType=6", "leadingEdgeTime_wfType=6; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=0", "leadingEdgeTime_wfType<=0; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=1", "leadingEdgeTime_wfType<=1; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=2", "leadingEdgeTime_wfType<=2; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=3", "leadingEdgeTime_wfType<=3; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=4", "leadingEdgeTime_wfType<=4; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=5", "leadingEdgeTime_wfType<=5; leadingEdgeTime (ns); count", 100, 0, 900));
+    VecH1_leadingEdgeTime.push_back(new TH1D("leadingEdgeTime_wfType<=6", "leadingEdgeTime_wfType<=6; leadingEdgeTime (ns); count", 100, 0, 900));
     std::vector<TH1D*> VecH1_timeOverThreshold;
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=0", "timeOverThreshold_wfType=0; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=1", "timeOverThreshold_wfType=1; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=2", "timeOverThreshold_wfType=2; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=3", "timeOverThreshold_wfType=3; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=4", "timeOverThreshold_wfType=4; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=5", "timeOverThreshold_wfType=5; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=6", "timeOverThreshold_wfType=6; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=0", "timeOverThreshold_wfType<=0; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=1", "timeOverThreshold_wfType<=1; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=2", "timeOverThreshold_wfType<=2; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=3", "timeOverThreshold_wfType<=3; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=4", "timeOverThreshold_wfType<=4; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=5", "timeOverThreshold_wfType<=5; timeOverThreshold (ns); count", 100, 150, 650));
-    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=6", "timeOverThreshold_wfType<=6; timeOverThreshold (ns); count", 100, 150, 650));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=0", "timeOverThreshold_wfType=0; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=1", "timeOverThreshold_wfType=1; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=2", "timeOverThreshold_wfType=2; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=3", "timeOverThreshold_wfType=3; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=4", "timeOverThreshold_wfType=4; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=5", "timeOverThreshold_wfType=5; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType=6", "timeOverThreshold_wfType=6; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=0", "timeOverThreshold_wfType<=0; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=1", "timeOverThreshold_wfType<=1; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=2", "timeOverThreshold_wfType<=2; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=3", "timeOverThreshold_wfType<=3; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=4", "timeOverThreshold_wfType<=4; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=5", "timeOverThreshold_wfType<=5; timeOverThreshold (ns); count", 100, 80, 800));
+    VecH1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_wfType<=6", "timeOverThreshold_wfType<=6; timeOverThreshold (ns); count", 100, 80, 800));
     std::vector<TH1D*> VecH1_adcMax;
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=0", "adcMax_wfType=0; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=1", "adcMax_wfType=1; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=2", "adcMax_wfType=2; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=3", "adcMax_wfType=3; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=4", "adcMax_wfType=4; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=5", "adcMax_wfType=5; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=6", "adcMax_wfType=6; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=0", "adcMax_wfType<=0; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=1", "adcMax_wfType<=1; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=2", "adcMax_wfType<=2; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=3", "adcMax_wfType<=3; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=4", "adcMax_wfType<=4; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=5", "adcMax_wfType<=5; adcMax (ns); count", 100, 0, 3700));
-    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=6", "adcMax_wfType<=6; adcMax (ns); count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=0", "adcMax_wfType=0; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=1", "adcMax_wfType=1; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=2", "adcMax_wfType=2; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=3", "adcMax_wfType=3; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=4", "adcMax_wfType=4; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=5", "adcMax_wfType=5; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType=6", "adcMax_wfType=6; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=0", "adcMax_wfType<=0; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=1", "adcMax_wfType<=1; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=2", "adcMax_wfType<=2; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=3", "adcMax_wfType<=3; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=4", "adcMax_wfType<=4; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=5", "adcMax_wfType<=5; adcMax ; count", 100, 0, 3700));
+    VecH1_adcMax.push_back(new TH1D("adcMax_wfType<=6", "adcMax_wfType<=6; adcMax ; count", 100, 0, 3700));
     std::vector<TH1D*> VecH1_adcOffset;
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=0", "adcOffset_wfType=0; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=1", "adcOffset_wfType=1; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=2", "adcOffset_wfType=2; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=3", "adcOffset_wfType=3; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=4", "adcOffset_wfType=4; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=5", "adcOffset_wfType=5; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=6", "adcOffset_wfType=6; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=0", "adcOffset_wfType<=0; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=1", "adcOffset_wfType<=1; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=2", "adcOffset_wfType<=2; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=3", "adcOffset_wfType<=3; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=4", "adcOffset_wfType<=4; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=5", "adcOffset_wfType<=5; adcOffset (ns); count", 100, 100, 400));
-    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=6", "adcOffset_wfType<=6; adcOffset (ns); count", 100, 100, 400));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=0", "adcOffset_wfType=0; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=1", "adcOffset_wfType=1; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=2", "adcOffset_wfType=2; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=3", "adcOffset_wfType=3; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=4", "adcOffset_wfType=4; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=5", "adcOffset_wfType=5; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType=6", "adcOffset_wfType=6; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=0", "adcOffset_wfType<=0; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=1", "adcOffset_wfType<=1; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=2", "adcOffset_wfType<=2; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=3", "adcOffset_wfType<=3; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=4", "adcOffset_wfType<=4; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=5", "adcOffset_wfType<=5; adcOffset ; count", 100, 60, 800));
+    VecH1_adcOffset.push_back(new TH1D("adcOffset_wfType<=6", "adcOffset_wfType<=6; adcOffset ; count", 100, 60, 800));
+    std::vector<TH1D*> VecH1_nsamples;
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=0", "nsamples_wfType=0; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=1", "nsamples_wfType=1; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=2", "nsamples_wfType=2; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=3", "nsamples_wfType=3; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=4", "nsamples_wfType=4; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=5", "nsamples_wfType=5; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType=6", "nsamples_wfType=6; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=0", "nsamples_wfType<=0; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=1", "nsamples_wfType<=1; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=2", "nsamples_wfType<=2; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=3", "nsamples_wfType<=3; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=4", "nsamples_wfType<=4; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=5", "nsamples_wfType<=5; nsamples ; count ", 30, 0, 30));
+    VecH1_nsamples.push_back(new TH1D("nsamples_wfType<=6", "nsamples_wfType<=6; nsamples ; count ", 30, 0, 30));
     std::vector<TH1D*> VecH1_occupancy;
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=0", "occupancy_occupancy=0; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=1", "occupancy_occupancy=1; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=2", "occupancy_occupancy=2; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=3", "occupancy_occupancy=3; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=4", "occupancy_occupancy=4; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=5", "occupancy_occupancy=5; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy=6", "occupancy_occupancy=6; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=0", "occupancy_occupancy<=0; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=1", "occupancy_occupancy<=1; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=2", "occupancy_occupancy<=2; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=3", "occupancy_occupancy<=3; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=4", "occupancy_occupancy<=4; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=5", "occupancy_occupancy<=5; occupancy (ns); count [%]", 576, 0, 576));
-    VecH1_occupancy.push_back(new TH1D("occupancy_occupancy<=6", "occupancy_occupancy<=6; occupancy (ns); count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=0", "occupancy_wfType=0; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=1", "occupancy_wfType=1; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=2", "occupancy_wfType=2; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=3", "occupancy_wfType=3; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=4", "occupancy_wfType=4; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=5", "occupancy_wfType=5; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType=6", "occupancy_wfType=6; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=0", "occupancy_wfType<=0; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=1", "occupancy_wfType<=1; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=2", "occupancy_wfType<=2; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=3", "occupancy_wfType<=3; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=4", "occupancy_wfType<=4; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=5", "occupancy_wfType<=5; wire; count [%]", 576, 0, 576));
+    VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=6", "occupancy_wfType<=6; wire; count [%]", 576, 0, 576));
 
     AhdcCCDB ahdcConstants;
     // Loop over events
@@ -183,6 +209,13 @@ int main(int argc, char const *argv[]) {
             int    adcMax  = adcBank.getInt("ADC", i);
             int    adcOffset  = adcBank.getFloat("ped", i);
             double time       = leadingEdgeTime - t0;
+            int count = 0;
+            for (int s = 0; s < 30; s++) {
+                char buffer[50];
+                sprintf(buffer, "s%d", s +1);
+                int value = wfBank.getShort(buffer, i);
+                if (value > 0) count++;
+            }
             for (int type = 0; type <= 6; type++) {
                 // wfType == type
                 if (wfType == type) {
@@ -192,7 +225,8 @@ int main(int argc, char const *argv[]) {
                     VecH1_timeOverThreshold[type]->Fill(timeOverThreshold); 
                     VecH1_adcMax[type]->Fill(adcMax); 
                     VecH1_adcOffset[type]->Fill(adcOffset); 
-                    VecH1_occupancy[type]->Fill(AhdcCCDB::wireUniqueId(sector, layer, component)); 
+                    VecH1_occupancy[type]->Fill(AhdcCCDB::wireUniqueId(sector, layer, component));
+                    VecH1_nsamples[type]->Fill(count);
                 }
                 if (wfType <= type) {
                     VecH1_wfType[7+type]->Fill(wfType); 
@@ -202,6 +236,7 @@ int main(int argc, char const *argv[]) {
                     VecH1_adcMax[7+type]->Fill(adcMax); 
                     VecH1_adcOffset[7+type]->Fill(adcOffset); 
                     VecH1_occupancy[7+type]->Fill(AhdcCCDB::wireUniqueId(sector, layer, component)); 
+                    VecH1_nsamples[7+type]->Fill(count);
                 }
             }
             if ((wfType < 0) || (wfType > 6)) printf("> WEIRD wfType : %d", wfType);
@@ -242,6 +277,7 @@ int main(int argc, char const *argv[]) {
             VecH1_timeOverThreshold[type]->Write(VecH1_timeOverThreshold[type]->GetName());
             VecH1_adcMax[type]->Write(VecH1_adcMax[type]->GetName());
             VecH1_adcOffset[type]->Write(VecH1_adcOffset[type]->GetName());
+            VecH1_nsamples[type]->Write(VecH1_nsamples[type]->GetName());
             VecH1_occupancy[type]->Write(VecH1_occupancy[type]->GetName());
         wfType_DIR[7+type]->cd(); 
             VecH1_wfType[7+type]->Write(VecH1_wfType[7+type]->GetName());
@@ -250,6 +286,7 @@ int main(int argc, char const *argv[]) {
             VecH1_timeOverThreshold[7+type]->Write(VecH1_timeOverThreshold[7+type]->GetName());
             VecH1_adcMax[7+type]->Write(VecH1_adcMax[7+type]->GetName());
             VecH1_adcOffset[7+type]->Write(VecH1_adcOffset[7+type]->GetName());
+            VecH1_nsamples[7+type]->Write(VecH1_nsamples[7+type]->GetName());
             VecH1_occupancy[7+type]->Write(VecH1_occupancy[7+type]->GetName());
     }
 
@@ -280,3 +317,40 @@ void progressBar(int state, int bar_length) { // state is a number between 0 and
     }
     fflush(stdout);
 }
+
+void stats() {
+    printf("> Start stats() -- count number of reconstructed tracks\n");
+    
+    std::vector<std::string> all_files;
+    //all_files.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/output/13.0.1/rec-23003.hipo");
+    all_files.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/output/13.3.0/rec-23003.hipo");
+    all_files.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/output/dev/rec-23003.hipo");
+    
+    for (std::string filename : all_files) {
+        printf("<><> Read %s\n", filename.c_str());
+        hipo::reader  reader(filename.c_str());
+        hipo::dictionary factory;
+        reader.readDictionary(factory);
+        hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+        hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
+        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+        hipo::event event;
+        long unsigned int nevents =0;
+        long unsigned int ntracks =0; 
+        while( reader.next()){
+            nevents++;
+            // Progress Bar
+            if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
+                progressBar(100.0*nevents/reader.getEntries());
+            }
+            reader.read(event);
+            event.getStructure(adcBank);
+            event.getStructure(wfBank);
+            event.getStructure(trackBank);
+            ntracks += trackBank.getRows();
+        }
+        printf("      ntracks %ld\n", ntracks);
+    }
+}
+
+
