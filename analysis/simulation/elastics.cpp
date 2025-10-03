@@ -128,10 +128,17 @@ int main(int argc, char const *argv[]) {
     /// Filter input files
     /// ///////////////////////////////////////////
     std::vector<std::string> all_filenames;
-    /*std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
+    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
+    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003";
+    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/dev";
+    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/dev-v2";
+    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/13.3.0";
     //std::string motif = ".*02299[0-9].*";
-    std::string motif = ".*";
-    std::regex re(motif.c_str());
+    //std::string motif = ".*";
+    //std::string motif = "rec-v2-run.*";
+    //std::string motif = "rec-run.*";
+    //std::string motif = "rec_clas_023003.evio.0000[0-5].*";
+    /*std::regex re(motif.c_str());
     for (const fs::directory_entry & entry : fs::directory_iterator(dir_name)) {
         std::string onefile = entry.path().filename().c_str(); // the filename without the whole path
         if (std::regex_match(onefile, re)) { // check with the filename match the motif
@@ -139,9 +146,10 @@ int main(int argc, char const *argv[]) {
             all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
         }
     }*/
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003-v2.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-timestamp.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -149,10 +157,14 @@ int main(int argc, char const *argv[]) {
     hipo::schema schemaWf("AHDC::wf", 22400, 10);
     hipo::schema schemaTrack("AHDC::kftrack", 23000, 26);
     hipo::schema schemaRunConfig("RUN::config", 10000, 11);
+    hipo::schema schemaRecEvent("REC::Event", 300, 30);
+    hipo::schema schemaAhdcHits("AHDC::hits", 23000, 23);
     schemaAdc.parse("sector/B, layer/B, component/S, order/B, ADC/I, time/F, ped/F, windex/S, integral/I, leadingEdgeTime/F, timeOverThreshold/F, constantFractionTime/F, wfType/S");
     schemaWf.parse("sector/B, layer/B, component/S, order/B, timestamp/L, s1/S, s2/S, s3/S, s4/S, s5/S, s6/S, s7/S, s8/S, s9/S, s10/S, s11/S, s12/S, s13/S, s14/S, s15/S, s16/S, s17/S, s18/S, s19/S, s20/S, s21/S, s22/S, s23/S, s24/S, s25/S, s26/S, s27/S, s28/S, s29/S, s30/S, time/I");
-    schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
-    schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
+    //schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
+    //schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
+    //schemaRecEvent.parse("category/L, topology/L, beamCharge/F, liveTime/D, startTime/F, RFTime/F, helicity/B, helicityRaw/B, procTime/F");
+    //schemaAhdcHits.parse("id/S, layer/B, superlayer/B, wire/I, doca/D, residual/D, residual_prefit/D,time/D, trackid/I");
     writer.getDictionary().addSchema(schemaAdc);
     writer.getDictionary().addSchema(schemaWf);
     writer.getDictionary().addSchema(schemaTrack);
@@ -240,10 +252,10 @@ int main(int argc, char const *argv[]) {
     // ahdc (kf) track
     //////////////////////////////
     std::vector<TH1I*> H1_ntracks;
-    H1_ntracks.push_back(new TH1I("ntracks_0", "number of tracks / evt", 5, 0, 5));
-    H1_ntracks.push_back(new TH1I("ntracks_1", "number of tracks / evt", 5, 0, 5));
-    H1_ntracks.push_back(new TH1I("ntracks_2", "number of tracks / evt", 5, 0, 5));
-    H1_ntracks.push_back(new TH1I("ntracks_3", "number of tracks / evt", 5, 0, 5));
+    H1_ntracks.push_back(new TH1I("ntracks_0", "number of tracks / evt", 10, 0, 10));
+    H1_ntracks.push_back(new TH1I("ntracks_1", "number of tracks / evt", 10, 0, 10));
+    H1_ntracks.push_back(new TH1I("ntracks_2", "number of tracks / evt", 10, 0, 10));
+    H1_ntracks.push_back(new TH1I("ntracks_3", "number of tracks / evt", 10, 0, 10));
     std::vector<TH1D*> H1_track_vz;
     H1_track_vz.push_back(new TH1D("vz_track_0", "vz (cm)", 100, -30, 30));
     H1_track_vz.push_back(new TH1D("vz_track_1", "vz (cm)", 100, -30, 30));
@@ -899,6 +911,8 @@ int main(int argc, char const *argv[]) {
                 hipo::bank outWfBank(schemaWf, (int) AdcId.size());
                 hipo::bank outTrackBank(schemaTrack, (int) TrackId.size());
                 hipo::bank outRunConfigBank(schemaRunConfig, 1);
+                //hipo::bank outRecEventBank(schemaRecEvent, 1);
+                //hipo::bank outAhdcHitsBank(schemaAhdcHits, (int) AdcId.size()); // not sure for the size??
                 for (int i = 0; i < outAdcBank.getRows(); i++) {
                     // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
                     int index = AdcId[i] - 1;
