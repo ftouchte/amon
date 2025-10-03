@@ -129,3 +129,13 @@ ahdcRawCuts AhdcCCDB::get_rawCuts(int wire) {
 ahdcT2d AhdcCCDB::get_t2d() {
     return T2d;
 }
+
+/*
+ExtendedAhdcCCDB::ExtendedAhdcCCDB() {
+
+}
+
+AhdcCCDB* ExtendedAhdcCCDB::get_table(int runno) {
+    auto it = tables.insert(runno, AhdcCCDB("mysql://clas12reader@clasdb.jlab.org/clas12", runno, "default", "2025-04-18_13-44-11"));
+}
+*/
