@@ -183,8 +183,14 @@ int main(int argc, char const *argv[]) {
     VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=4", "occupancy_wfType<=4; wire; count [%]", 576, 0, 576));
     VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=5", "occupancy_wfType<=5; wire; count [%]", 576, 0, 576));
     VecH1_occupancy.push_back(new TH1D("occupancy_wfType<=6", "occupancy_wfType<=6; wire; count [%]", 576, 0, 576));
-
-    AhdcCCDB ahdcConstants;
+    
+    //AhdcCCDB ahdcConstants;
+    //const char * timestamp = "no";
+    //const char * timestamp = "2025-10-03_00-00-01";
+    const char * timestamp = "2025-10-01_00-00-01";
+    AhdcCCDB ahdcConstants("mysql://clas12reader@clasdb.jlab.org/clas12", 23003, "default", timestamp);
+    TH1D* H1_t0 = new TH1D("t0", TString::Format("t0 , timestamp: %s; t0 (ns); count", timestamp).Data(), 100, 0, 400);
+    
     // Loop over events
     while( reader.next()){
         nevents++;
@@ -209,6 +215,7 @@ int main(int argc, char const *argv[]) {
             int    adcMax  = adcBank.getInt("ADC", i);
             int    adcOffset  = adcBank.getFloat("ped", i);
             double time       = leadingEdgeTime - t0;
+            H1_t0->Fill(t0);
             int count = 0;
             for (int s = 0; s < 30; s++) {
                 char buffer[50];
@@ -251,7 +258,7 @@ int main(int argc, char const *argv[]) {
     }
     // output
     TFile *f = new TFile(output, "RECREATE");
-   
+    H1_t0->Write("t0"); 
     std::vector<TDirectory*> wfType_DIR;
     wfType_DIR.push_back(f->mkdir("wfType==0"));
     wfType_DIR.push_back(f->mkdir("wfType==1"));
