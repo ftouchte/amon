@@ -10,6 +10,7 @@
 #define AHDC_CCDB_H
 
 #include <string>
+#include <map>
 
 struct ahdcRawCuts {
     double t_min;
@@ -65,5 +66,23 @@ public:
     ahdcRawCuts get_rawCuts(int wire); // numbering starts at 0
     ahdcT2d get_t2d();
 };
+
+/**
+ * An extension intended to managed multiples run number.
+ * 
+ * We don't want to load the table for each event but if 
+ * we use multiple files corresponding to different run 
+ * numbers, we still want to use the correct table variation
+ *
+ * So we should load the table on demand and once for a given 
+ * run number (i.e when the run number change)
+ */
+/*
+class ExtendedAhdcCCDB {
+    std::map<int, AhdcCCDB> tables;
+    AhdcCCDB* get_table(int runno);
+};
+
+*/
 
 #endif
