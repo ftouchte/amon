@@ -146,10 +146,10 @@ int main(int argc, char const *argv[]) {
             all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
         }
     }*/
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003.hipo");
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/wfType/all-rec-23003-v2.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
     all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-timestamp.hipo");
+    //all_filenames.push_back("");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -161,8 +161,8 @@ int main(int argc, char const *argv[]) {
     hipo::schema schemaAhdcHits("AHDC::hits", 23000, 23);
     schemaAdc.parse("sector/B, layer/B, component/S, order/B, ADC/I, time/F, ped/F, windex/S, integral/I, leadingEdgeTime/F, timeOverThreshold/F, constantFractionTime/F, wfType/S");
     schemaWf.parse("sector/B, layer/B, component/S, order/B, timestamp/L, s1/S, s2/S, s3/S, s4/S, s5/S, s6/S, s7/S, s8/S, s9/S, s10/S, s11/S, s12/S, s13/S, s14/S, s15/S, s16/S, s17/S, s18/S, s19/S, s20/S, s21/S, s22/S, s23/S, s24/S, s25/S, s26/S, s27/S, s28/S, s29/S, s30/S, time/I");
-    //schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
-    //schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
+    schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
+    schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
     //schemaRecEvent.parse("category/L, topology/L, beamCharge/F, liveTime/D, startTime/F, RFTime/F, helicity/B, helicityRaw/B, procTime/F");
     //schemaAhdcHits.parse("id/S, layer/B, superlayer/B, wire/I, doca/D, residual/D, residual_prefit/D,time/D, trackid/I");
     writer.getDictionary().addSchema(schemaAdc);
