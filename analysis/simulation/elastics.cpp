@@ -147,9 +147,10 @@ int main(int argc, char const *argv[]) {
         }
     }*/
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-timestamp.hipo");
     //all_filenames.push_back("");
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-notimestamp.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/rec-run_23003.00000.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -163,12 +164,14 @@ int main(int argc, char const *argv[]) {
     schemaWf.parse("sector/B, layer/B, component/S, order/B, timestamp/L, s1/S, s2/S, s3/S, s4/S, s5/S, s6/S, s7/S, s8/S, s9/S, s10/S, s11/S, s12/S, s13/S, s14/S, s15/S, s16/S, s17/S, s18/S, s19/S, s20/S, s21/S, s22/S, s23/S, s24/S, s25/S, s26/S, s27/S, s28/S, s29/S, s30/S, time/I");
     schemaTrack.parse("trackid/I, x/F, y/F, z/F, px/F, py/F, pz/F, n_hits/I, sum_adc/I, path/F, dEdx/F, p_drift/F, chi2/F, sum_residuals/F");
     schemaRunConfig.parse("run/I, event/I, unixtime/I, trigger/L, timestamp/L, type/B, mode/B, torus/F, solenoid/F");
-    //schemaRecEvent.parse("category/L, topology/L, beamCharge/F, liveTime/D, startTime/F, RFTime/F, helicity/B, helicityRaw/B, procTime/F");
-    //schemaAhdcHits.parse("id/S, layer/B, superlayer/B, wire/I, doca/D, residual/D, residual_prefit/D,time/D, trackid/I");
+    schemaRecEvent.parse("category/L, topology/L, beamCharge/F, liveTime/D, startTime/F, RFTime/F, helicity/B, helicityRaw/B, procTime/F");
+    schemaAhdcHits.parse("id/S, layer/B, superlayer/B, wire/I, doca/D, residual/D, residual_prefit/D,time/D, trackid/I");
     writer.getDictionary().addSchema(schemaAdc);
     writer.getDictionary().addSchema(schemaWf);
     writer.getDictionary().addSchema(schemaTrack);
     writer.getDictionary().addSchema(schemaRunConfig);
+    writer.getDictionary().addSchema(schemaRecEvent);
+    writer.getDictionary().addSchema(schemaAhdcHits);
     const char * outputFile = "elastics_events.hipo";
     if (std::filesystem::exists(outputFile)) {
         if (std::filesystem::remove(outputFile)) {
@@ -808,6 +811,7 @@ int main(int argc, char const *argv[]) {
             /***********************************************
              * for simulation calibration
              * ********************************************/
+            std::vector<int> HitIndex;
             std::vector<int> AdcId;
             std::vector<int> TrackId;
             H1_nelastics->Fill(Elastics.size());
@@ -820,6 +824,7 @@ int main(int argc, char const *argv[]) {
                     if (trackid == e.track.trackid) { // if this hit is from the track
                         //count++;
                         // track and probe before cuts
+                        HitIndex.push_back(i);
                         if (!isUsed) { // if the track is not used // count track only once!
                             H1_elastic_track_p->Fill(e.track.p);
                             H1_elastic_track_pT->Fill(e.track.pT);
@@ -907,15 +912,35 @@ int main(int argc, char const *argv[]) {
             } // end loop over elastics
             // save those event in a hipo file
             if (AdcId.size()*TrackId.size() > 0) { 
-                hipo::bank outAdcBank(schemaAdc, (int) AdcId.size());
-                hipo::bank outWfBank(schemaWf, (int) AdcId.size());
+                hipo::bank outAhdcHitsBank(schemaAhdcHits, (int) HitIndex.size());
+                hipo::bank outAdcBank(schemaAdc, (int) HitIndex.size());
+                hipo::bank outWfBank(schemaWf, (int) HitIndex.size());
+                //hipo::bank outAdcBank(schemaAdc, (int) adcBank.getRows());
+                //hipo::bank outWfBank(schemaWf, (int) adcBank.getRows());
                 hipo::bank outTrackBank(schemaTrack, (int) TrackId.size());
                 hipo::bank outRunConfigBank(schemaRunConfig, 1);
-                //hipo::bank outRecEventBank(schemaRecEvent, 1);
-                //hipo::bank outAhdcHitsBank(schemaAhdcHits, (int) AdcId.size()); // not sure for the size??
-                for (int i = 0; i < outAdcBank.getRows(); i++) {
+                hipo::bank outRecEventBank(schemaRecEvent, 1);
+                for (int i = 0; i < outAhdcHitsBank.getRows(); i++) {
+                    // AHDC::hits
+                    //outAhdcHitsBank.putShort("id", i, hitBank.getShort("id", HitIndex[i]));
+                    outAhdcHitsBank.putShort("id", i, i+1); // re-numerotation
+                    outAhdcHitsBank.putByte("layer", i, hitBank.getByte("layer", HitIndex[i]));
+                    outAhdcHitsBank.putByte("superlayer", i, hitBank.getByte("superlayer", HitIndex[i]));
+                    outAhdcHitsBank.putInt("wire", i, hitBank.getInt("wire", HitIndex[i]));
+                    outAhdcHitsBank.putDouble("doca", i, hitBank.getDouble("doca", HitIndex[i]));
+                    outAhdcHitsBank.putDouble("residual", i, hitBank.getDouble("residual", HitIndex[i]));
+                    outAhdcHitsBank.putDouble("residual_prefit", i, hitBank.getDouble("residual_prefit", HitIndex[i]));
+                    outAhdcHitsBank.putDouble("time", i, hitBank.getDouble("time", HitIndex[i]));
+                    outAhdcHitsBank.putInt("trackid", i, hitBank.getInt("trackid", HitIndex[i]));
+                    // AHDC::adc
+                    int index = hitBank.get("id", HitIndex[i]) - 1; // adc index
+                //}
+                // AHDC::adc (I have to save all hits in order to retrieve them using the hit id of AHDC::hits)
+                // correct path : tracks --> hits --> adc or wf
+                //for (int i = 0; i < outAdcBank.getRows(); i++) {
                     // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
-                    int index = AdcId[i] - 1;
+                    //int index = AdcId[i] - 1;
+                    //int index = i; // if everything works well I will rename index by i
                     // AHDC::adc
                     outAdcBank.putByte("sector", i, adcBank.getInt("sector", index));
                     outAdcBank.putByte("layer", i, adcBank.getInt("layer", index));
@@ -1005,11 +1030,25 @@ int main(int argc, char const *argv[]) {
                     outRunConfigBank.putFloat("torus", 0, runConfigBank.getFloat("torus", 0));
                     outRunConfigBank.putFloat("solenoid", 0, runConfigBank.getFloat("solenoid", 0));
                 }
+                // REC::Event
+                {
+                    outRecEventBank.putLong("category", 0, recEventBank.getLong("category", 0));
+                    outRecEventBank.putLong("topology", 0, recEventBank.getLong("topology", 0));
+                    outRecEventBank.putFloat("beamCharge", 0, recEventBank.getFloat("beamCharge", 0));
+                    outRecEventBank.putDouble("liveTime", 0, recEventBank.getDouble("liveTime", 0));
+                    outRecEventBank.putFloat("startTime", 0, recEventBank.getFloat("startTime", 0));
+                    outRecEventBank.putFloat("RFTime", 0, recEventBank.getFloat("RFTime", 0));
+                    outRecEventBank.putByte("helicity", 0, recEventBank.getByte("helicity", 0));
+                    outRecEventBank.putByte("helicityRaw", 0, recEventBank.getByte("helicityRaw", 0));
+                    outRecEventBank.putFloat("procTime", 0, recEventBank.getFloat("procTime", 0));
+                }
                 outEvent.reset();
                 outEvent.addStructure(outAdcBank);
                 outEvent.addStructure(outWfBank);
                 outEvent.addStructure(outTrackBank);
                 outEvent.addStructure(outRunConfigBank);
+                outEvent.addStructure(outRecEventBank);
+                outEvent.addStructure(outAhdcHitsBank);
                 writer.addEvent(outEvent);
             }
         } // and loop over events
