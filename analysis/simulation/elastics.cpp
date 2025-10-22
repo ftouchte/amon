@@ -148,7 +148,8 @@ int main(int argc, char const *argv[]) {
     }*/
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
     //all_filenames.push_back("");
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/new/new-rec-all-23003.0-5.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-notimestamp.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/rec-run_23003.00000.hipo");
 
