@@ -98,60 +98,29 @@ int main(int argc, char const *argv[]) {
     double pT_max = 0.30;
     //double sum_adc_min = 430;
     //double sum_adc_max = 2800;
-    double sum_adc_min = 3200;
-    double sum_adc_max = 9800;
-    double DeltaPhi1 =-210;
-    double DeltaPhi2 =150;
+    double sum_adc_min = 5000;
+    double sum_adc_max = 14000;
+    double DeltaPhi1 =-178.7;
+    double DeltaPhi2 =173.23;
     double width_DeltaPhi = 45;
-// ------------------------------------
-// Open HIPO file
-// ------------------------------------
-//    const char * filename = "/home/touchte-codjo/Desktop/hipofiles/track/D2/22712/all_rec_clas_022712.hipo";
-//    Process only one file
-//    hipo::reader  reader(filename);
-//    hipo::dictionary factory;
-//    reader.readDictionary(factory);
-//    hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
-//    hipo::bank  track0Bank(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
-//    hipo::bank  particleBank(factory.getSchema("REC::Particle"));
-//    hipo::bank  recEventBank(factory.getSchema("REC::Event"));
-//    hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
-//    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
-//    hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
-//    hipo::event event;
-//    factory.getSchema("AHDC::adc").show(); 
-//    factory.getSchema("AHDC::wf").show(); 
-//    factory.getSchema("AHDC::kftrack").show();
-   
 
     ///////////////////////////////////////////////
     /// Filter input files
     /// ///////////////////////////////////////////
     std::vector<std::string> all_filenames;
-    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1";
-    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003";
-    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/dev";
-    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/dev-v2";
-    //std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/wfType/23003/13.3.0";
-    //std::string motif = ".*02299[0-9].*";
+    std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0";
     //std::string motif = ".*";
-    //std::string motif = "rec-v2-run.*";
-    //std::string motif = "rec-run.*";
-    //std::string motif = "rec_clas_023003.evio.0000[0-5].*";
-    /*std::regex re(motif.c_str());
+    std::string motif = "rec_clas_022712.evio.0000[0-9].hipo";
+    std::regex re(motif.c_str());
     for (const fs::directory_entry & entry : fs::directory_iterator(dir_name)) {
         std::string onefile = entry.path().filename().c_str(); // the filename without the whole path
-        if (std::regex_match(onefile, re)) { // check with the filename match the motif
+        if (std::regex_match(onefile, re)) { // check if the filename match the motif
             //printf("%s \n", onefile.c_str());
             all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
         }
-    }*/
+    }
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
     //all_filenames.push_back("");
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/new/new-rec-all-23003.0-5.hipo");
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-input.hipo");
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/allrec-notimestamp.hipo");
-    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/time/rec-run_23003.00000.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -443,7 +412,7 @@ int main(int argc, char const *argv[]) {
         hipo::dictionary factory;
         reader.readDictionary(factory);
         hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
-        hipo::bank  track0Bank(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
+        //hipo::bank  trackBank0(factory.getSchema("AHDC::track")); // to match old cooked files where dEdx was filled in AHDC::track instead of AHDC::kftrack
         hipo::bank  particleBank(factory.getSchema("REC::Particle"));
         hipo::bank  recEventBank(factory.getSchema("REC::Event"));
         hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
@@ -463,7 +432,7 @@ int main(int argc, char const *argv[]) {
             }
             reader.read(event);
             event.getStructure(trackBank);
-            event.getStructure(track0Bank);
+            event.getStructure(trackBank);
             event.getStructure(particleBank);
             event.getStructure(recEventBank);
             event.getStructure(adcBank);
@@ -542,7 +511,7 @@ int main(int argc, char const *argv[]) {
                 T.vz = T.vz*0.1; // convert mm to cm
                 T.p  = T.p*0.001; // convert MeV to GeV
                 T.pT = T.pT*0.001; // convert MeV to Gev
-                T.dEdx = track0Bank.getFloat("dEdx", i);
+                T.dEdx = trackBank.getFloat("dEdx", i);
                 T.adc = trackBank.getInt("sum_adc", i);
                 T.trackid = trackBank.getInt("trackid", i);
                 Tracks.push_back(T);
@@ -555,7 +524,7 @@ int main(int argc, char const *argv[]) {
                 H1_track_nhits[0]->Fill(trackBank.getInt("n_hits", i)); 
                 H1_track_adc[0]->Fill(trackBank.getInt("sum_adc", i));
                 H1_track_path[0]->Fill(trackBank.getFloat("path", i));   
-                H1_track_dEdx[0]->Fill(track0Bank.getFloat("dEdx", i));    
+                H1_track_dEdx[0]->Fill(trackBank.getFloat("dEdx", i));    
                 H1_track_residuals[0]->Fill(trackBank.getFloat("sum_residuals", i));
                 H1_track_residuals_per_nhits[0]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
                 H1_track_chi2[0]->Fill(trackBank.getFloat("chi2", i));
@@ -645,7 +614,7 @@ int main(int argc, char const *argv[]) {
                 T.vz = T.vz*0.1; // convert mm to cm
                 T.p  = T.p*0.001; // convert MeV to GeV
                 T.pT = T.pT*0.001; // convert MeV to Gev
-                T.dEdx = track0Bank.getFloat("dEdx", i);
+                T.dEdx = trackBank.getFloat("dEdx", i);
                 T.adc = trackBank.getInt("sum_adc", i);
                 T.trackid = trackBank.getInt("trackid", i);
                 Tracks.push_back(T);
@@ -658,7 +627,7 @@ int main(int argc, char const *argv[]) {
                 H1_track_nhits[1]->Fill(trackBank.getInt("n_hits", i)); 
                 H1_track_adc[1]->Fill(trackBank.getInt("sum_adc", i));
                 H1_track_path[1]->Fill(trackBank.getFloat("path", i));   
-                H1_track_dEdx[1]->Fill(track0Bank.getFloat("dEdx", i));    
+                H1_track_dEdx[1]->Fill(trackBank.getFloat("dEdx", i));    
                 H1_track_residuals[1]->Fill(trackBank.getFloat("sum_residuals", i));
                 H1_track_residuals_per_nhits[1]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
                 H1_track_chi2[1]->Fill(trackBank.getFloat("chi2", i));
@@ -744,7 +713,7 @@ int main(int argc, char const *argv[]) {
                     H1_track_nhits[2]->Fill(trackBank.getInt("n_hits", i)); 
                     H1_track_adc[2]->Fill(trackBank.getInt("sum_adc", i));
                     H1_track_path[2]->Fill(trackBank.getFloat("path", i));   
-                    H1_track_dEdx[2]->Fill(track0Bank.getFloat("dEdx", i));    
+                    H1_track_dEdx[2]->Fill(trackBank.getFloat("dEdx", i));    
                     H1_track_residuals[2]->Fill(trackBank.getFloat("sum_residuals", i));
                     H1_track_residuals_per_nhits[2]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
                     H1_track_chi2[2]->Fill(trackBank.getFloat("chi2", i));
@@ -784,7 +753,7 @@ int main(int argc, char const *argv[]) {
                         H1_track_nhits[3]->Fill(trackBank.getInt("n_hits", i)); 
                         H1_track_adc[3]->Fill(trackBank.getInt("sum_adc", i));
                         H1_track_path[3]->Fill(trackBank.getFloat("path", i));   
-                        H1_track_dEdx[3]->Fill(track0Bank.getFloat("dEdx", i));    
+                        H1_track_dEdx[3]->Fill(trackBank.getFloat("dEdx", i));    
                         H1_track_residuals[3]->Fill(trackBank.getFloat("sum_residuals", i));
                         H1_track_residuals_per_nhits[3]->Fill(trackBank.getFloat("sum_residuals", i)/trackBank.getInt("n_hits", i));
                         H1_track_chi2[3]->Fill(trackBank.getFloat("chi2", i));
