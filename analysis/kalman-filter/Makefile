@@ -40,7 +40,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter
+all: kfilter distance
+
+distance: distance.o AhdcCCDB.o futils.o
+	$(CXX) -o distance.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 kfilter: kfilter.o AhdcCCDB.o futils.o
 	$(CXX) -o kfilter.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
