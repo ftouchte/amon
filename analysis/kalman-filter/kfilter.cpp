@@ -41,12 +41,20 @@ void progressBar(int state, int bar_length = 100);
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-    const char * output = "./output/kfilter-v1.root";
+    //const char * output = "./output/kfilter-v1.root";
+    //const char * output = "./output/kfilter-deuteron-v2.root";
+    //const char * output = "./output/kfilter-deuteron-v4.root";
+    const char * output = "./output/kfilter-deuteron-v5.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v1.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v1.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v2.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v2.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v4.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v5.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v6.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -70,7 +78,7 @@ int main(int argc, char const *argv[]) {
     TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; count", 6, 0, 6); 
     TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3000); 
     TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 150, 750, 100, 0, 3000); 
-    TH1I* H1_nsteps = new TH1I("nsteps", "nsteps in G4; count;", 20, 0, 20);
+    TH1I* H1_nsteps = new TH1I("nsteps", "nsteps in G4; nsteps; count;", 20, 0, 20);
     std::vector<TH1D*> VecH1_mctime;
     VecH1_mctime.push_back(new TH1D("mctime_nsteps=1", "mctime_nsteps=1; mctime (ns); count", 100, 0, 400));
     VecH1_mctime.push_back(new TH1D("mctime_nsteps=2", "mctime_nsteps=2; mctime (ns); count", 100, 0, 400));
@@ -91,7 +99,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_track_pT = new TH1D("track_pT", "pT; pT (MeV); #count", 100, 0, 1000); 
     TH1D* H1_track_theta = new TH1D("track_theta", "theta; theta (deg); #count", 100, 0, 181); 
     TH1D* H1_track_phi = new TH1D("track_phi", "phi; phi (deg); #count", 100, 0, 361); 
-    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -30, 30); 
+    TH1D* H1_track_vz = new TH1D("track_vz", "vz; vz (cm); #count", 100, -16, 16); 
     TH1D* H1_track_sum_adc = new TH1D("track_sum_adc", "#Sigma adc; #Sigma adc; #count", 100, 0, 5000); 
     TH1D* H1_track_sum_residuals = new TH1D("track_res", "Sum residuals; Sum residuals (mm); #count", 100, -5, 5); 
     TH1D* H1_track_chi2 = new TH1D("track_chi2", "chi2ndf; chi2ndf (mm^{2}); #count", 100, 0, 3); 
@@ -102,13 +110,13 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 0, 181); 
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361); 
     TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (cm); #count", 100, -16, 16); 
-    TH2D* H2_corr_p = new TH2D("corr_p", "p_{track} vs p_{mc}; p_{mc} (MeV); p_{track} (MeV)", 100, 225, 280, 100, 0, 2000);
-    TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 220, 280, 100, 0, 2000);
+    TH2D* H2_corr_p = new TH2D("corr_p", "p_{track} vs p_{mc}; p_{mc} (MeV); p_{track} (MeV)", 100, 190, 310, 100, 190, 310);
+    TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 190, 310, 100, 190, 310);
     TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
-    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{track} vs #theta_{mc}; #theta_{mc} (deg); #theta_{track} (deg)", 100, 85, 95, 100, 0, 181);
-    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -30, 30);
-    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 100, -15, 25); 
-    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{mc} - phi_{track}; #Delta phi (deg); #count", 100, -20, 20); 
+    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{track} vs #theta_{mc}; #theta_{mc} (deg); #theta_{track} (deg)", 100, 55, 125, 100, 55, 125);
+    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -15, 15);
+    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 100, -5, 10); 
+    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{mc} - phi_{track}; #Delta phi (deg); #count", 100, -5, 5); 
     // hit 
     TH1D* H1_distance = new TH1D("distance", "hit distance; distance (mm); #count", 100, 0, 4); 
     TH1D* H1_mcdistance = new TH1D("mcdistance", "distance using mc t2d; distance (mm); #count", 100, 0, 4); // obtained from time 
@@ -121,7 +129,7 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_corr_distance = new TH2D("corr_distance", "distance vs mcdistance; mcdistance (mm); distance (mm)", 100, 0, 4, 100, 0, 4);
     TH2D* H2_corr_time = new TH2D("corr_time", "time vs mctime; mctime (mm); time (mm)", 100, 0, 250, 100, 0, 250);
     TH1D* H1_residual = new TH1D("residuals", "residuals; residuals (mm); #count", 100, -4, 4); 
-    TH2D* H2_time2distance = new TH2D("corr_time2distance", "time2distance; time (ns); KF - distance (mm)", 100, 0, 250, 100, 0, 4); 
+    TH2D* H2_time2distance = new TH2D("corr_time2distance", "time2distance; time (ns); KF distance (mm)", 100, 0, 250, 100, 0, 4); 
     std::vector<TH1D*> VecH1_noise;
     VecH1_noise.push_back(new TH1D("noise s0", "s0; s0 (adc); count", 100, 250, 380));
     VecH1_noise.push_back(new TH1D("noise s1", "s1; s1 (adc); count", 100, 250, 380));
@@ -329,34 +337,34 @@ int main(int argc, char const *argv[]) {
     comp_dir->cd();
     {
     // Compare track and simu
-        TCanvas* canvas2 = new TCanvas("c1_track_study", "Simulation vs Reconstruction");
+        TCanvas* canvas2 = new TCanvas("c1_track_study", "Simulated vs Reconstructed");
         canvas2->Divide(3,2);
         canvas2->cd(1);
-        THStack* stack1 = new THStack("stack_p", "#bf{p} #color[4]{Reconstruction} vs #color[2]{Simulation}; p (MeV)");
+        THStack* stack1 = new THStack("stack_p", "#bf{p} #color[4]{Reconstructed} vs #color[2]{Simulated}; p (MeV)");
         stack1->Add(H1_track_p);
         H1_mc_p->SetLineColor(kRed);
         stack1->Add(H1_mc_p);
         stack1->Draw("nostack");
         canvas2->cd(2);
-        THStack* stack2 = new THStack("stack_pT", "#bf{pT} #color[4]{Reconstruction} vs #color[2]{Simulation}; pT (MeV)");
+        THStack* stack2 = new THStack("stack_pT", "#bf{pT} #color[4]{Reconstructed} vs #color[2]{Simulated}; pT (MeV)");
         stack2->Add(H1_track_pT);
         H1_mc_pT->SetLineColor(kRed);
         stack2->Add(H1_mc_pT);
         stack2->Draw("nostack");
         canvas2->cd(3);
-        THStack* stack3 = new THStack("stack_theta", "#bf{theta} #color[4]{Reconstruction} vs #color[2]{Simulation}; theta (deg)");
+        THStack* stack3 = new THStack("stack_theta", "#bf{theta} #color[4]{Reconstructed} vs #color[2]{Simulated}; theta (deg)");
         stack3->Add(H1_track_theta);
         H1_mc_theta->SetLineColor(kRed);
         stack3->Add(H1_mc_theta);
         stack3->Draw("nostack");
         canvas2->cd(4);
-        THStack* stack4 = new THStack("stack_phi", "#bf{phi} #color[4]{Reconstruction} vs #color[2]{Simulation}; phi (deg)");
+        THStack* stack4 = new THStack("stack_phi", "#bf{phi} #color[4]{Reconstructed} vs #color[2]{Simulated}; phi (deg)");
         stack4->Add(H1_track_phi);
         H1_mc_phi->SetLineColor(kRed);
         stack4->Add(H1_mc_phi);
         stack4->Draw("nostack");
         canvas2->cd(5);
-        THStack* stack5 = new THStack("stack_vz", "#bf{vz} #color[4]{Reconstruction} vs #color[2]{Simulation}; vz (cm)");
+        THStack* stack5 = new THStack("stack_vz", "#bf{vz} #color[4]{Reconstructed} vs #color[2]{Simulated}; vz (cm)");
         stack5->Add(H1_track_vz);
         H1_mc_vz->SetLineColor(kRed);
         stack5->Add(H1_mc_vz);
