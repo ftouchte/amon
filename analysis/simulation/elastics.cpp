@@ -172,7 +172,7 @@ int main(int argc, char const *argv[]) {
     H1_probe_p.push_back(new TH1D("p_probe_0", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
     H1_probe_p.push_back(new TH1D("p_probe_1", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
     H1_probe_p.push_back(new TH1D("p_probe_2", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
-    H1_probe_p.push_back(new TH1D("p_probe_3", "p electron/photon (GeV)", 100, 2.16, 2.25));
+    H1_probe_p.push_back(new TH1D("p_probe_3", "p electron/photon (GeV)", 100, 0.18, 0.32));
     std::vector<TH1D*> H1_probe_pT;
     H1_probe_pT.push_back(new TH1D("pT_probe_0", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
     H1_probe_pT.push_back(new TH1D("pT_probe_1", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
@@ -303,25 +303,25 @@ int main(int argc, char const *argv[]) {
     // correlations probes (electron or gamma) vs tracks)
     //////////////////////////////////////////////////////
     std::vector<TH2D*> H2_p_dEdx;
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_0", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_1", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.2, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_0", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_1", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
     std::vector<TH2D*> H2_p_adc;
     H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     std::vector<TH2D*> H2_vze_vz;
-    H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_2", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_3", "vz_{e} vs vz", 100, -25, 10, 100, -16, 16)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_2", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_3", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
     std::vector<TH2D*> H2_pTe_pT;
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_0", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_1", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_2", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_3", "pT_{e} vs pT", 100, 0, 0.9, 100, 0, 1)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_0", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_1", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_2", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_3", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
     std::vector<TH1D*> H1_delta_vz;
     H1_delta_vz.push_back(new TH1D("delta_vz_0", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
     H1_delta_vz.push_back(new TH1D("delta_vz_1", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
@@ -333,16 +333,19 @@ int main(int argc, char const *argv[]) {
     H1_delta_phi.push_back(new TH1D("delta_phi_2", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_3", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     //////////////////////////////////////////////////////
-    /// for simulation
+    /// for simulation | calibration | elastics selection
     //////////////////////////////////////////////////////
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400); 
-    TH1D* H1_dt0 = new TH1D("dt0", "leadingEdgeTime - t0; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
-    //TH1D* H1_dt00 = new TH1D("dt0_before_cuts", "leadingEdgeTime - t0 before cuts; leadingEdgeTime - t0 (ns); count", 100, 0, 400); 
+    TH1D* H1_time = new TH1D("time", "time = leadingEdgeTime - t0 - startTime; time (ns); count", 100, 0, 250); 
+    TH1D* H1_distance = new TH1D("distance", "distance (mm); distance (mm); count", 100, 0, 4); 
+    TH1D* H1_residual = new TH1D("residual", "residual (mm); residual (mm); count", 100, -5, 5); 
+    TH2D* H2_time2distance = new TH2D("time2distance", "time2distance; time (ns), distance (mm); count", 100, 0, 400, 100, 0, 4); 
     TH1I* H1_nelastics = new TH1I("nelastics", "#(e/g, track) per event; ; count;", 10, 0, 10); 
-    TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 0, 700); 
-    TH1D* H1_timeMax = new TH1D("timeMax", "timeMax; timeMax (ns); count", 100, 200, 900); 
-    TH1D* H1_deltaTime = new TH1D("deltaTime", "timeMax - leadingEdgeTime (ns); timeMax - leadingEdgeTime (ns); count", 100, 0, 400); 
-    TH1D* H1_timeOverThreshold = new TH1D("tot_tot", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 752);
+    TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 250, 700); 
+    TH1D* H1_timeOverThreshold = new TH1D("tot_tot", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 750);
+    TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
+    TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); amplidute (adc); count;", 100, 0, 4000); 
+    TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 150, 750, 100, 0, 3000); 
     std::vector<TH1D*> VecH1_noise;
     VecH1_noise.push_back(new TH1D("noise s1", "s0; s0 (adc); count", 100, 0, 380));
     VecH1_noise.push_back(new TH1D("noise s2", "s1; s1 (adc); count", 100, 0, 380));
@@ -351,28 +354,22 @@ int main(int argc, char const *argv[]) {
     VecH1_noise.push_back(new TH1D("noise s1-s2", "s1-s2; s1-s2 (adc); count", 100, -50, 50));
     VecH1_noise.push_back(new TH1D("noise s2-s3", "s2-s3; s2-s3 (adc); count", 100, -50, 50));
     VecH1_noise.push_back(new TH1D("noise s3-s4", "s3-s4; s3-s4 (adc); count", 100, -50, 50));
-    //TH1D* H1_tot0 = new TH1D("tot_1", "ToT just after dt0 cut; timeOverThreshol (ns); count", 100, 150, 752); 
-    TH1I* H1_wfType = new TH1I("wfType", "wfType; count;", 6, 0, 6); 
-    TH1I* H1_amplitude = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 2000); 
-    TH2D* H2_times = new TH2D("timeMax, leadingEdgeTime", "timeMax vs leadingEdgeTime; timeMax (ns); leadingEdgeTime (ns);", 10, 200, 900, 100, 0, 700); 
-    TH2D* H2_tot_amp = new TH2D("amp, tot", "amplitude vs timeOverThreshold;tot (ns); amp (adc)", 100, 340, 610, 100, 0, 3000); 
-    TH2D* H2_deltaTime_adc = new TH2D("deltaTime_adc", "deltaTime vs amplitude;deltaTime (ns); amplitude (ns)", 100, 0, 400, 100, 0, 3700); 
     TH1D* H1_elastic_track_p = new TH1D("elastic_track_p", "p (GeV)", 100, 0.2, 1.6); 
     TH1D* H1_elastic_track_pT = new TH1D("elastic_track_pT", "pT (GeV)", 100, 0, 1); 
     TH1D* H1_elastic_track_theta = new TH1D("elastic_track_theta", "theta (deg)", 100, 0, 181); 
     TH1D* H1_elastic_track_phi = new TH1D("elastic_track_phi", "phi (deg)", 100, 0, 361); 
-    TH1D* H1_elastic_probe_p = new TH1D("elastic_probe_p", "p (GeV)", 100, 2.16, 2.25); 
-    TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "pT (GeV)", 100, 0.1, 0.5); 
-    TH1D* H1_elastic_probe_theta = new TH1D("elastic_probe_theta", "theta (deg)", 100, 0, 12); 
+    TH1D* H1_elastic_probe_p = new TH1D("elastic_probe_p", "p (GeV)", 100, 0.19, 2.25); 
+    TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "pT (GeV)", 100, 0.15, 0.5); 
+    TH1D* H1_elastic_probe_theta = new TH1D("elastic_probe_theta", "theta (deg)", 100, 4, 15); 
     TH1D* H1_elastic_probe_phi = new TH1D("elastic_probe_phi", "phi (deg)", 100, 0, 361);
     TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000);
-    TH1D* H1_elastics_expected_track_p = new TH1D("expected_track_p", "p (GeV)", 100, 0.2, 1.6); // what should be the track knowing it is an elastic and from theta_electron 
-    TH1D* H1_elastics_expected_track_pT = new TH1D("expected_track_pT", "pT (GeV)", 100, 0, 1); 
-    TH1D* H1_elastics_expected_track_theta = new TH1D("expected_track_theta", "theta (deg)", 100, 0, 181); 
+    TH1D* H1_elastics_expected_track_p = new TH1D("expected_track_p", "p (GeV)", 100, 0.15, 0.5); // what should be the track knowing it is an elastic and from theta_electron 
+    TH1D* H1_elastics_expected_track_pT = new TH1D("expected_track_pT", "pT (GeV)", 100, 0.15, 0.5); 
+    TH1D* H1_elastics_expected_track_theta = new TH1D("expected_track_theta", "theta (deg)", 100, 79, 90); 
     TH1D* H1_elastics_expected_track_phi = new TH1D("expected_track_phi", "phi (deg)", 100, 0, 361); 
-    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, 0.21, 0.284); 
-    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, 0.21, 0.284); 
-    TH1D* H1_selection_expected_track_theta = new TH1D("selection_expected_track_theta", "theta (deg)", 100, 86.4, 87.2); 
+    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, 0.15, 0.3); 
+    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, 0.15, 0.3); 
+    TH1D* H1_selection_expected_track_theta = new TH1D("selection_expected_track_theta", "theta (deg)", 100, 79, 90); 
     TH1D* H1_selection_expected_track_phi = new TH1D("selection_expected_track_phi", "phi (deg)", 100, 0, 361); 
     TH1D* H1_selection_reconstructed_probe_pT = new TH1D("selection_reconstructed_probe_pT", "pT (GeV)", 100, pT_min - 0.1*(pT_max-pT_min), pT_max + 0.1*(pT_max-pT_min)); 
     TH1D* H1_selection_reconstructed_track_adc = new TH1D("selection_reconstructed_track_adc", "#Sum adc; #Sum adc; count", 100, sum_adc_min - 0.1*(sum_adc_max-sum_adc_min), sum_adc_max + 0.1*(sum_adc_max-sum_adc_min)); 
@@ -782,7 +779,6 @@ int main(int argc, char const *argv[]) {
              * for simulation calibration
              * ********************************************/
             std::vector<int> HitIndex;
-            std::vector<int> AdcId;
             std::vector<int> TrackId;
             H1_nelastics->Fill(Elastics.size());
             for (ElasticsOutput e : Elastics) {
@@ -835,32 +831,34 @@ int main(int argc, char const *argv[]) {
                             // there is also the notion of trueIndex due to the notion of Filtered Bank (only available in Java)
                             // the the hit id is defined make we don't need to use the trueIndex, actually, there is equivalent in c++
                             // but it is confusing to use it in coatjava/*/rec/ahdc/Hit/HitReader.java
-                            int hit_id = hitBank.getInt("id",i) - 1; 
-                            double sector    = adcBank.getInt("sector", hit_id);
-                            double layer     = adcBank.getInt("layer", hit_id);
-                            double component = adcBank.getInt("component", hit_id);
+                            double time = hitBank.getDouble("time", i);
+                            double distance = hitBank.getDouble("doca", i);
+                            double residual = hitBank.getDouble("residual", i);
+                            int adcid = hitBank.getInt("id",i) - 1; 
+                            double sector    = adcBank.getInt("sector", adcid);
+                            double layer     = adcBank.getInt("layer", adcid);
+                            double component = adcBank.getInt("component", adcid);
                             ahdcT0 obj  = ahdcConstants.get_t0(sector, layer, component);
-                            double time    = adcBank.getFloat("leadingEdgeTime", hit_id);
-                            double timeMax = adcBank.getFloat("time", hit_id);
-                            double tot     = adcBank.getFloat("timeOverThreshold", hit_id);
-                            double adc        = adcBank.getInt("ADC", hit_id);
-                            //int ped        = adcBank.getInt("ped", hit_id);
-                            double ped        = adcBank.getFloat("ped", hit_id);
-                            AdcId.push_back(hit_id+1); // restore the real id
+                            double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcid);
+                            double tot     = adcBank.getFloat("timeOverThreshold", adcid);
+                            double adc        = adcBank.getInt("ADC", adcid);
+                            //int ped        = adcBank.getInt("ped", adcid);
+                            double ped        = adcBank.getFloat("ped", adcid);
+                            int wfType = adcBank.getShort("wfType", adcid);
                             H1_t0->Fill(obj.t0);
-                            H1_dt0->Fill(time-obj.t0);
-                            H1_leadingEdgeTime->Fill(time); 
-                            H1_timeMax->Fill(timeMax);
-                            H1_deltaTime->Fill(timeMax-time); 
+                            H1_time->Fill(time);
+                            H1_distance->Fill(distance);
+                            H1_residual->Fill(residual);
+                            H2_time2distance->Fill(time, distance - residual);
+                            H1_leadingEdgeTime->Fill(leadingEdgeTime); 
                             H1_timeOverThreshold->Fill(tot);
                             H1_amplitude->Fill(adc); 
-                            H2_times->Fill(timeMax, time);
                             H2_tot_amp->Fill(tot, adc);
-                            H2_deltaTime_adc->Fill(timeMax-time, adc);
-                            int s1 = wfBank.getShort("s1", hit_id);
-                            int s2 = wfBank.getShort("s2", hit_id);
-                            int s3 = wfBank.getShort("s3", hit_id);
-                            int s4 = wfBank.getShort("s4", hit_id);
+                            H1_wfType->Fill(wfType);
+                            int s1 = wfBank.getShort("s1", adcid);
+                            int s2 = wfBank.getShort("s2", adcid);
+                            int s3 = wfBank.getShort("s3", adcid);
+                            int s4 = wfBank.getShort("s4", adcid);
                             VecH1_noise[0]->Fill(s1);
                             VecH1_noise[1]->Fill(s2);
                             VecH1_noise[2]->Fill(s3);
@@ -881,7 +879,7 @@ int main(int argc, char const *argv[]) {
                 //if (count == 0) printf("count : %d --> trackid : %d --> evt : %d --> nAhdcHits : %d --> nAhdcAdc : %d\n", count, e.track.trackid, runConfigBank.getInt("event", 0), hitBank.getRows(), adcBank.getRows());
             } // end loop over elastics
             // save those event in a hipo file
-            if (AdcId.size()*TrackId.size() > 0) { 
+            if (HitIndex.size()*TrackId.size() > 0) { 
                 hipo::bank outAhdcHitsBank(schemaAhdcHits, (int) HitIndex.size());
                 hipo::bank outAdcBank(schemaAdc, (int) HitIndex.size());
                 hipo::bank outWfBank(schemaWf, (int) HitIndex.size());
@@ -903,15 +901,8 @@ int main(int argc, char const *argv[]) {
                     outAhdcHitsBank.putDouble("time", i, hitBank.getDouble("time", HitIndex[i]));
                     outAhdcHitsBank.putInt("trackid", i, hitBank.getInt("trackid", HitIndex[i]));
                     // AHDC::adc
-                    int index = hitBank.get("id", HitIndex[i]) - 1; // adc index
-                //}
-                // AHDC::adc (I have to save all hits in order to retrieve them using the hit id of AHDC::hits)
-                // correct path : tracks --> hits --> adc or wf
-                //for (int i = 0; i < outAdcBank.getRows(); i++) {
                     // Attention: the hit id numerotation starts at 1, the getter indexation starts at 0
-                    //int index = AdcId[i] - 1;
-                    //int index = i; // if everything works well I will rename index by i
-                    // AHDC::adc
+                    int index = hitBank.get("id", HitIndex[i]) - 1; // adc index
                     outAdcBank.putByte("sector", i, adcBank.getInt("sector", index));
                     outAdcBank.putByte("layer", i, adcBank.getInt("layer", index));
                     outAdcBank.putShort("component", i, adcBank.getInt("component", index));
@@ -1403,54 +1394,16 @@ int main(int argc, char const *argv[]) {
     // signal processing 
     TDirectory* signals_dir = calibration_dir->mkdir("signals_from_selected_hits");
     signals_dir->cd();
-    //H1_dt00->Write("dt0_0"); 
-    H1_dt0->Write("time"); 
-    //H1_tot0->Write("tot_0"); 
+    H1_distance->Write("distance"); 
+    H1_time->Write("time"); 
+    H1_residual->Write("residual");
+    H2_time2distance->Write("time2distance");
     H1_leadingEdgeTime->Write("leadindEdgeTime"); 
     H1_timeOverThreshold->Write("timeOverThreshold");
-    H1_timeMax->Write("timeMax");
     H1_t0->Write("t0_distribution"); 
-    //H1_deltaTime->Write("dt"); 
     H1_amplitude->Write("amplitude"); 
     H1_wfType->Write("wfType");
-    H2_times->Write("corr_timeMax_leadingEdgeTime");
     H2_tot_amp->Write("corr_tot_amp");
-    H2_deltaTime_adc->Write("corr_dt_amp");
-    // >>>>>>>>>   Process H2_deltaTime_adc
-    TCanvas* canvas1 = new TCanvas("c1_deltaTime_amplitude", "deltaTime vs amplitude; timeMax - leadingedgeTime (ns); amplitude (adc)");
-    canvas1->SetLogz();
-    H2_deltaTime_adc->Draw("colz");
-    TText* text1 = new TText();
-    text1->SetTextSize(0.02);
-    text1->SetTextColor(kRed);
-    int nbins = H2_deltaTime_adc->GetXaxis()->GetNbins();
-    printf("> Analyse correlation between deltaTime (ns) and amplitude (adc)\n");
-    printf(">   nbins x axis : %d\n", nbins);
-    int proj_nbins = 0.05*nbins;
-    int Npts = nbins/proj_nbins;
-    TGraphErrors* gr = new TGraphErrors(Npts);
-    for (int i = 0; i < Npts; i++) {
-        TH1D* H1_projTime = H2_deltaTime_adc->ProjectionX(TString::Format("_px_%d", i).Data(), i*proj_nbins, (i+1)*proj_nbins);
-        double mean = H1_projTime->GetMean();
-        double stdDev = H1_projTime->GetStdDev();
-        printf(">   mean : %lf, stdDev : %lf\n", mean, stdDev);
-        double y_bin_inf = H2_deltaTime_adc->GetYaxis()->GetBinCenter(i*proj_nbins); // adc_inf for this collection of bins
-        double y_bin_sup = H2_deltaTime_adc->GetYaxis()->GetBinCenter((i+1)*proj_nbins); // adc_sup this collection of bins
-        gr->SetPoint(i, mean, 0.5*(y_bin_inf+y_bin_sup));
-        gr->SetPointError(i, stdDev, 0);
-        text1->DrawText(mean + stdDev, 0.5*(y_bin_inf+y_bin_sup), TString::Format("%.2lf +/- %.2lf", mean, stdDev).Data());
-    }
-    gr->SetMarkerColor(kBlack);
-    gr->SetMarkerStyle(21);
-    gr->SetLineWidth(2);
-    gr->SetLineColor(kRed);
-    gr->Draw("same pl");
-    TLegend* legend = new TLegend(0.1,0.7,0.25,0.9);
-    //legend->SetHeader("deltaTime projection","C");
-    legend->AddEntry(gr, "deltaTime projection");
-    legend->Draw();
-    // <<<<<<<<<<<<<< end process H2_deltaTime_adc
-    canvas1->Write("c1_deltaTime_adc");
     VecH1_noise[0]->Write("wf_s0");
     VecH1_noise[1]->Write("wf_s1");
     VecH1_noise[2]->Write("wf_s2");
