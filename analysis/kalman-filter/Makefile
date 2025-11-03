@@ -40,7 +40,13 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance
+all: kfilter distance time2distance fitter
+
+fitter: fitter.o 
+	$(CXX) -o fitter.exe $^ $(ROOTLIBS) 
+
+time2distance: time2distance.o AhdcCCDB.o futils.o
+	$(CXX) -o time2distance.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 distance: distance.o AhdcCCDB.o futils.o
 	$(CXX) -o distance.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
