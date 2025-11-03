@@ -44,17 +44,13 @@ int main(int argc, char const *argv[]) {
     //const char * output = "./output/kfilter-v1.root";
     //const char * output = "./output/kfilter-deuteron-v2.root";
     //const char * output = "./output/kfilter-deuteron-v4.root";
-    const char * output = "./output/kfilter-deuteron-v5.root";
+    const char * output = "./output/kfilter-deuteron-v14.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v1.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v2.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v2.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v4.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v5.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v6.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v14.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -73,7 +69,7 @@ int main(int argc, char const *argv[]) {
     // adc
     TH1D* H1_occ = new TH1D("occupancy", "occupancy; wire; count [%]", 576, 0, 576);
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400);
-    TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 0, 700); 
+    TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 100, 600); 
     TH1D* H1_tot = new TH1D("timeOverThreshold", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 750); 
     TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; count", 6, 0, 6); 
     TH1I* H1_adc = new TH1I("amplitude", "amplitude (adc); count;", 100, 0, 3000); 
