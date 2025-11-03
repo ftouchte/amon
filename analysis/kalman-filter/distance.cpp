@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
     //const char * output = "./output/distance.root";
-    const char * output = "./output/distance-v13.root";
+    const char * output = "./output/distance-v13-bis.root";
     
     /////////////////////////
     /// simu
@@ -128,8 +128,8 @@ int main(int argc, char const *argv[]) {
                 double mcDocaTime = p0 + p1*mcDoca + p2*pow(mcDoca,2) + p3*pow(mcDoca,3) + p4*pow(mcDoca,4) + p5*pow(mcDoca,5); 
                 //double t0 = ahdcConstants.get_t0(sector, layer, component).t0;
                 //double decodedTime = adcBank.getDouble("leadingEdgeTime", i) - t0; // for the simu, startTime = 0
-                double decodedTime = hitBank.getDouble("time", i); 
-                double decodedDistance = hitBank.getDouble("doca", i);
+                double decodedTime = hitBank.getDouble("time", h); 
+                double decodedDistance = hitBank.getDouble("doca", h);
                 //double mcMeanDistance = (mcMeanTime < 0) ? 0 : -0.0497 -0.00667*mcMeanTime + 0.389*sqrt(mcMeanTime) - 0.189*pow(mcMeanTime, 1.0/3);
                 double mcMeanDistance = -99;
                 H1_mcMeanTime->Fill(mcMeanTime);

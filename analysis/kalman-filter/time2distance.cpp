@@ -47,7 +47,7 @@ TCanvas* time2distance(std::vector<double> & pars);
 int main(int argc, char const *argv[]) {
 
     // output
-    const char * output = "./output/time2distance-v11.root";
+    const char * output = "./output/time2distance-v10-bis.root";
     TFile *f = new TFile(output, "RECREATE");
     TDirectory *projection_dir = f->mkdir("t2d_fit_projection1D");
     //std::vector<double> pars;
@@ -62,7 +62,7 @@ int main(int argc, char const *argv[]) {
     /// simu
     /// /////////////////////
     //const char* filename = "/home/touchte-codjo/Desktop/amon/analysis/simulation/elastics_events.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v11.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v10.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -112,9 +112,9 @@ int main(int argc, char const *argv[]) {
                 //int layer = wfBank.getShort("layer", i);
                 //int component = wfBank.getShort("component", i);
                 //double t0 = ahdcConstants.get_t0(sector, layer, component).t0;
-                double time = hitBank.getDouble("time", i); 
-                double residual = hitBank.getDouble("residual", i);
-                double doca = hitBank.getDouble("doca", i);
+                double time = hitBank.getDouble("time", h); 
+                double residual = hitBank.getDouble("residual", h);
+                double doca = hitBank.getDouble("doca", h);
                 double distance = doca - residual; 
                 //double distance = (time < 0) ? 0 : -0.0497 -0.00667*time + 0.389*sqrt(time) - 0.189*pow(time, 1.0/3);
                 H1_time->Fill(time);
