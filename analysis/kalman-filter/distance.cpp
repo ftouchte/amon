@@ -44,12 +44,12 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
     //const char * output = "./output/distance.root";
-    const char * output = "./output/distance-v13-bis.root";
+    const char * output = "./output/distance-v15.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v13.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v15.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v7.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
@@ -72,7 +72,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_deltaTime = new TH1D("deltaTime", "deltaTime = mcDocaTime - decodedTime; deltaTime (ns); count", 100, -50, 50);
     TH1D* H1_mcDoca    = new TH1D("mcDoca", "mcDoca; mcDoca (mm); #count", 100, 0, 4); 
     TH1D* H1_decodedDistance = new TH1D("decodedDistance", "decodedDistance; decodedDistance (mm); count", 100, 0, 4);
-    TH1D* H1_deltaDistance = new TH1D("deltaDistance", "deltaDistance = mcDoca - decodedDistance; deltaDistance (mm); count", 100, -2.6, 2.6);
+    TH1D* H1_deltaDistance = new TH1D("deltaDistance", "deltaDistance = mcDoca - decodedDistance; deltaDistance (mm); count", 100, -1, 1);
     TH1D* H1_mcMeanTime  = new TH1D("mcMeanTime", "mcMeanTime; mcMeanTime (ns); count", 100, 0, 250);
     TH1D* H1_mcMeanDistance  = new TH1D("mcMeanDistance", "mcMeanDistance; mcMeanDistance (mm); count", 100, 0, 4);
     std::vector<TH2D*> H2_corrDistances;
@@ -90,7 +90,70 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_tot    = new TH1D("tot", "timeOverThreshold; timeOverThreshold (ns); #count", 100, 150, 750); 
     TH2D* H2_deltaTime_adc = new TH2D("corr_deltaTime_adc", "deltaTime vs ADC;ADC (adc); deltaTime (ns)", 100, 0, 4000, 100, -50, 50);
     TH2D* H2_deltaDistance_adc = new TH2D("corr_deltaDistance_adc", "deltaDistance vs ADC;ADC (adc); deltaDistance (mm)", 100, 0, 4000, 100, -2.6, 2.6);
-    //AhdcCCDB ahdcConstants;
+    AhdcCCDB ahdcConstants;
+    //****** T2D inversion************************
+    ahdcT2d T2D = ahdcConstants.get_t2d();
+    auto eval_t2d = [T2D] (double x) -> double {
+        return T2D.p0 + T2D.p1*pow(x, 1.0) + T2D.p2*pow(x, 2.0) + T2D.p3*pow(x, 3.0) + T2D.p4*pow(x, 4.0) + T2D.p5*pow(x, 5.0);
+    };
+    double xi[50];
+    double yi[50];
+    for (int i = 0; i < 50; i++) {
+        xi[i] = i*(350.0/50);
+        yi[i] = eval_t2d(xi[i]);
+    }
+    // inverse of the xime2yistance
+    auto eval_inv_t2d = [xi, yi] (double y) -> double {
+        if (y < 0) {
+            return ((xi[1]-xi[0])/(yi[1]-yi[0]))*(y - yi[0]) + xi[0];
+        }
+        else if (y >= yi[49]) {
+            return ((xi[49]-xi[48])/(yi[49]-yi[48]))*(y - yi[48]) + xi[48];
+        } else {
+            int i = 0;
+            while (i < 48) {
+                if ((y >= yi[i]) && (y < yi[i+1])) {
+                        break;
+                }
+                i++;
+            }
+            return ((xi[i+1]-xi[i])/(yi[i+1]-yi[i]))*(y - yi[i]) + xi[i];
+        }
+    };
+    //*********** END T2D inversion ****************
+    int Npts = 100;
+    TGraph * gr = new TGraph(Npts);
+    for (int i = 0; i < Npts; i++) {
+        double x = i*(350.0/Npts);
+        double y = eval_t2d(x);
+        gr->SetPoint(i, x, y);
+    }
+    TGraph * igr = new TGraph(Npts);
+    for (int i = 0; i < Npts; i++) {
+        double x = i*(4.0/Npts);
+        double y = eval_inv_t2d(x);
+        igr->SetPoint(i, x, y);
+    }
+    gr->SetTitle("time2distance; time (ns); distance (mm)");
+    igr->SetTitle("distance2time; distance (mm); time (ns)");
+    TGraph * igr_gr = new TGraph(Npts);
+    for (int i = 0; i < Npts; i++) {
+        double x = i*(350.0/Npts);
+        double y = eval_t2d(x);
+        double xx = eval_inv_t2d(y);
+        igr_gr->SetPoint(i, x, xx);
+    }
+    TGraph * gr_igr = new TGraph(Npts);
+    for (int i = 0; i < Npts; i++) {
+        double x = i*(4.0/Npts);
+        double y = eval_inv_t2d(x);
+        double xx = eval_t2d(y);
+        gr_igr->SetPoint(i, x, xx);
+    }
+    igr_gr->SetTitle("igr o gr; time (ns); time (ns)");
+    gr_igr->SetTitle("gr o igr; distance (mm); distance (mm)");
+
+
     // Loop over events
     while( reader.next()){
         nevents++;
@@ -119,13 +182,14 @@ int main(int argc, char const *argv[]) {
                 //int component = wfBank.getShort("component", i);
                 double mcMeanTime = 0.01*wfBank.getInt(std::string("s30").c_str(), i);
                 double mcDoca = 0.001*wfBank.getInt(std::string("s28").c_str(), i);
-                double p0 = 0;
-                double p1 = 2.55132;
-                double p2 = 10.7884;
-                double p3 = 12.8042;
-                double p4 = -9.91149;
-                double p5 = 2.38082;
-                double mcDocaTime = p0 + p1*mcDoca + p2*pow(mcDoca,2) + p3*pow(mcDoca,3) + p4*pow(mcDoca,4) + p5*pow(mcDoca,5); 
+                //double p0 = 0;
+                //double p1 = 2.55132;
+                //double p2 = 10.7884;
+                //double p3 = 12.8042;
+                //double p4 = -9.91149;
+                //double p5 = 2.38082;
+                //double mcDocaTime = p0 + p1*mcDoca + p2*pow(mcDoca,2) + p3*pow(mcDoca,3) + p4*pow(mcDoca,4) + p5*pow(mcDoca,5); 
+                double mcDocaTime = eval_inv_t2d(mcDoca);
                 //double t0 = ahdcConstants.get_t0(sector, layer, component).t0;
                 //double decodedTime = adcBank.getDouble("leadingEdgeTime", i) - t0; // for the simu, startTime = 0
                 double decodedTime = hitBank.getDouble("time", h); 
@@ -148,7 +212,7 @@ int main(int argc, char const *argv[]) {
                 H2_corrTimes[1]->Fill(mcDocaTime, mcMeanTime);
                 H2_corrTimes[2]->Fill(mcMeanTime, decodedTime);
                 //H2_time2distance->Fill(mcMeanTime, mcDoca);
-                H1_remcDoca->Fill(-0.0129887*mcDocaTime -0.331228*log(1+mcDocaTime) +0.516754*sqrt(mcDocaTime));
+                //H1_remcDoca->Fill(-0.0129887*mcDocaTime -0.331228*log(1+mcDocaTime) +0.516754*sqrt(mcDocaTime));
                 int adc = adcBank.get("ADC",i);
                 H1_adc->Fill(adc);
                 H2_deltaTime_adc->Fill(adc, mcDocaTime - decodedTime);
@@ -164,27 +228,46 @@ int main(int argc, char const *argv[]) {
     // output
     TFile *f = new TFile(output, "RECREATE");
     
-    H1_mcMeanTime->Write("mcMeanTime");
+    //H1_mcMeanTime->Write("mcMeanTime");
     H1_decodedTime->Write("decodedTime");
     H1_mcDocaTime->Write("mcDocaTime");
-    H1_mcMeanDistance->Write("mcMeanDistance");
+    //H1_mcMeanDistance->Write("mcMeanDistance");
     H1_decodedDistance->Write("decodedDistance");
     H1_mcDoca->Write("mcDoca");
     H2_corrDistances[0]->Write("corr_mcDoca_decodedDistance");
-    H2_corrDistances[1]->Write("corr_mcDoca_mcMeanDistance");
-    H2_corrDistances[2]->Write("corr_mcMeanDistance_decodedDistance");
+    //H2_corrDistances[1]->Write("corr_mcDoca_mcMeanDistance");
+    //H2_corrDistances[2]->Write("corr_mcMeanDistance_decodedDistance");
     H2_corrTimes[0]->Write("corr_mcDocaTime_decodedTime");
-    H2_corrTimes[1]->Write("corr_mcDocaTime_mcMeanTime");
-    H2_corrTimes[2]->Write("corr_mcMeanTime_decodedTime");
+    //H2_corrTimes[1]->Write("corr_mcDocaTime_mcMeanTime");
+    //H2_corrTimes[2]->Write("corr_mcMeanTime_decodedTime");
     //H2_time2distance->Write("time2distance");
     //H1_t0->Write("t0");
     H1_deltaTime->Write("deltaTime");
     H1_deltaDistance->Write("deltaDistance");
-    H1_remcDoca->Write("remcDoca");
+    //H1_remcDoca->Write("remcDoca");
     H1_adc->Write("ADC");
     H2_deltaTime_adc->Write("corr_deltaTime_adc");
     H2_deltaDistance_adc->Write("corr_deltaDistance_adc");
     H1_tot->Write("ToT");
+    gr->Write("gr");
+    igr->Write("igr");
+    igr_gr->Write("igr_gr");
+    gr_igr->Write("gr_igr");
+    TCanvas *c11 = new TCanvas("c11", "time2distance funtions");
+    c11->Divide(2,2);
+    c11->cd(1);
+    gr->Draw("APL");
+    c11->cd(2);
+    igr->Draw("APL");
+    c11->cd(3);
+    igr_gr->Draw("APL");
+    TF1 * f1 = new TF1("f1", "x", 0, 350);
+    f1->Draw("same");
+    c11->cd(4);
+    gr_igr->Draw("APL");
+    TF1 * f2 = new TF1("f2", "x", 0, 4);
+    f2->Draw("same");
+    c11->Write("t2d_functions");
 
     f->Close();
     printf("File created : %s\n", output);
