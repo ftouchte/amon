@@ -44,13 +44,13 @@ int main(int argc, char const *argv[]) {
     //const char * output = "./output/kfilter-v1.root";
     //const char * output = "./output/kfilter-deuteron-v2.root";
     //const char * output = "./output/kfilter-deuteron-v4.root";
-    const char * output = "./output/kfilter-deuteron-v14.root";
+    const char * output = "./output/kfilter-deuteron-v17.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v1.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v14.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v17.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
