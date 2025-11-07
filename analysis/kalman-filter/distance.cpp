@@ -85,7 +85,7 @@ int main(int argc, char const *argv[]) {
     H2_corrTimes.push_back(new TH2D("corr_6", "mcMeanTime vs decodedTime;mcMeanTime (ns); decodedTime (ns)", 100, 0, 250, 100, 0, 250));
     //TH2D* H2_time2distance = new TH2D("corr_t2d", "mcMeanTime vs mcDoca;mcMeanTime (ns); mcDoca (mm)", 100, 0, 250, 100, 0, 4);
     //TH1D* H1_t0  = new TH1D("t0", "t0; t0 (ns); count", 100, 0, 400);
-    TH1D* H1_remcDoca    = new TH1D("remcDoca", "remcDoca from t2d; remcDoca (mm); #count", 100, 0, 4); 
+    //TH1D* H1_remcDoca    = new TH1D("remcDoca", "remcDoca from t2d; remcDoca (mm); #count", 100, 0, 4); 
     TH1D* H1_adc    = new TH1D("adc", "ADC; ADC (adc); #count", 100, 0, 4000); 
     TH1D* H1_tot    = new TH1D("tot", "timeOverThreshold; timeOverThreshold (ns); #count", 100, 150, 750); 
     TH2D* H2_deltaTime_adc = new TH2D("corr_deltaTime_adc", "deltaTime vs ADC;ADC (adc); deltaTime (ns)", 100, 0, 4000, 100, -50, 50);
