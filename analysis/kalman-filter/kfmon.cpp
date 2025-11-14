@@ -42,16 +42,18 @@
 // utilities
 void progressBar(int state, int bar_length = 100);
 // end utilities
+void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_x, double var_y, double var_z, double & var_r, double & var_theta, double & var_phi, const char * nature = "");
+
 
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-    const char * output = "./output/kfmon-v20.root";
+   const char * output = "./output/kfmon-v25.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v20.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v25.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -171,14 +173,27 @@ int main(int argc, char const *argv[]) {
             std::map<std::tuple<int, int, int>, std::pair<TGraph*,TGraph*>> graphMap;
             // key : Niter to draw lines
             std::map<int, std::pair<TGraph*,TGraph*>> graphMapIter;
-            // Variances of x, y, z, px, py, pz around the beam axis (indicator ==0) 
+            // Variances of x, y, z, modulus, theta, phi (spherical coordinates) around the beam axis (indicator ==0) 
             //std::vector<TGraph*> graphVariance = {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()};
-            std::vector<std::vector<TGraph*>> graphVariance = {
+            // Position
+            std::vector<std::vector<TGraph*>> graphPosVariance = {
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // prediction
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // correction
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}  // both of them
             };
-            std::vector<std::vector<TGraph*>> graphValue = {
+            // Momentum
+            std::vector<std::vector<TGraph*>> graphMomVariance = {
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // prediction
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // correction
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}  // both of them
+            };
+            std::vector<std::vector<TGraph*>> graphPosValue = {
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // prediction
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // correction
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()},  // both of them
+                {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}  // mc value
+            };
+            std::vector<std::vector<TGraph*>> graphMomValue = {
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // prediction
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()}, // correction
                 {new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph(), new TGraph()},  // both of them
@@ -202,14 +217,46 @@ int main(int argc, char const *argv[]) {
                 double var_px = kfmonBank.getFloat("var_px", i);
                 double var_py = kfmonBank.getFloat("var_py", i);
                 double var_pz = kfmonBank.getFloat("var_pz", i);
-                
+                double var_pos_r;
+                double var_pos_theta;
+                double var_pos_phi;
+                double var_mom_p;
+                double var_mom_theta;
+                double var_mom_phi;
+                computeSphericalVariance(x, y, z, var_x, var_y, var_z, var_pos_r, var_pos_theta, var_pos_phi, "position");
+                computeSphericalVariance(px, py, pz, var_px, var_py, var_pz, var_mom_p, var_mom_theta, var_mom_phi, "momentum");
+                double pos_r;
+                double pos_theta;
+                double pos_phi;
+                double mom_p;
+                double mom_theta;
+                double mom_phi;
+                futils::cart2polarDEG(x,y,z,pos_r,pos_theta,pos_phi);
+                futils::cart2polarDEG(px,py,pz,mom_p,mom_theta,mom_phi);
+                double mc_vx = mcBank.get("vx", 0)*10; // cm to mm 
+                double mc_vy = mcBank.get("vy", 0)*10; 
+                double mc_vz = mcBank.get("vz", 0)*10; 
+                double mc_px = mcBank.get("px", 0)*1000; // GeV to MeV
+                double mc_py = mcBank.get("py", 0)*1000;
+                double mc_pz = mcBank.get("pz", 0)*1000;
+                double mc_pos_r;
+                double mc_pos_theta;
+                double mc_pos_phi;
+                double mc_mom_p;
+                double mc_mom_theta;
+                double mc_mom_phi;
+                futils::cart2polarDEG(mc_vx,mc_vy,mc_vz,mc_pos_r,mc_pos_theta,mc_pos_phi);
+                futils::cart2polarDEG(mc_px,mc_py,mc_pz,mc_mom_p,mc_mom_theta,mc_mom_phi);
+
                 // it : iterator, is an object that points to a std::pair containing 
                 // it->first is the key, here the std::tuple
                 // it->second is the value, here the TGraph*
                 // inserted is a boolean, is false if the element already exist and true if it is a new element
                 // if false, "it" corresponds to the existing element
-                
-                if (Niter >= 10) continue;
+                ///////////////////////////////// 
+                /// cut on Niter
+                //if (Niter >= 10) continue;
+                /////////////////////////////////
                 { // Niter, orientation, status
                     auto [it, inserted] = graphMap.insert({std::make_tuple(Niter, orientation, status), std::make_pair(new TGraph(), new TGraph())});
                     (it->second).first->AddPoint(x,y); // xy
@@ -222,60 +269,102 @@ int main(int argc, char const *argv[]) {
                 }
                 { // Variance graph
                     if (indicator == 0) { // beam level
-                       graphVariance[2][0]->AddPoint(Niter, var_x); 
-                       graphVariance[2][1]->AddPoint(Niter, var_y); 
-                       graphVariance[2][2]->AddPoint(Niter, var_z); 
-                       graphVariance[2][3]->AddPoint(Niter, var_px); 
-                       graphVariance[2][4]->AddPoint(Niter, var_py); 
-                       graphVariance[2][5]->AddPoint(Niter, var_pz);
+                       graphPosVariance[2][0]->AddPoint(Niter, var_x); 
+                       graphPosVariance[2][1]->AddPoint(Niter, var_y); 
+                       graphPosVariance[2][2]->AddPoint(Niter, var_z); 
+                       graphPosVariance[2][3]->AddPoint(Niter, var_pos_r); 
+                       graphPosVariance[2][4]->AddPoint(Niter, var_pos_theta); 
+                       graphPosVariance[2][5]->AddPoint(Niter, var_pos_phi); 
+                       graphMomVariance[2][0]->AddPoint(Niter, var_px); 
+                       graphMomVariance[2][1]->AddPoint(Niter, var_py); 
+                       graphMomVariance[2][2]->AddPoint(Niter, var_pz);
+                       graphMomVariance[2][3]->AddPoint(Niter, var_mom_p); 
+                       graphMomVariance[2][4]->AddPoint(Niter, var_mom_theta); 
+                       graphMomVariance[2][5]->AddPoint(Niter, var_mom_phi);
                        if (status == 0) { // prediction
-                           graphVariance[0][0]->AddPoint(Niter, var_x); 
-                           graphVariance[0][1]->AddPoint(Niter, var_y); 
-                           graphVariance[0][2]->AddPoint(Niter, var_z); 
-                           graphVariance[0][3]->AddPoint(Niter, var_px); 
-                           graphVariance[0][4]->AddPoint(Niter, var_py); 
-                           graphVariance[0][5]->AddPoint(Niter, var_pz);
+                           graphPosVariance[0][0]->AddPoint(Niter, var_x); 
+                           graphPosVariance[0][1]->AddPoint(Niter, var_y); 
+                           graphPosVariance[0][2]->AddPoint(Niter, var_z); 
+                           graphPosVariance[0][3]->AddPoint(Niter, var_pos_r); 
+                           graphPosVariance[0][4]->AddPoint(Niter, var_pos_theta); 
+                           graphPosVariance[0][5]->AddPoint(Niter, var_pos_phi); 
+                           graphMomVariance[0][0]->AddPoint(Niter, var_px); 
+                           graphMomVariance[0][1]->AddPoint(Niter, var_py); 
+                           graphMomVariance[0][2]->AddPoint(Niter, var_pz);
+                           graphMomVariance[0][3]->AddPoint(Niter, var_mom_p); 
+                           graphMomVariance[0][4]->AddPoint(Niter, var_mom_theta); 
+                           graphMomVariance[0][5]->AddPoint(Niter, var_mom_phi);
                        } 
                        else { // correction, status == 1
-                           graphVariance[1][0]->AddPoint(Niter, var_x); 
-                           graphVariance[1][1]->AddPoint(Niter, var_y); 
-                           graphVariance[1][2]->AddPoint(Niter, var_z); 
-                           graphVariance[1][3]->AddPoint(Niter, var_px); 
-                           graphVariance[1][4]->AddPoint(Niter, var_py); 
-                           graphVariance[1][5]->AddPoint(Niter, var_pz);
+                           graphPosVariance[1][0]->AddPoint(Niter, var_x); 
+                           graphPosVariance[1][1]->AddPoint(Niter, var_y); 
+                           graphPosVariance[1][2]->AddPoint(Niter, var_z); 
+                           graphPosVariance[1][3]->AddPoint(Niter, var_pos_r); 
+                           graphPosVariance[1][4]->AddPoint(Niter, var_pos_theta); 
+                           graphPosVariance[1][5]->AddPoint(Niter, var_pos_phi); 
+                           graphMomVariance[1][0]->AddPoint(Niter, var_px); 
+                           graphMomVariance[1][1]->AddPoint(Niter, var_py); 
+                           graphMomVariance[1][2]->AddPoint(Niter, var_pz);
+                           graphMomVariance[1][3]->AddPoint(Niter, var_mom_p); 
+                           graphMomVariance[1][4]->AddPoint(Niter, var_mom_theta); 
+                           graphMomVariance[1][5]->AddPoint(Niter, var_mom_phi);
                        }
                     }
                 }
                 { // Value graph
                     if (indicator == 0) { // beam level
-                       graphValue[2][0]->AddPoint(Niter, x); 
-                       graphValue[2][1]->AddPoint(Niter, y); 
-                       graphValue[2][2]->AddPoint(Niter, z); 
-                       graphValue[2][3]->AddPoint(Niter, px); 
-                       graphValue[2][4]->AddPoint(Niter, py); 
-                       graphValue[2][5]->AddPoint(Niter, pz);
+                       graphPosValue[2][0]->AddPoint(Niter, x); 
+                       graphPosValue[2][1]->AddPoint(Niter, y); 
+                       graphPosValue[2][2]->AddPoint(Niter, z); 
+                       graphPosValue[2][3]->AddPoint(Niter, pos_r); 
+                       graphPosValue[2][4]->AddPoint(Niter, pos_theta); 
+                       graphPosValue[2][5]->AddPoint(Niter, pos_phi);
+                       graphMomValue[2][0]->AddPoint(Niter, px); 
+                       graphMomValue[2][1]->AddPoint(Niter, py); 
+                       graphMomValue[2][2]->AddPoint(Niter, pz); 
+                       graphMomValue[2][3]->AddPoint(Niter, mom_p); 
+                       graphMomValue[2][4]->AddPoint(Niter, mom_theta); 
+                       graphMomValue[2][5]->AddPoint(Niter, mom_phi);
                        if (status == 0) { // prediction
-                           graphValue[0][0]->AddPoint(Niter, x); 
-                           graphValue[0][1]->AddPoint(Niter, y); 
-                           graphValue[0][2]->AddPoint(Niter, z); 
-                           graphValue[0][3]->AddPoint(Niter, px); 
-                           graphValue[0][4]->AddPoint(Niter, py); 
-                           graphValue[0][5]->AddPoint(Niter, pz);
+                           graphPosValue[0][0]->AddPoint(Niter, x); 
+                           graphPosValue[0][1]->AddPoint(Niter, y); 
+                           graphPosValue[0][2]->AddPoint(Niter, z); 
+                           graphPosValue[0][3]->AddPoint(Niter, pos_r); 
+                           graphPosValue[0][4]->AddPoint(Niter, pos_theta); 
+                           graphPosValue[0][5]->AddPoint(Niter, pos_phi); 
+                           graphMomValue[0][0]->AddPoint(Niter, px); 
+                           graphMomValue[0][1]->AddPoint(Niter, py); 
+                           graphMomValue[0][2]->AddPoint(Niter, pz);
+                           graphMomValue[0][3]->AddPoint(Niter, mom_p); 
+                           graphMomValue[0][4]->AddPoint(Niter, mom_theta); 
+                           graphMomValue[0][5]->AddPoint(Niter, mom_phi);
                        } 
                        else { // correction, status == 1
-                           graphValue[1][0]->AddPoint(Niter, x); 
-                           graphValue[1][1]->AddPoint(Niter, y); 
-                           graphValue[1][2]->AddPoint(Niter, z); 
-                           graphValue[1][3]->AddPoint(Niter, px); 
-                           graphValue[1][4]->AddPoint(Niter, py); 
-                           graphValue[1][5]->AddPoint(Niter, pz);
+                           graphPosValue[1][0]->AddPoint(Niter, x); 
+                           graphPosValue[1][1]->AddPoint(Niter, y); 
+                           graphPosValue[1][2]->AddPoint(Niter, z); 
+                           graphPosValue[1][3]->AddPoint(Niter, pos_r); 
+                           graphPosValue[1][4]->AddPoint(Niter, pos_theta); 
+                           graphPosValue[1][5]->AddPoint(Niter, pos_phi); 
+                           graphMomValue[1][0]->AddPoint(Niter, px); 
+                           graphMomValue[1][1]->AddPoint(Niter, py); 
+                           graphMomValue[1][2]->AddPoint(Niter, pz);
+                           graphMomValue[1][3]->AddPoint(Niter, mom_p); 
+                           graphMomValue[1][4]->AddPoint(Niter, mom_theta); 
+                           graphMomValue[1][5]->AddPoint(Niter, mom_phi);
                        }
-                       graphValue[3][0]->AddPoint(Niter, mcBank.get("vx", 0)*10); 
-                       graphValue[3][1]->AddPoint(Niter, mcBank.get("vy", 0)*10); 
-                       graphValue[3][2]->AddPoint(Niter, mcBank.get("vz", 0)*10); 
-                       graphValue[3][3]->AddPoint(Niter, mcBank.get("px", 0)*1000); 
-                       graphValue[3][4]->AddPoint(Niter, mcBank.get("py", 0)*1000); 
-                       graphValue[3][5]->AddPoint(Niter, mcBank.get("pz", 0)*1000);
+                       graphPosValue[3][0]->AddPoint(Niter, mc_vx); 
+                       graphPosValue[3][1]->AddPoint(Niter, mc_vy); 
+                       graphPosValue[3][2]->AddPoint(Niter, mc_vz); 
+                       graphPosValue[3][3]->AddPoint(Niter, mc_pos_r); 
+                       graphPosValue[3][4]->AddPoint(Niter, mc_pos_theta); 
+                       graphPosValue[3][5]->AddPoint(Niter, mc_pos_phi); 
+                       graphMomValue[3][0]->AddPoint(Niter, mc_px); 
+                       graphMomValue[3][1]->AddPoint(Niter, mc_py); 
+                       graphMomValue[3][2]->AddPoint(Niter, mc_pz);
+                       graphMomValue[3][3]->AddPoint(Niter, mc_mom_p); 
+                       graphMomValue[3][4]->AddPoint(Niter, mc_mom_theta); 
+                       graphMomValue[3][5]->AddPoint(Niter, mc_mom_phi);
                     }
                 }
             }
@@ -405,63 +494,109 @@ int main(int argc, char const *argv[]) {
             ///////////////////////////////
             // Display : error variances
             // ////////////////////////////
-            TCanvas * cm = new TCanvas(TString::Format("c%d_%d_var", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d ErrorCovaraince", (int) nevents, trackRow+1).Data(), 1600, 900);
-            cm->Divide(3,2);
-            std::vector<const char *> name = {"x", "y", "z", "px", "py", "pz"};
-            std::vector<const char *> unit = {"mm", "mm", "mm", "MeV", "MeV", "MeV"};
+            TCanvas * cvar = new TCanvas(TString::Format("c%d_%d_var_pos", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d ErrorVariance", (int) nevents, trackRow+1).Data(), 1600, 900);
+            cvar->Divide(4,3);
+            std::vector<const char *> name_pos = {"Position x", "Position y", "Position z", "Position R", "Position theta", "Position phi"};
+            std::vector<const char *> unit_pos = {"mm", "mm", "mm", "mm", "deg", "deg"};
+            std::vector<const char *> name_mom = {"Momentum px", "Momentum py", "Momentum pz", "Momentum p", "Momentum theta", "Momentum phi"};
+            std::vector<const char *> unit_mom = {"MeV", "MeV", "MeV", "MeV", "deg", "deg"};
             for (int i = 0; i < 6; i++) {
-                cm->cd(i+1);
-                graphVariance[0][i]->SetMarkerColor(kRed);
-                graphVariance[0][i]->SetMarkerStyle(25);
-                graphVariance[0][i]->SetMarkerSize(2);
-                graphVariance[1][i]->SetMarkerColor(kBlue);
-                graphVariance[1][i]->SetMarkerStyle(26);
-                graphVariance[1][i]->SetMarkerSize(2);
-                TMultiGraph *mg1 = new TMultiGraph();
-                mg1->SetTitle(TString::Format("Variance %s in %s^{2}; Niter; Var(%s)", name[i], unit[i], name[i]).Data());
-                mg1->Add(graphVariance[2][i], "l");
-                mg1->Add(graphVariance[1][i], "p");
-                mg1->Add(graphVariance[0][i], "p");
-                mg1->Draw("a");
-                TLegend* legend2 = new TLegend(0.1,0.7,0.35,0.9);
-                //legend2->AddEntry(graphVariance[2][i], "all");
-                legend2->AddEntry(graphVariance[0][i], "prediction", "p");
-                legend2->AddEntry(graphVariance[1][i], "correction", "p");
-                legend2->Draw();
+                {// Pos
+                    cvar->cd(i+1);
+                    graphPosVariance[0][i]->SetMarkerColor(kRed);
+                    graphPosVariance[0][i]->SetMarkerStyle(25);
+                    graphPosVariance[0][i]->SetMarkerSize(2);
+                    graphPosVariance[1][i]->SetMarkerColor(kBlue);
+                    graphPosVariance[1][i]->SetMarkerStyle(26);
+                    graphPosVariance[1][i]->SetMarkerSize(2);
+                    TMultiGraph *mg1 = new TMultiGraph();
+                    mg1->SetTitle(TString::Format("Variance %s in %s^{2}; Niter; Var(%s)", name_pos[i], unit_pos[i], name_pos[i]).Data());
+                    mg1->Add(graphPosVariance[2][i], "l");
+                    mg1->Add(graphPosVariance[1][i], "p");
+                    mg1->Add(graphPosVariance[0][i], "p");
+                    TLegend* legend1 = new TLegend(0.1,0.7,0.35,0.9);
+                    legend1->AddEntry(graphPosVariance[0][i], "prediction", "p");
+                    legend1->AddEntry(graphPosVariance[1][i], "correction", "p");
+                    mg1->Draw("a");
+                    legend1->Draw();
+                }
+                {// Mom
+                    cvar->cd(6+i+1);
+                    graphMomVariance[0][i]->SetMarkerColor(kRed);
+                    graphMomVariance[0][i]->SetMarkerStyle(25);
+                    graphMomVariance[0][i]->SetMarkerSize(2);
+                    graphMomVariance[1][i]->SetMarkerColor(kBlue);
+                    graphMomVariance[1][i]->SetMarkerStyle(26);
+                    graphMomVariance[1][i]->SetMarkerSize(2);
+                    TMultiGraph *mg2 = new TMultiGraph();
+                    mg2->SetTitle(TString::Format("Variance %s in %s^{2}; Niter; Var(%s)", name_mom[i], unit_mom[i], name_mom[i]).Data());
+                    mg2->Add(graphMomVariance[2][i], "l");
+                    mg2->Add(graphMomVariance[1][i], "p");
+                    mg2->Add(graphMomVariance[0][i], "p");
+                    TLegend* legend2 = new TLegend(0.1,0.7,0.35,0.9);
+                    legend2->AddEntry(graphMomVariance[0][i], "prediction", "p");
+                    legend2->AddEntry(graphMomVariance[1][i], "correction", "p");
+                    mg2->Draw("a");
+                    legend2->Draw();
+                }
             }
             // write output
-            cm->Write(TString::Format("event_%d_track_%d_variances", (int) nevents, trackRow+1).Data());
+            cvar->Write(TString::Format("event_%d_track_%d_variances", (int) nevents, trackRow+1).Data());
             ///////////////////////////////
             // Display : error values
             // ////////////////////////////
-            TCanvas * co = new TCanvas(TString::Format("c%d_%d_val", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d State or Value", (int) nevents, trackRow+1).Data(), 1600, 900);
-            co->Divide(3,2);
+            TCanvas * cval = new TCanvas(TString::Format("c%d_%d_val", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d Estimation", (int) nevents, trackRow+1).Data(), 1600, 900);
+            cval->Divide(4,3);
             for (int i = 0; i < 6; i++) {
-                co->cd(i+1);
-                graphValue[0][i]->SetMarkerColor(kRed);
-                graphValue[0][i]->SetMarkerStyle(25);
-                graphValue[0][i]->SetMarkerSize(2);
-                graphValue[1][i]->SetMarkerColor(kBlue);
-                graphValue[1][i]->SetMarkerStyle(26);
-                graphValue[1][i]->SetMarkerSize(2);
-                graphValue[3][i]->SetLineColor(kGreen);
-                graphValue[3][i]->SetLineWidth(2);
-                TMultiGraph *mg1 = new TMultiGraph();
-                mg1->SetTitle(TString::Format("Value %s in %s; Niter; %s", name[i], unit[i], name[i]).Data());
-                mg1->Add(graphValue[3][i], "l");
-                mg1->Add(graphValue[2][i], "l");
-                mg1->Add(graphValue[1][i], "p");
-                mg1->Add(graphValue[0][i], "p");
-                mg1->Draw("a");
-                TLegend* legend3 = new TLegend(0.1,0.7,0.35,0.9);
-                legend3->AddEntry(graphValue[3][i], "true");
-                //legend3->AddEntry(graphValue[2][i], "all");
-                legend3->AddEntry(graphValue[0][i], "prediction", "p");
-                legend3->AddEntry(graphValue[1][i], "correction", "p");
-                legend3->Draw();
+                { // Pos
+                    cval->cd(i+1);
+                    graphPosValue[0][i]->SetMarkerColor(kRed);
+                    graphPosValue[0][i]->SetMarkerStyle(25);
+                    graphPosValue[0][i]->SetMarkerSize(2);
+                    graphPosValue[1][i]->SetMarkerColor(kBlue);
+                    graphPosValue[1][i]->SetMarkerStyle(26);
+                    graphPosValue[1][i]->SetMarkerSize(2);
+                    graphPosValue[3][i]->SetLineColor(kGreen);
+                    graphPosValue[3][i]->SetLineWidth(2);
+                    TMultiGraph *mg1 = new TMultiGraph();
+                    mg1->SetTitle(TString::Format("Estimation %s in %s; Niter; %s", name_pos[i], unit_pos[i], name_pos[i]).Data());
+                    mg1->Add(graphPosValue[3][i], "l");
+                    mg1->Add(graphPosValue[2][i], "l");
+                    mg1->Add(graphPosValue[1][i], "p");
+                    mg1->Add(graphPosValue[0][i], "p");
+                    mg1->Draw("a");
+                    TLegend* legend3 = new TLegend(0.1,0.7,0.35,0.9);
+                    legend3->AddEntry(graphPosValue[3][i], "true");
+                    legend3->AddEntry(graphPosValue[0][i], "prediction", "p");
+                    legend3->AddEntry(graphPosValue[1][i], "correction", "p");
+                    legend3->Draw();
+                }
+                { // Mom
+                    cval->cd(6+i+1);
+                    graphMomValue[0][i]->SetMarkerColor(kRed);
+                    graphMomValue[0][i]->SetMarkerStyle(25);
+                    graphMomValue[0][i]->SetMarkerSize(2);
+                    graphMomValue[1][i]->SetMarkerColor(kBlue);
+                    graphMomValue[1][i]->SetMarkerStyle(26);
+                    graphMomValue[1][i]->SetMarkerSize(2);
+                    graphMomValue[3][i]->SetLineColor(kGreen);
+                    graphMomValue[3][i]->SetLineWidth(2);
+                    TMultiGraph *mg1 = new TMultiGraph();
+                    mg1->SetTitle(TString::Format("Estimation %s in %s; Niter; %s", name_mom[i], unit_mom[i], name_mom[i]).Data());
+                    mg1->Add(graphMomValue[3][i], "l");
+                    mg1->Add(graphMomValue[2][i], "l");
+                    mg1->Add(graphMomValue[1][i], "p");
+                    mg1->Add(graphMomValue[0][i], "p");
+                    mg1->Draw("a");
+                    TLegend* legend3 = new TLegend(0.1,0.7,0.35,0.9);
+                    legend3->AddEntry(graphMomValue[3][i], "true");
+                    legend3->AddEntry(graphMomValue[0][i], "prediction", "p");
+                    legend3->AddEntry(graphMomValue[1][i], "correction", "p");
+                    legend3->Draw();
+                }
             }
             // write output
-            co->Write(TString::Format("event_%d_track_%d_values", (int) nevents, trackRow+1).Data());
+            cval->Write(TString::Format("event_%d_track_%d_values", (int) nevents, trackRow+1).Data());
         }
     }
     printf("nevents    : %ld \n", nevents);
@@ -497,3 +632,38 @@ void progressBar(int state, int bar_length) { // state is a number between 0 and
     }
     fflush(stdout);
 }
+
+void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_x, double var_y, double var_z, double & var_r, double & var_theta, double & var_phi, const char * nature) {
+    // prevent NaN ot Inf values
+    // if mu_x and mu_y are strictly equal to 0 (at beginning of the Kalman Filter for example)
+    // phi can not be defined
+    // theta is equals to 0 but its derivative is infinite at 0
+    // we then assume that all the variance if given by the z component to the r component
+    // I assume x, y and z independents but in reality we can correlations
+    if ((std::abs(mu_x) < 1e-9) && (std::abs(mu_y) < 1e-9)) {
+        var_r = var_z;
+        var_theta = 0;
+        var_phi = 0;
+    } else {
+        // var_r
+        double r = sqrt(mu_x*mu_x+mu_y*mu_y+mu_z*mu_z);
+        double drdx = mu_x/r;
+        double drdy = mu_y/r;
+        double drdz = mu_z/r;
+        var_r = drdx*drdx*var_x + drdy*drdy*var_y + drdz*drdz*var_z;
+        // var_theta
+        double dthetadz = (-1/r)/sqrt(1-pow(mu_z/r,2.0));
+        double dthetady = (1/r)*(mu_z/r)*(mu_y/r)/sqrt(1-pow(mu_z/r,2.0));
+        double dthetadx = (1/r)*(mu_z/r)*(mu_x/r)/sqrt(1-pow(mu_z/r,2.0));
+        var_theta = dthetadx*dthetadx*var_x + dthetady*dthetady*var_y + dthetadz*dthetadz*var_z;
+        var_theta *= pow(180.0/M_PI,2.0); // convert to deg²
+        // var_phi
+        double dphidz = 0;
+        double rho2 = mu_x*mu_x+mu_y*mu_y;
+        double dphidy = mu_x/rho2;
+        double dphidx = -mu_y/rho2;
+        var_phi = dphidx*dphidx*var_x + dphidy*dphidy*var_y + dphidz*dphidz*var_z;
+        var_phi *= pow(180.0/M_PI,2.0); // convert to deg²
+    }
+}
+
