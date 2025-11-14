@@ -34,7 +34,8 @@ namespace futils {
 
     bool cart2polar(double x, double y, double z, double & rho, double & theta, double & phi){
         rho = sqrt(x*x+y*y+z*z);
-        if (rho <= __DBL_EPSILON__) {return false;}
+        if (rho <= 1e-9) {theta = 0; phi = 0; return false;} // we consider that if x < 1e-9 then rho is 0
+        if (sqrt(x*x+y*y) <= 1e-9) {phi = 0; return false;}
         theta = acos(z/rho);
         if (y >= 0){
             phi = acos(x/(rho*sin(theta)));
@@ -45,15 +46,44 @@ namespace futils {
         return true;
     } 
 
+    bool cart2polarDEG(double x, double y, double z, double & rho, double & theta, double & phi){
+        rho = sqrt(x*x+y*y+z*z);
+        if (rho <= 1e-9) {theta = 0; phi = 0; return false;}
+        if (sqrt(x*x+y*y) <= 1e-9) {phi = 0; return false;}
+        theta = acos(z/rho);
+        if (y >= 0){
+            phi = acos(x/(rho*sin(theta)));
+        }
+        else {
+            phi = 2*M_PI - acos(x/(rho*sin(theta)));
+        }
+        phi *= 180/M_PI;
+        theta *= 180/M_PI;
+        return true;
+    } 
+
     bool cart2polar(double x, double y, double & rho, double & theta){
         rho = sqrt(x*x+y*y);
-        if (rho <= __DBL_EPSILON__) {return false;}
+        if (rho <= 1e-9) {theta = 0; return false;}
         if (y >= 0) {
             theta = acos(x/rho);
         }
         else {
             theta = 2*M_PI - acos(x/rho);
         }
+        return true;
+    }
+
+    bool cart2polarDEG(double x, double y, double & rho, double & theta){
+        rho = sqrt(x*x+y*y);
+        if (rho <= 1e-9) {theta = 0; return false;}
+        if (y >= 0) {
+            theta = acos(x/rho);
+        }
+        else {
+            theta = 2*M_PI - acos(x/rho);
+        }
+        theta *= 180/M_PI;
         return true;
     }
 
