@@ -108,7 +108,7 @@ int main(int argc, char const *argv[]) {
     /// Filter input files
     /// ///////////////////////////////////////////
     std::vector<std::string> all_filenames;
-    std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0";
+    /*std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0";
     //std::string motif = ".*";
     std::string motif = "rec_clas_022712.evio.0000[0-9].hipo";
     std::regex re(motif.c_str());
@@ -118,9 +118,11 @@ int main(int argc, char const *argv[]) {
             //printf("%s \n", onefile.c_str());
             all_filenames.push_back(dir_name + "/" + onefile); // save this file with the whole path
         }
-    }
+    }*/
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
     //all_filenames.push_back("");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0/rec_clas_022712.evio.00000.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-22712-00000-v11.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -172,7 +174,7 @@ int main(int argc, char const *argv[]) {
     H1_probe_p.push_back(new TH1D("p_probe_0", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
     H1_probe_p.push_back(new TH1D("p_probe_1", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
     H1_probe_p.push_back(new TH1D("p_probe_2", "p electron/photon (GeV)", 100, lim_probe_p_inf, lim_probe_p_sup));
-    H1_probe_p.push_back(new TH1D("p_probe_3", "p electron/photon (GeV)", 100, 0.18, 0.32));
+    H1_probe_p.push_back(new TH1D("p_probe_3", "p electron/photon (GeV)", 100, 2.0, 2.3));
     std::vector<TH1D*> H1_probe_pT;
     H1_probe_pT.push_back(new TH1D("pT_probe_0", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
     H1_probe_pT.push_back(new TH1D("pT_probe_1", "pT electron/photon (GeV)", 100, lim_probe_pT_inf, lim_probe_pT_sup));
@@ -303,25 +305,40 @@ int main(int argc, char const *argv[]) {
     // correlations probes (electron or gamma) vs tracks)
     //////////////////////////////////////////////////////
     std::vector<TH2D*> H2_p_dEdx;
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_0", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_1", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
-    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_0", "pT electron (GeV) vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_1", "pT electron (GeV) vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_2", "pT electron (GeV) vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
+    H2_p_dEdx.push_back(new TH2D("pTe_dEdx_3", "pT electron (GeV) vs dEdx", 100, 0.19, 0.45, 100, 0, 200));
     std::vector<TH2D*> H2_p_adc;
-    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
-    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT e^{-}/#gamma vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_0", "pT electron (GeV) vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_1", "pT electron (GeV) vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_2", "pT electron (GeV) vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
+    H2_p_adc.push_back(new TH2D("pTe_adc_3", "pT electron (GeV) vs #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000));
     std::vector<TH2D*> H2_vze_vz;
-    H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_2", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
-    H2_vze_vz.push_back(new TH2D("vze_vz_3", "vz_{e} vs vz", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_0", "vz_{e} vs vz (cm)", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_1", "vz_{e} vs vz (cm)", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_2", "vz_{e} vs vz (cm)", 100, -30, 10, 100, -30, 30)); 
+    H2_vze_vz.push_back(new TH2D("vze_vz_3", "vz_{e} vs vz (cm)", 100, -30, 10, 100, -30, 30)); 
+    std::vector<TH2D*> H2_pe_p;
+    H2_pe_p.push_back(new TH2D("pe_p_0", "p_{e} vs p (GeV)", 100, 2.0, 2.3, 100, 0.15, 1.2)); 
+    H2_pe_p.push_back(new TH2D("pe_p_1", "p_{e} vs p (GeV)", 100, 2.0, 2.3, 100, 0.15, 1.2)); 
+    H2_pe_p.push_back(new TH2D("pe_p_2", "p_{e} vs p (GeV)", 100, 2.0, 2.3, 100, 0.15, 1.2)); 
+    H2_pe_p.push_back(new TH2D("pe_p_3", "p_{e} vs p (GeV)", 100, 2.0, 2.3, 100, 0.15, 1.2)); 
     std::vector<TH2D*> H2_pTe_pT;
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_0", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_1", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_2", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
-    H2_pTe_pT.push_back(new TH2D("pTe_pT_3", "pT_{e} vs pT", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_0", "pT_{e} vs pT (GeV)", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_1", "pT_{e} vs pT (GeV)", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_2", "pT_{e} vs pT (GeV)", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    H2_pTe_pT.push_back(new TH2D("pTe_pT_3", "pT_{e} vs pT (GeV)", 100, 0, 0.5, 100, 0.16, 0.42)); 
+    std::vector<TH2D*> H2_thetae_theta;
+    H2_thetae_theta.push_back(new TH2D("thetae_theta_0", "theta_{e} vs theta (deg)", 100, 4, 12, 100, 0, 181)); 
+    H2_thetae_theta.push_back(new TH2D("thetae_theta_1", "theta_{e} vs theta (deg)", 100, 4, 12, 100, 0, 181)); 
+    H2_thetae_theta.push_back(new TH2D("thetae_theta_2", "theta_{e} vs theta (deg)", 100, 4, 12, 100, 0, 181)); 
+    H2_thetae_theta.push_back(new TH2D("thetae_theta_3", "theta_{e} vs theta (deg)", 100, 4, 12, 100, 0, 181)); 
+    std::vector<TH2D*> H2_phie_phi;
+    H2_phie_phi.push_back(new TH2D("phie_phi_0", "phi_{e} vs phi (deg)", 100, 0, 361, 100, 0, 361)); 
+    H2_phie_phi.push_back(new TH2D("phie_phi_1", "phi_{e} vs phi (deg)", 100, 0, 361, 100, 0, 361)); 
+    H2_phie_phi.push_back(new TH2D("phie_phi_2", "phi_{e} vs phi (deg)", 100, 0, 361, 100, 0, 361)); 
+    H2_phie_phi.push_back(new TH2D("phie_phi_3", "phi_{e} vs phi (deg)", 100, 0, 361, 100, 0, 361)); 
     std::vector<TH1D*> H1_delta_vz;
     H1_delta_vz.push_back(new TH1D("delta_vz_0", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
     H1_delta_vz.push_back(new TH1D("delta_vz_1", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
@@ -332,14 +349,20 @@ int main(int argc, char const *argv[]) {
     H1_delta_phi.push_back(new TH1D("delta_phi_1", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_2", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_3", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
+    H1_delta_phi.push_back(new TH1D("delta_phi_3_bis", "|#Delta #phi| - 180 (deg)", 100, -50, 50));
     //////////////////////////////////////////////////////
     /// for simulation | calibration | elastics selection
     //////////////////////////////////////////////////////
     TH1D* H1_t0 = new TH1D("t0", "t0; time (ns); count", 100, 150, 400); 
     TH1D* H1_time = new TH1D("time", "time = leadingEdgeTime - t0 - startTime; time (ns); count", 100, 0, 250); 
     TH1D* H1_distance = new TH1D("distance", "distance (mm); distance (mm); count", 100, 0, 4); 
-    TH1D* H1_residual = new TH1D("residual", "residual (mm); residual (mm); count", 100, -5, 5); 
-    TH2D* H2_time2distance = new TH2D("time2distance", "time2distance; time (ns), distance (mm); count", 100, 0, 400, 100, 0, 4); 
+    TH1D* H1_residual = new TH1D("residual", "residual (mm); residual (mm); count", 100, -2, 2); 
+    TH1D* H1_residual_filtered = new TH1D("residual_filtered", "residual (mm); residual (mm); count", 100, -2, 2); 
+    TH2D* H2_residual_time = new TH2D("residual_time", "residual vs time; time (ns); residual (mm)", 100, 0, 400, 100, -5, 5); 
+    TH2D* H2_residual_tot = new TH2D("residual_tot", "residual vs tot; tot (ns); residual (mm)", 100, 300, 650, 100, -5, 5); 
+    TH2D* H2_residual_amplitude = new TH2D("residual_amplitude", "residual vs amplitude; amplitude (adc); residual (mm)", 100, 0, 4000, 100, -5, 5); 
+    TH2D* H2_time2distance = new TH2D("time2distance", "time2distance; time (ns); distance (mm); count", 100, 0, 400, 100, 0, 4); 
+    TH2D* H2_time2distance_filtered = new TH2D("time2distance_filtered", "time2distance; time (ns); distance (mm); count", 100, 0, 400, 100, 0, 4); 
     TH1I* H1_nelastics = new TH1I("nelastics", "#(e/g, track) per event; ; count;", 10, 0, 10); 
     TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; time (ns); count", 100, 250, 700); 
     TH1D* H1_timeOverThreshold = new TH1D("tot_tot", "timeOverThreshol (ns); timeOverThreshol (ns); count", 100, 150, 750);
@@ -367,8 +390,8 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_elastics_expected_track_pT = new TH1D("expected_track_pT", "pT (GeV)", 100, 0.15, 0.5); 
     TH1D* H1_elastics_expected_track_theta = new TH1D("expected_track_theta", "theta (deg)", 100, 79, 90); 
     TH1D* H1_elastics_expected_track_phi = new TH1D("expected_track_phi", "phi (deg)", 100, 0, 361); 
-    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, 0.15, 0.3); 
-    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, 0.15, 0.3); 
+    TH1D* H1_selection_expected_track_p = new TH1D("selection_expected_track_p", "p (GeV)", 100, pT_min - 0.1*(pT_max-pT_min), pT_max + 0.1*(pT_max-pT_min)); 
+    TH1D* H1_selection_expected_track_pT = new TH1D("selection_expected_track_pT", "pT (GeV)", 100, pT_min - 0.1*(pT_max-pT_min), pT_max + 0.1*(pT_max-pT_min)); 
     TH1D* H1_selection_expected_track_theta = new TH1D("selection_expected_track_theta", "theta (deg)", 100, 79, 90); 
     TH1D* H1_selection_expected_track_phi = new TH1D("selection_expected_track_phi", "phi (deg)", 100, 0, 361); 
     TH1D* H1_selection_reconstructed_probe_pT = new TH1D("selection_reconstructed_probe_pT", "pT (GeV)", 100, pT_min - 0.1*(pT_max-pT_min), pT_max + 0.1*(pT_max-pT_min)); 
@@ -537,7 +560,11 @@ int main(int argc, char const *argv[]) {
                     H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
                     H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
                     H2_p_adc[0]->Fill(S.pT, T.adc);
+                    H2_pe_p[0]->Fill(S.p, T.p);
                     H2_pTe_pT[0]->Fill(S.pT, T.pT);
+                    H2_thetae_theta[0]->Fill(S.theta, T.theta);
+                    H2_phie_phi[0]->Fill(S.phi, T.phi);
+                    H2_vze_vz[0]->Fill(S.vz, T.vz);
                 }
                 for (State S : Photons) {
                     H2_vze_vz[0]->Fill(S.vz, T.vz); 
@@ -545,7 +572,11 @@ int main(int argc, char const *argv[]) {
                     H1_delta_phi[0]->Fill(S.phi - T.phi); // convert rad in deg 
                     H2_p_dEdx[0]->Fill(S.pT, T.dEdx);
                     H2_p_adc[0]->Fill(S.pT, T.adc);
+                    H2_pe_p[0]->Fill(S.p, T.p);
                     H2_pTe_pT[0]->Fill(S.pT, T.pT);
+                    H2_thetae_theta[0]->Fill(S.theta, T.theta);
+                    H2_phie_phi[0]->Fill(S.phi, T.phi);
+                    H2_vze_vz[0]->Fill(S.vz, T.vz);
                 }
             }
 
@@ -648,7 +679,11 @@ int main(int argc, char const *argv[]) {
                     H1_delta_phi[1]->Fill(S.phi - T.phi);  
                     H2_p_dEdx[1]->Fill(S.pT, T.dEdx);
                     H2_p_adc[1]->Fill(S.pT, T.adc);
+                    H2_pe_p[1]->Fill(S.p, T.p);
                     H2_pTe_pT[1]->Fill(S.pT, T.pT);
+                    H2_thetae_theta[1]->Fill(S.theta, T.theta);
+                    H2_phie_phi[1]->Fill(S.phi, T.phi);
+                    H2_vze_vz[1]->Fill(S.vz, T.vz);
                 }
             }
             /*******************************************
@@ -690,7 +725,11 @@ int main(int argc, char const *argv[]) {
                     H1_delta_phi[2]->Fill(S.phi - T.phi);  
                     H2_p_dEdx[2]->Fill(S.pT, T.dEdx);
                     H2_p_adc[2]->Fill(S.pT, T.adc);
+                    H2_pe_p[2]->Fill(S.p, T.p);
                     H2_pTe_pT[2]->Fill(S.pT, T.pT);
+                    H2_thetae_theta[2]->Fill(S.theta, T.theta);
+                    H2_phie_phi[2]->Fill(S.phi, T.phi);
+                    H2_vze_vz[2]->Fill(S.vz, T.vz);
                     // probe 
                     H1_probe_vz[2]->Fill(S.vz);
                     H1_probe_p[2]->Fill(S.p);
@@ -728,9 +767,15 @@ int main(int argc, char const *argv[]) {
                         H2_vze_vz[3]->Fill(S.vz, T.vz); 
                         H1_delta_vz[3]->Fill(S.vz - T.vz); 
                         H1_delta_phi[3]->Fill(S.phi - T.phi);  
+                        H1_delta_phi[4]->Fill(std::fabs(S.phi - T.phi) - 180);  
                         H2_p_dEdx[3]->Fill(S.pT, T.dEdx);
                         H2_p_adc[3]->Fill(S.pT, T.adc);
+                        H2_p_adc[3]->Fill(S.pT, T.adc);
+                        H2_pe_p[3]->Fill(S.p, T.p);
                         H2_pTe_pT[3]->Fill(S.pT, T.pT);
+                        H2_thetae_theta[3]->Fill(S.theta, T.theta);
+                        H2_phie_phi[3]->Fill(S.phi, T.phi);
+                        H2_vze_vz[3]->Fill(S.vz, T.vz);
                         // probe 
                         H1_probe_vz[3]->Fill(S.vz);
                         H1_probe_p[3]->Fill(S.p);
@@ -849,6 +894,13 @@ int main(int argc, char const *argv[]) {
                             H1_time->Fill(time);
                             H1_distance->Fill(distance);
                             H1_residual->Fill(residual);
+                            if (std::abs(residual) > 1e-10) {
+                                H1_residual_filtered->Fill(residual);
+                                H2_time2distance_filtered->Fill(time, distance - residual);
+                            }
+                            H2_residual_amplitude->Fill(adc, residual);
+                            H2_residual_tot->Fill(tot, residual);
+                            H2_residual_time->Fill(time, residual);
                             H2_time2distance->Fill(time, distance - residual);
                             H1_leadingEdgeTime->Fill(leadingEdgeTime); 
                             H1_timeOverThreshold->Fill(tot);
@@ -1250,9 +1302,21 @@ int main(int argc, char const *argv[]) {
         ptr->GetXaxis()->SetTitle("vz probe (cm)");
         ptr->GetYaxis()->SetTitle("vz track (cm)");
     }
+    for (TH2D* ptr : H2_pe_p) {
+        ptr->GetXaxis()->SetTitle("p probe (GeV)");
+        ptr->GetYaxis()->SetTitle("p track (GeV)");
+    }
     for (TH2D* ptr : H2_pTe_pT) {
         ptr->GetXaxis()->SetTitle("pT probe (GeV)");
         ptr->GetYaxis()->SetTitle("pT track (GeV)");
+    }
+    for (TH2D* ptr : H2_thetae_theta) {
+        ptr->GetXaxis()->SetTitle("theta probe (deg)");
+        ptr->GetYaxis()->SetTitle("theta track (deg)");
+    }
+    for (TH2D* ptr : H2_phie_phi) {
+        ptr->GetXaxis()->SetTitle("phi probe (deg)");
+        ptr->GetYaxis()->SetTitle("phi track (deg)");
     }
     for (TH2D* ptr : H2_p_dEdx) {
         ptr->GetXaxis()->SetTitle("pT probe (GeV)");
@@ -1265,39 +1329,52 @@ int main(int argc, char const *argv[]) {
     // Level 0 -- no cuts
     TDirectory* corr_nocuts_dir = corr_dir->mkdir("nocuts");
     corr_nocuts_dir->cd();
-    H2_vze_vz[0]->Write("corr_vz"); 
-    H1_delta_vz[0]->Write("delta_vz"); 
-    H1_delta_phi[0]->Write("delat_phi");  
     H2_p_dEdx[0]->Write("corr_pT_dEdx");
     H2_p_adc[0]->Write("corr_pT_adc");
+    H2_pe_p[0]->Write("corr_p");
     H2_pTe_pT[0]->Write("corr_pT");
+    H2_thetae_theta[0]->Write("corr_theta");
+    H2_phie_phi[0]->Write("corr_phi");
+    H2_vze_vz[0]->Write("corr_vz"); 
+    H1_delta_vz[0]->Write("delta_vz"); 
+    H1_delta_phi[0]->Write("delta_phi");  
     // Level 1 -- probe priority
     TDirectory* corr_probe_priority_dir = corr_dir->mkdir("probe_priority");
     corr_probe_priority_dir->cd();
-    H2_vze_vz[1]->Write("corr_vz"); 
-    H1_delta_vz[1]->Write("delta_vz"); 
-    H1_delta_phi[1]->Write("delat_phi");  
     H2_p_dEdx[1]->Write("corr_pT_dEdx");
     H2_p_adc[1]->Write("corr_pT_adc");
+    H2_pe_p[1]->Write("corr_p");
     H2_pTe_pT[1]->Write("corr_pT");
+    H2_thetae_theta[1]->Write("corr_theta");
+    H2_phie_phi[1]->Write("corr_phi");
+    H2_vze_vz[1]->Write("corr_vz"); 
+    H1_delta_vz[1]->Write("delta_vz"); 
+    H1_delta_phi[1]->Write("delta_phi");  
     // Level 2 -- cu_on_W2
     TDirectory* corr_w2_cut_dir = corr_dir->mkdir("cut_on_W2");
     corr_w2_cut_dir->cd();
-    H2_vze_vz[2]->Write("corr_vz"); 
-    H1_delta_vz[2]->Write("delta_vz"); 
-    H1_delta_phi[2]->Write("delat_phi");  
     H2_p_dEdx[2]->Write("corr_pT_dEdx");
     H2_p_adc[2]->Write("corr_pT_adc");
+    H2_pe_p[2]->Write("corr_p");
     H2_pTe_pT[2]->Write("corr_pT");
+    H2_thetae_theta[2]->Write("corr_theta");
+    H2_phie_phi[2]->Write("corr_phi");
+    H2_vze_vz[2]->Write("corr_vz"); 
+    H1_delta_vz[2]->Write("delta_vz"); 
+    H1_delta_phi[2]->Write("delta_phi");  
     // Level 3 -- cut_on_delta_phi
     TDirectory* corr_w2_delta_phi_dir = corr_dir->mkdir("cut_on_delta_phi");
     corr_w2_delta_phi_dir->cd();
-    H2_vze_vz[3]->Write("corr_vz"); 
-    H1_delta_vz[3]->Write("delta_vz"); 
-    H1_delta_phi[3]->Write("delat_phi");  
     H2_p_dEdx[3]->Write("corr_pT_dEdx");
     H2_p_adc[3]->Write("corr_pT_adc");
+    H2_pe_p[3]->Write("corr_p");
     H2_pTe_pT[3]->Write("corr_pT");
+    H2_thetae_theta[3]->Write("corr_theta");
+    H2_phie_phi[3]->Write("corr_phi");
+    H2_vze_vz[3]->Write("corr_vz"); 
+    H1_delta_vz[3]->Write("delta_vz"); 
+    H1_delta_phi[3]->Write("delta_phi");  
+    H1_delta_phi[4]->Write("delta_phi_centered");  
     ///////////////////////////
     //  ft photon without cuts
     ///////////////////////////
@@ -1397,7 +1474,12 @@ int main(int argc, char const *argv[]) {
     H1_distance->Write("distance"); 
     H1_time->Write("time"); 
     H1_residual->Write("residual");
+    H1_residual_filtered->Write("residual_filtered");
+    H2_residual_time->Write("residual_time");
+    H2_residual_amplitude->Write("residual_amplitude");
+    H2_residual_tot->Write("residual_tot");
     H2_time2distance->Write("time2distance");
+    H2_time2distance_filtered->Write("time2distance_filtered");
     H1_leadingEdgeTime->Write("leadindEdgeTime"); 
     H1_timeOverThreshold->Write("timeOverThreshold");
     H1_t0->Write("t0_distribution"); 
