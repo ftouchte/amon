@@ -31,7 +31,9 @@ namespace futils {
     double variance(const std::vector<double> & data);
     double std_dev(const std::vector<double> & data);
     bool cart2polar(double x, double y, double z, double & rho, double & theta, double & phi);
+    bool cart2polarDEG(double x, double y, double z, double & rho, double & theta, double & phi); // return angle in deg
     bool cart2polar(double x, double y, double & rho, double & theta);
+    bool cart2polarDEG(double x, double y, double & rho, double & theta); // return angle in deg
     double integrate(Integrable f, double a, double b, int Npts);
 }
 
