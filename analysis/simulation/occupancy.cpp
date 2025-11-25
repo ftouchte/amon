@@ -43,12 +43,12 @@ int main(int argc, char const *argv[]) {
     
     const char* output = "./output/occupancy_study.root";
 
-    //printf("argc : %d\n", argc);
-    //if (argc < 2) { 
-    //    return printf("Please, provide a filename...\n");
-    //}
-    //const char* filename = argv[1];
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/raw-D2-run-23003.hipo";
+    printf("argc : %d\n", argc);
+    if (argc < 2) { 
+        return printf("Please, provide a filename...\n");
+    }
+    const char* filename = argv[1];
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/wfType/raw-D2-run-23003.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -128,27 +128,30 @@ int main(int argc, char const *argv[]) {
     printf("nevents    : %ld \n", nevents);
     
     // Renormalise occupancy
-    int i_max = 0;
-    int count_max = 0;
     for (int i = 0; i < 5; i++) {
+        VecH1_occupancy[i]->SetLineWidth(3);
         VecH1_occupancy[i]->Scale(100.0/nevents);
-        int count = VecH1_occupancy[i]->GetBinContent(VecH1_occupancy[i]->GetMaximumBin());
-        if (count > count_max) {
-            count_max = count;
-            i_max = i;
-        }
     }
     TCanvas* canvas1 = new TCanvas("c1_occupacy", "Occupancy study;wire; count [%]");
+    // all
+    VecH1_occupancy[0]->SetTitle("Occupancy");
+    VecH1_occupancy[0]->SetLineColor(kBlack);
+    VecH1_occupancy[0]->Draw();
+    // raw cuts
+    VecH1_occupancy[1]->SetLineColor(kBlue);
+    VecH1_occupancy[1]->Draw("same");
+    // wfType <= 2
+    VecH1_occupancy[2]->SetLineColor(kGreen);
+    VecH1_occupancy[2]->Draw("same");
+    // wfType <=2 & raw cuts
+    VecH1_occupancy[3]->SetLineColor(kRed);
+    VecH1_occupancy[3]->Draw("same");
+    // legend
     TLegend* legend = new TLegend(0.5,0.6,0.9,0.9);
-    VecH1_occupancy[i_max]->Draw();
-    legend->AddEntry(VecH1_occupancy[i_max], VecH1_occupancy[i_max]->GetName());
-    for (int i = 0; i < 5; i++) {
-        if (i != i_max) {
-            VecH1_occupancy[i]->SetLineColor(i+2);
-            VecH1_occupancy[i]->Draw("same");
-            legend->AddEntry(VecH1_occupancy[i], VecH1_occupancy[i]->GetName());
-        }
-    }
+    legend->AddEntry(VecH1_occupancy[0], VecH1_occupancy[0]->GetName());
+    legend->AddEntry(VecH1_occupancy[2], VecH1_occupancy[2]->GetName());
+    legend->AddEntry(VecH1_occupancy[3], VecH1_occupancy[3]->GetName());
+    legend->AddEntry(VecH1_occupancy[1], VecH1_occupancy[1]->GetName());
     legend->Draw();
 
     // output
