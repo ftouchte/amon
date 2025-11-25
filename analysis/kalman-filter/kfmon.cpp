@@ -48,12 +48,12 @@ void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-   const char * output = "./output/kfmon-v25.root";
+   const char * output = "./output/kfmon-v28.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v25.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v28.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -66,6 +66,7 @@ int main(int argc, char const *argv[]) {
     hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
     hipo::bank  mcBank(factory.getSchema("MC::Particle"));
     hipo::bank  trueBank(factory.getSchema("MC::True"));
+    hipo::bank  runConfigBank(factory.getSchema("RUN::config"));
     hipo::event event;
     long unsigned int nevents =0;
     long unsigned int nMCtracks =0;
@@ -99,17 +100,26 @@ int main(int argc, char const *argv[]) {
     gr_ahdcView->Draw("AP");
     TFile *f = new TFile(output, "RECREATE");
     c0->Write("ahdcView_empty");
-    // color palette
-    //std::vector<int> ColorPalette= {};
+
+    // Histograms
+    TH2D* H2_corr_phi = new TH2D("corr_phi", "#phi_{mc} vs #phi_{track}; #phi_{track} (deg); #phi_{mc} (deg)", 100, 0, 361, 100, 0, 361); 
+    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{mc} vs #theta_{track}; #theta_{track} (deg); #theta_{mc} (deg)", 100, 0, 181, 100, 50, 130); 
+    TH2D* H2_corr_p = new TH2D("corr_p", "p_{mc} vs p_{track}; p_{track} (MeV); p_{mc} (MeV)", 100, 190, 310, 100, 190, 310); 
+    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{mc} vs vz_{track}; vz_{track} (cm); vz_{mc} (cm)", 100, -16, 16, 100, -16, 16); 
+    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{mc} - #phi_{track}; #Delta #phi (deg); #count", 100, -12, 12);
+    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 100, -10, 10);
+    TH1D* H1_residual = new TH1D("residual", "residual; residual (mm); #count", 100, -2, 2);
+    TH1D* H1_residual_filtered = new TH1D("residual_filtered", "residual; residual (mm); #count", 100, -2, 2);
 
     // Loop over events
     while( reader.next()){
-        if (nevents > 10) break;
+
+        //if (nevents > 10) break;
         nevents++;
         // Progress Bar
-        //if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
-        //    progressBar(100.0*nevents/reader.getEntries());
-        //}
+        if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
+            progressBar(100.0*nevents/reader.getEntries());
+        }
         reader.read(event);
         event.getStructure(adcBank);
         event.getStructure(wfBank);
@@ -119,16 +129,58 @@ int main(int argc, char const *argv[]) {
         event.getStructure(hitBank);
         event.getStructure(mcBank);
         event.getStructure(trueBank);
+        event.getStructure(runConfigBank);
+
 
         nMCtracks += mcBank.getRows();
         nKFtracks += trackBank.getRows();
-
+        { // Histograms
+            if (trackBank.getRows() < 1) continue;
+            // mc
+            double mc_px = mcBank.get("px", 0)*1000; // GeV to MeV
+            double mc_py = mcBank.get("py", 0)*1000;
+            double mc_pz = mcBank.get("pz", 0)*1000;
+            double mc_p;
+            double mc_theta;
+            double mc_phi;
+            futils::cart2polarDEG(mc_px,mc_py,mc_pz,mc_p,mc_theta,mc_phi);
+            // track
+            double track_px = trackBank.get("px", 0); // MeV
+            double track_py = trackBank.get("py", 0);
+            double track_pz = trackBank.get("pz", 0);
+            double track_p;
+            double track_theta;
+            double track_phi;
+            futils::cart2polarDEG(track_px,track_py,track_pz,track_p,track_theta,track_phi);
+            double mc_vz = mcBank.get("vz", 0); // cm
+            double track_vz = trackBank.get("z", 0)*0.1; // mm to cm
+            // Fill historgrams
+            H2_corr_phi->Fill(track_phi, mc_phi);
+            H2_corr_theta->Fill(track_theta, mc_theta);
+            H2_corr_p->Fill(track_p, mc_p);
+            H2_corr_vz->Fill(track_vz, mc_vz);
+            H1_delta_phi->Fill(mc_phi-track_phi);
+            H1_delta_vz->Fill(mc_vz-track_vz);
+            for (int i = 0; i < hitBank.getRows(); i++) {
+                if ((int) hitBank.get("trackid", i) == (int) trackBank.get("trackid", 0)) {
+                    H1_residual->Fill(hitBank.get("residual", i));
+                    if (std::abs(hitBank.get("residual", i)) > 1e-9) {
+                        H1_residual_filtered->Fill(hitBank.get("residual", i));
+                    }
+                }
+            }
+        }
+        
+        //if (nevents > 10) continue;
+        int evt_number = runConfigBank.get("event", 0);
+        if (evt_number < 4501 || evt_number > 4510) continue;
+        //printf("evt n° : %d\n", (int) runConfigBank.get("event", 0));
         // loop over track
         for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
             ///////////////////////////////
             // Display : states/positions
             // ////////////////////////////
-            TCanvas * cn = new TCanvas(TString::Format("c%d_%d", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d ahdcView", (int) nevents, trackRow+1).Data(), 1600, 900);
+            TCanvas * cn = new TCanvas(TString::Format("c%d_%d", (int) evt_number, trackRow+1).Data(),TString::Format("c%d_%d ahdcView", (int) evt_number, trackRow+1).Data(), 1600, 900);
             cn->Divide(2,1);
             // XY view
             cn->cd(1);
@@ -485,7 +537,7 @@ int main(int argc, char const *argv[]) {
 
 
             // output
-            cn->Write(TString::Format("event_%d_track_%d_positions", (int) nevents, trackRow+1).Data());
+            cn->Write(TString::Format("event_%d_track_%d_positions", (int) evt_number, trackRow+1).Data());
             // delete graphMap
             for (auto& [k, g] : graphMap) {
                 delete g.first;
@@ -494,7 +546,7 @@ int main(int argc, char const *argv[]) {
             ///////////////////////////////
             // Display : error variances
             // ////////////////////////////
-            TCanvas * cvar = new TCanvas(TString::Format("c%d_%d_var_pos", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d ErrorVariance", (int) nevents, trackRow+1).Data(), 1600, 900);
+            TCanvas * cvar = new TCanvas(TString::Format("c%d_%d_var_pos", (int) evt_number, trackRow+1).Data(),TString::Format("c%d_%d ErrorVariance", (int) evt_number, trackRow+1).Data(), 1600, 900);
             cvar->Divide(4,3);
             std::vector<const char *> name_pos = {"Position x", "Position y", "Position z", "Position R", "Position theta", "Position phi"};
             std::vector<const char *> unit_pos = {"mm", "mm", "mm", "mm", "deg", "deg"};
@@ -541,11 +593,11 @@ int main(int argc, char const *argv[]) {
                 }
             }
             // write output
-            cvar->Write(TString::Format("event_%d_track_%d_variances", (int) nevents, trackRow+1).Data());
+            cvar->Write(TString::Format("event_%d_track_%d_variances", (int) evt_number, trackRow+1).Data());
             ///////////////////////////////
             // Display : error values
             // ////////////////////////////
-            TCanvas * cval = new TCanvas(TString::Format("c%d_%d_val", (int) nevents, trackRow+1).Data(),TString::Format("c%d_%d Estimation", (int) nevents, trackRow+1).Data(), 1600, 900);
+            TCanvas * cval = new TCanvas(TString::Format("c%d_%d_val", (int) evt_number, trackRow+1).Data(),TString::Format("c%d_%d Estimation", (int) evt_number, trackRow+1).Data(), 1600, 900);
             cval->Divide(4,3);
             for (int i = 0; i < 6; i++) {
                 { // Pos
@@ -596,7 +648,7 @@ int main(int argc, char const *argv[]) {
                 }
             }
             // write output
-            cval->Write(TString::Format("event_%d_track_%d_values", (int) nevents, trackRow+1).Data());
+            cval->Write(TString::Format("event_%d_track_%d_values", (int) evt_number, trackRow+1).Data());
         }
     }
     printf("nevents    : %ld \n", nevents);
@@ -604,6 +656,16 @@ int main(int argc, char const *argv[]) {
     printf("nKFtrack    : %ld \n", nKFtracks);
     printf("percentage  : %.2lf %%\n", 100.0*nKFtracks/nMCtracks);
     // output
+    // Write histograms
+    H2_corr_phi->Write("corr_phi");
+    H2_corr_theta->Write("corr_theta");
+    H2_corr_p->Write("corr_p");
+    H2_corr_vz->Write("corr_vz");
+    H1_delta_phi->Write("delta_phi");
+    H1_delta_vz->Write("delta_vz");
+    H1_residual->Write("residual");
+    H1_residual_filtered->Write("residual_filtered");
+
 
     f->Close();
     printf("File created : %s\n", output);
