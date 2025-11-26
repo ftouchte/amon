@@ -40,10 +40,13 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon
+all: kfilter distance time2distance fitter kfmon lund-file
 
 kfmon: kfmon.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 
 	$(CXX) -o kfmon.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
+
+lund-file: lund-file.o 
+	$(CXX) -o lund-file.exe $^ $(ROOTLIBS) 
 
 fitter: fitter.o 
 	$(CXX) -o fitter.exe $^ $(ROOTLIBS) 
