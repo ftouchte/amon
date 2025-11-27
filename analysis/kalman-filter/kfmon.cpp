@@ -48,12 +48,12 @@ void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-   const char * output = "./output/kfmon-v28.root";
+   const char * output = "./output/kfmon-v31.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v28.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v31.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -67,6 +67,7 @@ int main(int argc, char const *argv[]) {
     hipo::bank  mcBank(factory.getSchema("MC::Particle"));
     hipo::bank  trueBank(factory.getSchema("MC::True"));
     hipo::bank  runConfigBank(factory.getSchema("RUN::config"));
+    hipo::bank  recBank(factory.getSchema("REC::Particle"));
     hipo::event event;
     long unsigned int nevents =0;
     long unsigned int nMCtracks =0;
@@ -110,6 +111,9 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 100, -10, 10);
     TH1D* H1_residual = new TH1D("residual", "residual; residual (mm); #count", 100, -2, 2);
     TH1D* H1_residual_filtered = new TH1D("residual_filtered", "residual; residual (mm); #count", 100, -2, 2);
+    TH1D* H1_time = new TH1D("time", "time; time (ns); #count", 100, 0, 250);
+    TH1D* H1_distance = new TH1D("distance", "distance; distance (mm); #count", 100, 0, 4);
+    TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; #count", 7, 0, 7);
 
     // Loop over events
     while( reader.next()){
@@ -130,6 +134,8 @@ int main(int argc, char const *argv[]) {
         event.getStructure(mcBank);
         event.getStructure(trueBank);
         event.getStructure(runConfigBank);
+        event.getStructure(recBank);
+        if (recBank.getRows() < 1) continue; 
 
 
         nMCtracks += mcBank.getRows();
@@ -167,13 +173,16 @@ int main(int argc, char const *argv[]) {
                     if (std::abs(hitBank.get("residual", i)) > 1e-9) {
                         H1_residual_filtered->Fill(hitBank.get("residual", i));
                     }
+                    H1_time->Fill(hitBank.get("time", i));
+                    H1_distance->Fill(hitBank.get("doca", i));
+                    H1_wfType->Fill(adcBank.get("wfType", hitBank.get("id", i) - 1));
                 }
             }
         }
         
-        //if (nevents > 10) continue;
+        if (nevents > 10) continue;
         int evt_number = runConfigBank.get("event", 0);
-        if (evt_number < 4501 || evt_number > 4510) continue;
+        //if (evt_number < 4501 || evt_number > 4510) continue;
         //printf("evt n° : %d\n", (int) runConfigBank.get("event", 0));
         // loop over track
         for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
@@ -665,6 +674,9 @@ int main(int argc, char const *argv[]) {
     H1_delta_vz->Write("delta_vz");
     H1_residual->Write("residual");
     H1_residual_filtered->Write("residual_filtered");
+    H1_time->Write("time");
+    H1_distance->Write("distance");
+    H1_wfType->Write("wfType");
 
 
     f->Close();
