@@ -48,12 +48,12 @@ void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-   const char * output = "./output/kfmon-v31.root";
+   const char * output = "./output/kfmon-v43.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v31.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v43.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -114,6 +114,13 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_time = new TH1D("time", "time; time (ns); #count", 100, 0, 250);
     TH1D* H1_distance = new TH1D("distance", "distance; distance (mm); #count", 100, 0, 4);
     TH1I* H1_wfType = new TH1I("wfType", "wfType; wfType; #count", 7, 0, 7);
+    std::vector<TH1D*> H1_variances;
+    H1_variances.push_back(new TH1D("KF_var_x", "var_x; var_x (mm^{2}); #count", 100, 0, 5));
+    H1_variances.push_back(new TH1D("KF_var_y", "var_y; var_y (mm^{2}); #count", 100, 0, 5));
+    H1_variances.push_back(new TH1D("KF_var_z", "var_z; var_z (mm^{2}); #count", 100, 0, 5));
+    H1_variances.push_back(new TH1D("KF_var_px", "var_px; var_px (MeV^{2}); #count", 100, 0, 100));
+    H1_variances.push_back(new TH1D("KF_var_py", "var_py; var_py (MeV^{2}); #count", 100, 0, 100));
+    H1_variances.push_back(new TH1D("KF_var_pz", "var_pz; var_pz (MeV^{2}); #count", 100, 0, 250));
 
     // Loop over events
     while( reader.next()){
@@ -134,8 +141,8 @@ int main(int argc, char const *argv[]) {
         event.getStructure(mcBank);
         event.getStructure(trueBank);
         event.getStructure(runConfigBank);
-        event.getStructure(recBank);
-        if (recBank.getRows() < 1) continue; 
+        //event.getStructure(recBank);
+        //if (recBank.getRows() < 1) continue; 
 
 
         nMCtracks += mcBank.getRows();
@@ -342,6 +349,12 @@ int main(int argc, char const *argv[]) {
                        graphMomVariance[2][3]->AddPoint(Niter, var_mom_p); 
                        graphMomVariance[2][4]->AddPoint(Niter, var_mom_theta); 
                        graphMomVariance[2][5]->AddPoint(Niter, var_mom_phi);
+                       H1_variances[0]->Fill(var_x);
+                       H1_variances[1]->Fill(var_y);
+                       H1_variances[2]->Fill(var_z);
+                       H1_variances[3]->Fill(var_px);
+                       H1_variances[4]->Fill(var_py);
+                       H1_variances[5]->Fill(var_pz);
                        if (status == 0) { // prediction
                            graphPosVariance[0][0]->AddPoint(Niter, var_x); 
                            graphPosVariance[0][1]->AddPoint(Niter, var_y); 
@@ -677,6 +690,9 @@ int main(int argc, char const *argv[]) {
     H1_time->Write("time");
     H1_distance->Write("distance");
     H1_wfType->Write("wfType");
+    for (int i = 0; i < 6; i++) {
+        H1_variances[i]->Write(H1_variances[i]->GetName());
+    }
 
 
     f->Close();

@@ -41,12 +41,12 @@ void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-   const char * output = "./output/clas-recon-v31.root";
+   const char * output = "./output/clas-recon-v36.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v31.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v36.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -69,24 +69,24 @@ int main(int argc, char const *argv[]) {
 
     // Histograms
     TH2D* H2_corr_phi = new TH2D("corr_phi", "#phi_{mc} vs #phi_{rec}; #phi_{rec} (deg); #phi_{mc} (deg)", 100, 0, 361, 100, 0, 361); 
-    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{mc} vs #theta_{rec}; #theta_{rec} (deg); #theta_{mc} (deg)", 100, 0, 15, 100, 4, 10); 
-    TH2D* H2_corr_p = new TH2D("corr_p", "p_{mc} vs p_{rec}; p_{rec} (GeV); p_{mc} (GeV)", 100, 1.8, 2.5, 100, 2.15, 2.2); 
-    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{mc} vs vz_{rec}; vz_{rec} (cm); vz_{mc} (cm)", 100, -40, 60, 100, -16, 16); 
+    TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{mc} vs #theta_{rec}; #theta_{rec} (deg); #theta_{mc} (deg)", 100, 4, 10, 100, 4, 10); 
+    TH2D* H2_corr_p = new TH2D("corr_p", "p_{mc} vs p_{rec}; p_{rec} (GeV); p_{mc} (GeV)", 100, 1.8, 2.5, 100, 1.8, 2.5); 
+    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{mc} vs vz_{rec}; vz_{rec} (cm); vz_{mc} (cm)", 100, -16, 16, 100, -16, 16); 
     TH1D* H1_mc_p = new TH1D("mc_p", "p; p (GeV); #count", 100, 2.15, 2.2);
     TH1D* H1_mc_theta = new TH1D("mc_theta", "theta; theta (deg); #count", 100, 4, 10);
     TH1D* H1_mc_phi = new TH1D("mc_phi", "phi; phi (deg); #count", 100, 0, 361);
     TH1D* H1_mc_vx = new TH1D("mc_vx", "vx; vx (cm); #count", 100, -16, 16);
     TH1D* H1_mc_vy = new TH1D("mc_vy", "vy; vy (cm); #count", 100, -16, 16);
     TH1D* H1_mc_vz = new TH1D("mc_vz", "vz; vz (cm); #count", 100, -16, 16);
-    TH1D* H1_rec_p = new TH1D("rec_p", "p; p (GeV); #count", 100, 1.8, 2.5);
-    TH1D* H1_rec_theta = new TH1D("rec_theta", "theta; theta (deg); #count", 100, 0, 15);
+    TH1D* H1_rec_p = new TH1D("rec_p", "p; p (GeV); #count", 100, 2.15, 2.2);
+    TH1D* H1_rec_theta = new TH1D("rec_theta", "theta; theta (deg); #count", 100, 4, 10);
     TH1D* H1_rec_phi = new TH1D("rec_phi", "phi; phi (deg); #count", 100, 0, 361);
     TH1D* H1_rec_vx = new TH1D("rec_vx", "vx; vx (cm); #count", 100, -16, 16);
     TH1D* H1_rec_vy = new TH1D("rec_vy", "vy; vy (cm); #count", 100, -16, 16);
-    TH1D* H1_rec_vz = new TH1D("rec_vz", "vz; vz (cm); #count", 100, -40, 60);
-    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{rec}; #Delta vz (cm); #count", 100, -60, 60);
-    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{mc} - #phi_{rec}; #Delta #phi (deg); #count", 100, -20, 20);
-    TH1D* H1_delta_theta = new TH1D("delta_theta", "#Delta #theta = #theta_{mc} - #theta_{rec}; #Delta #theta (deg); #count", 100, -6, 6);
+    TH1D* H1_rec_vz = new TH1D("rec_vz", "vz; vz (cm); #count", 100, -16, 16);
+    TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{rec}; #Delta vz (cm); #count", 100, -16, 16);
+    TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta #phi = #phi_{mc} - #phi_{rec}; #Delta #phi (deg); #count", 100, -10, 10);
+    TH1D* H1_delta_theta = new TH1D("delta_theta", "#Delta #theta = #theta_{mc} - #theta_{rec}; #Delta #theta (deg); #count", 100, -2, 2);
 
     // Loop over events
     while( reader.next()){
