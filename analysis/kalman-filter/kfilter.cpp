@@ -41,16 +41,12 @@ void progressBar(int state, int bar_length = 100);
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-    //const char * output = "./output/kfilter-v1.root";
-    //const char * output = "./output/kfilter-deuteron-v2.root";
-    //const char * output = "./output/kfilter-deuteron-v4.root";
-    const char * output = "./output/kfilter-deuteron-v17.root";
+    const char * output = "./output/kfilter-deuteron-v45.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-proton-v1.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v17.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v45.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -110,7 +106,7 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_corr_pT = new TH2D("corr_pT", "pT_{track} vs pT_{mc}; pT_{mc} (MeV); pT_{track} (MeV)", 100, 190, 310, 100, 190, 310);
     TH2D* H2_corr_phi = new TH2D("corr_phi", "#Phi_{track} vs #Phi_{mc}; #Phi_{mc} (deg); #Phi_{track} (deg)", 100, 0, 361, 100, 0, 361);
     TH2D* H2_corr_theta = new TH2D("corr_theta", "#theta_{track} vs #theta_{mc}; #theta_{mc} (deg); #theta_{track} (deg)", 100, 55, 125, 100, 55, 125);
-    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -15, 15);
+    TH2D* H2_corr_vz = new TH2D("corr_vz", "vz_{track} vs vz_{mc}; vz_{mc} (cm); vz_{track} (cm)", 100, -16, 16, 100, -16, 16);
     TH1D* H1_delta_vz = new TH1D("delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 100, -5, 10); 
     TH1D* H1_delta_phi = new TH1D("delta_phi", "#Delta phi = phi_{mc} - phi_{track}; #Delta phi (deg); #count", 100, -5, 5); 
     // hit 
@@ -124,7 +120,7 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_deltaTime_tot = new TH2D("corr_deltaTime_tot", "deltaTime vs timeOverThreshold; mctime - rectime = deltaTime (ns); tot (ns)", 100, -40, 60, 100, 150, 750); 
     TH2D* H2_corr_distance = new TH2D("corr_distance", "distance vs mcdistance; mcdistance (mm); distance (mm)", 100, 0, 4, 100, 0, 4);
     TH2D* H2_corr_time = new TH2D("corr_time", "time vs mctime; mctime (mm); time (mm)", 100, 0, 250, 100, 0, 250);
-    TH1D* H1_residual = new TH1D("residuals", "residuals; residuals (mm); #count", 100, -4, 4); 
+    TH1D* H1_residual = new TH1D("residual", "residual; residual (mm); #count", 100, -2, 2); 
     TH2D* H2_time2distance = new TH2D("corr_time2distance", "time2distance; time (ns); KF distance (mm)", 100, 0, 250, 100, 0, 4); 
     std::vector<TH1D*> VecH1_noise;
     VecH1_noise.push_back(new TH1D("noise s0", "s0; s0 (adc); count", 100, 250, 380));
@@ -410,3 +406,4 @@ void progressBar(int state, int bar_length) { // state is a number between 0 and
     }
     fflush(stdout);
 }
+

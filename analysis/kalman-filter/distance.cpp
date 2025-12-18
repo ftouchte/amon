@@ -44,12 +44,12 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
     //const char * output = "./output/distance.root";
-    const char * output = "./output/distance-v15.root";
+    const char * output = "./output/distance-v17.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v15.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v17.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v7.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);

@@ -109,7 +109,6 @@ int main(int argc, char const *argv[]) {
     /// ///////////////////////////////////////////
     std::vector<std::string> all_filenames;
     /*std::string dir_name = "/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0";
-    //std::string motif = ".*";
     std::string motif = "rec_clas_022712.evio.0000[0-9].hipo";
     std::regex re(motif.c_str());
     for (const fs::directory_entry & entry : fs::directory_iterator(dir_name)) {
@@ -121,8 +120,9 @@ int main(int argc, char const *argv[]) {
     }*/
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.0.1/rec_clas_023003.evio.00000.hipo");
     //all_filenames.push_back("");
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0/rec_clas_022712.evio.00000.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0/rec_clas_022712.evio.00000.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-22712-00000-v11.hipo");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v31.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -209,7 +209,7 @@ int main(int argc, char const *argv[]) {
     H1_Q2.push_back(new TH1D("Q2_2", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
     H1_Q2.push_back(new TH1D("Q2_3", "Q^{2} (GeV^{2})", 100, lim_Q2_inf, lim_Q2_sup));
     std::vector<TH1D*> H1_W2;
-    H1_W2.push_back(new TH1D("W2_0", "W^{2} (GeV^{2})", 100, lim_W2_inf, lim_W2_sup));
+    H1_W2.push_back(new TH1D("W2_0", "W^{2}; W^{2} (GeV^{2}); #count", 100, lim_W2_inf, lim_W2_sup));
     H1_W2.push_back(new TH1D("W2_1", "W^{2} (GeV^{2})", 100, 3.4, 4));
     H1_W2.push_back(new TH1D("W2_2", "W^{2} (GeV^{2})", 100, 3.4, 4));
     H1_W2.push_back(new TH1D("W2_3", "W^{2} (GeV^{2})", 100, 3.4, 4));
@@ -345,7 +345,7 @@ int main(int argc, char const *argv[]) {
     H1_delta_vz.push_back(new TH1D("delta_vz_2", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
     H1_delta_vz.push_back(new TH1D("delta_vz_3", "#Delta vz = vz_{e} - vz (cm)", 100, -40, 40));
     std::vector<TH1D*> H1_delta_phi; 
-    H1_delta_phi.push_back(new TH1D("delta_phi_0", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
+    H1_delta_phi.push_back(new TH1D("delta_phi_0", "#Delta #phi = #phi_{e} - #phi_{track}; #Delta #phi (deg); #count", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_1", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_2", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
     H1_delta_phi.push_back(new TH1D("delta_phi_3", "#Delta #phi = #phi_{e} - #phi (deg)", 100, -360, 360));
@@ -385,7 +385,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_elastic_probe_pT = new TH1D("elastic_probe_pT", "pT (GeV)", 100, 0.15, 0.5); 
     TH1D* H1_elastic_probe_theta = new TH1D("elastic_probe_theta", "theta (deg)", 100, 4, 15); 
     TH1D* H1_elastic_probe_phi = new TH1D("elastic_probe_phi", "phi (deg)", 100, 0, 361);
-    TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "pT e^{-}/#gamma vs #Sigma adc; pT_{probe}; #Sigma adc", 100, 0.19, 0.45, 100, 0, 15000);
+    TH2D* H2_elastic_pT_adc = new TH2D("elastic_pT_adc", "electron pT vs track Sum_adc; pT_{e}; Sum_adc", 100, 0.19, 0.45, 100, 0, 15000);
     TH1D* H1_elastics_expected_track_p = new TH1D("expected_track_p", "p (GeV)", 100, 0.15, 0.5); // what should be the track knowing it is an elastic and from theta_electron 
     TH1D* H1_elastics_expected_track_pT = new TH1D("expected_track_pT", "pT (GeV)", 100, 0.15, 0.5); 
     TH1D* H1_elastics_expected_track_theta = new TH1D("expected_track_theta", "theta (deg)", 100, 79, 90); 
