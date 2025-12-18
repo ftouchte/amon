@@ -69,10 +69,17 @@ void polar2cart(double p, double theta, double phi, double & px, double & py, do
     py = p*sin(theta)*sin(phi);
 }
 
+double uniform(double a, double b, int nevents) {
+    double x = (1.0*(rand() % nevents))/nevents;
+    return (b-a)*x + a;
+}
+
 void generate_kinematics(int nevents, LundParticle & electron, LundParticle & track) {
     // electron
-    double phi = 2*M_PI*(rand() % nevents)/nevents;
-    double theta = (3*(1.0*(rand() % nevents)/nevents) + 5.5)*M_PI/180;
+    //double phi = 2*M_PI*(rand() % nevents)/nevents;
+    //double theta = (3*(1.0*(rand() % nevents)/nevents) + 5.5)*M_PI/180;
+    double phi = uniform(-3,3, nevents)*M_PI/180; 
+    double theta = uniform(7,8, nevents)*M_PI/180;
     double p = 2.18; // GeV
     double Ee = 2.23951; // GeV
     polar2cart(p, theta, phi, electron.px, electron.py, electron.pz);
