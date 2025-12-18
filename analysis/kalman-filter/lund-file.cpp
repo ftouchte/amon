@@ -96,7 +96,7 @@ void generate_kinematics(int nevents, LundParticle & electron, LundParticle & tr
     track.theta = track_theta;
     track.phi = track_phi;
     // vertex
-    double vertex = 30*(1.0*(rand() % nevents))/nevents -15;
+    double vertex = uniform(-15,15, nevents);
     electron.vx = 0;
     electron.vy = 0;
     electron.vz = vertex;
