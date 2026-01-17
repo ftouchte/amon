@@ -40,12 +40,15 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test
+
+fOptions_test: fOptions_test.o fOptions.o
+	$(CXX) -o fOptions_test.exe $^
 
 clasrecon: clasrecon.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 
 	$(CXX) -o clasrecon.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
 
-kfmon_data: kfmon_data.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 
+kfmon_data: kfmon_data.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o fOptions.o
 	$(CXX) -o kfmon_data.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
 
 kfmon: kfmon.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 
