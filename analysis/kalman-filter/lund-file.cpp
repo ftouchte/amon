@@ -75,13 +75,14 @@ double uniform(double a, double b, int nevents) {
 }
 
 void generate_kinematics(int nevents, LundParticle & electron, LundParticle & track) {
-    // electron
-    //double phi = 2*M_PI*(rand() % nevents)/nevents;
-    //double theta = (3*(1.0*(rand() % nevents)/nevents) + 5.5)*M_PI/180;
-    double phi = uniform(-3,3, nevents)*M_PI/180; 
-    double theta = uniform(7,8, nevents)*M_PI/180;
-    double p = 2.18; // GeV
+    // beam energy
     double Ee = 2.23951; // GeV
+    double nu = 0.06966; // GeV, nu = E - E', this the mean of the distribution
+    // electron
+    double phi = uniform(0,360, nevents)*M_PI/180; // deg to rad
+    double theta = uniform(7,8, nevents)*M_PI/180;
+    double p = Ee - nu; // GeV
+    
     polar2cart(p, theta, phi, electron.px, electron.py, electron.pz);
     electron.p = p;
     electron.theta = theta;
@@ -96,7 +97,7 @@ void generate_kinematics(int nevents, LundParticle & electron, LundParticle & tr
     track.theta = track_theta;
     track.phi = track_phi;
     // vertex
-    double vertex = uniform(-15,15, nevents);
+    double vertex = uniform(-15,15, nevents); // cm
     electron.vx = 0;
     electron.vy = 0;
     electron.vz = vertex;
@@ -105,17 +106,28 @@ void generate_kinematics(int nevents, LundParticle & electron, LundParticle & tr
     track.vz = vertex;
 }
 
+#include <filesystem>
 int main(int argc, const char * argv[]) {
     
     //const char * output_name = "lund_tobesimulated.dat";
     //std::ofstream ofs (output_name, std::ofstream::out);
-    int nevents = 1000;
-    int nfiles = 10;
+    if (argc < 1) {
+        printf("Please, provide an empty directory...\n");
+        return 0;
+    }
+    const char * output_dir = argv[1];
+    if (!(std::filesystem::exists(output_dir) && std::filesystem::is_directory(output_dir) && std::filesystem::is_empty(output_dir))) {
+        printf("Error: (%s) path does not exist or path is not a directory or directory is not empty.\n", output_dir);
+        return 0;
+    }
+    // total number of events = nevents*nfiles
+    int nevents = 2000;
+    int nfiles = 40;
     std::vector<std::ofstream> ofs;
     for (int i = 0; i < nfiles; i++) {
-        ofs.push_back(std::ofstream(TString::Format("./output-lund/lund_file_%0*d.dat", (int) floor(log10(nfiles))+1, i).Data(), std::ofstream::out));
+        ofs.push_back(std::ofstream(TString::Format("%s/lund_file_%0*d.dat", output_dir,(int) floor(log10(nfiles))+1, i).Data(), std::ofstream::out));
     }
-  
+    
     // Header
     LundHeader header;
     header.nbOfParticles = 2;
@@ -144,22 +156,22 @@ int main(int argc, const char * argv[]) {
     electron.vx = 0;
     electron.vy = 0;
     electron.vz = 0;
-    // deuteron
-    LundParticle deuteron;
-    deuteron.index = 2;
-    deuteron.lifetime = -1; // UD
-    deuteron.type = 1;
-    deuteron.ID = 1000010020;
-    deuteron.parent_index = 0;
-    deuteron.daughter_index = 0; // UD
-    deuteron.px = -0.24;
-    deuteron.py = 0;
-    deuteron.pz = 0.03;
-    deuteron.mass = 1.875;
-    deuteron.energy = sqrt(pow(deuteron.mass,2) + pow(deuteron.px,2) + pow(deuteron.py,2) + pow(deuteron.pz,2)); // UD
-    deuteron.vx = 0;
-    deuteron.vy = 0;
-    deuteron.vz = 0;
+    // track
+    LundParticle track;
+    track.index = 2;
+    track.lifetime = -1; // UD
+    track.type = 1;
+    track.ID = 1000010020; //   this is a deuteron
+    track.parent_index = 0;
+    track.daughter_index = 0; // UD
+    track.px = -0.24;
+    track.py = 0;
+    track.pz = 0.03;
+    track.mass = 1.875;
+    track.energy = sqrt(pow(track.mass,2) + pow(track.px,2) + pow(track.py,2) + pow(track.pz,2)); // UD
+    track.vx = 0;
+    track.vy = 0;
+    track.vz = 0;
     
     // Histograms
     TH1D* H1_electron_p = new TH1D("electron_p", "p; p (GeV); count", 100, 2.17, 2.20);
@@ -175,15 +187,15 @@ int main(int argc, const char * argv[]) {
         // Loop over number of events
         for (int i = 0; i <= nevents; i++) {
             // Update kinematics
-            generate_kinematics(nfiles*nevents, electron, deuteron);
+            generate_kinematics(nfiles*nevents, electron, track);
             H1_electron_p->Fill(electron.p);
             H1_electron_theta->Fill(electron.theta*180/M_PI);
             H1_electron_phi->Fill(electron.phi*180/M_PI);
             H1_electron_vz->Fill(electron.vz);
-            H1_track_p->Fill(deuteron.p);
-            H1_track_theta->Fill(deuteron.theta*180/M_PI);
-            H1_track_phi->Fill(deuteron.phi*180/M_PI);
-            H1_track_vz->Fill(deuteron.vz);
+            H1_track_p->Fill(track.p);
+            H1_track_theta->Fill(track.theta*180/M_PI);
+            H1_track_phi->Fill(track.phi*180/M_PI);
+            H1_track_vz->Fill(track.vz);
             // Ici l'ordre est très important !!!
             // Print Header
             ofs[num] << header.nbOfParticles << " ";
@@ -211,21 +223,21 @@ int main(int argc, const char * argv[]) {
             ofs[num] << electron.vx << " ";
             ofs[num] << electron.vy << " ";
             ofs[num] << electron.vz << std::endl;
-            // Print deuteron
-            ofs[num] << deuteron.index << " ";
-            ofs[num] << deuteron.lifetime << " "; // UD
-            ofs[num] << deuteron.type << " ";
-            ofs[num] << std::setw(10) << deuteron.ID << " ";
-            ofs[num] << deuteron.parent_index << " ";
-            ofs[num] << deuteron.daughter_index << " "; // UD
-            ofs[num] << deuteron.px << " ";
-            ofs[num] << deuteron.py << " ";
-            ofs[num] << deuteron.pz << " ";
-            ofs[num] << deuteron.energy << " "; // UD
-            ofs[num] << deuteron.mass << " "; // UD
-            ofs[num] << deuteron.vx << " ";
-            ofs[num] << deuteron.vy << " ";
-            ofs[num] << deuteron.vz << std::endl;
+            // Print track
+            ofs[num] << track.index << " ";
+            ofs[num] << track.lifetime << " "; // UD
+            ofs[num] << track.type << " ";
+            ofs[num] << std::setw(10) << track.ID << " ";
+            ofs[num] << track.parent_index << " ";
+            ofs[num] << track.daughter_index << " "; // UD
+            ofs[num] << track.px << " ";
+            ofs[num] << track.py << " ";
+            ofs[num] << track.pz << " ";
+            ofs[num] << track.energy << " "; // UD
+            ofs[num] << track.mass << " "; // UD
+            ofs[num] << track.vx << " ";
+            ofs[num] << track.vy << " ";
+            ofs[num] << track.vz << std::endl;
         }
     } 
     // save in root file
@@ -234,10 +246,10 @@ int main(int argc, const char * argv[]) {
     H1_electron_theta->Write("electron_theta");
     H1_electron_phi->Write("electron_phi");
     H1_electron_vz->Write("electron_vz");
-    H1_track_p->Write("deuteron_p");
-    H1_track_theta->Write("deuteron_theta");
-    H1_track_phi->Write("deuteron_phi");
-    H1_track_vz->Write("deuteron_vz");
+    H1_track_p->Write("track_p");
+    H1_track_theta->Write("track_theta");
+    H1_track_phi->Write("track_phi");
+    H1_track_vz->Write("track_vz");
     f->Close();
     printf("File created : %s\n", "./output/lund_file.root");
     
