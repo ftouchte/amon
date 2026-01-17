@@ -33,6 +33,7 @@
 #include "TArrow.h"
 
 #include "futils.h"
+#include "fOptions.h"
 
 // utilities
 void progressBar(int state, int bar_length = 100);
@@ -65,22 +66,24 @@ int main(int argc, char const *argv[]) {
     // record start time
     auto start = std::chrono::high_resolution_clock::now();
 
-    std::string filename, output;
+    fOptions OPT({"-i", "-o", "-v"});
+    OPT.LoadOptions(argc, argv);
+    OPT.Show();
 
-    if (argc < 2) {
-        printf("Please provide 1 file name and 1 output name...\n");
-        // return error code
+    std::string filename = OPT.GetValue("-i");
+    std::string output = OPT.GetValue("-o");
+    std::string version = OPT.GetValue("-v");
+
+    if (version.compare("") != 0) {
+        filename = std::string("/home/touchte-codjo/Desktop/hipofiles/kalman-filter/rec-data-r22712-v") + version + ".hipo"; 
+        output = std::string("./output/kfmon_data_r22712_v") + version + ".root";
+    }
+
+    if (filename.compare("") == 0 && output.compare("") == 0 && version.compare("") == 0) {
+        printf("Please provide options...\n");
         return 1;
     }
-    
-    // set filename and initialise reader
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-22712.hipo";
-    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-realrun-22712-p0v6.hipo";
 
-    filename = argv[1];
-    output = argv[2];
-
-    //const char * output = "./output/kfmon_data.root";
     printf("> filename : %s\n", filename.c_str());
     hipo::reader  reader(filename.c_str());
     hipo::dictionary factory;
