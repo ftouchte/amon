@@ -32,12 +32,10 @@
 #include "THStack.h"
 #include "TArrow.h"
 
+#include "kfmon_data.h"
 #include "futils.h"
 #include "fOptions.h"
 
-// utilities
-void progressBar(int state, int bar_length = 100);
-//////////////////////////////
 
 // define some constants
 const double beam_energy = 2.23951; // incident energy if the electron, GeV
@@ -48,31 +46,19 @@ const double deuteron_mass = 1.875; // energy mass of Deuterium, GeV
 
 const double delta_phi_width = 45;
 
-struct Particle_kinematics {
-    int row = -1;
-    double px = -999, py = -999, pz = -999;
-    double vz = -999;
-    double p = -999, theta = -999, phi = -999;
-};
-
-TCanvas* superimpose_histograms(TH1D* h_all, TH1D* h_sel, const char * name);
-TCanvas* display_elastics_cuts(TH2D* h, const char * name);
-TCanvas* fit_histogram(TH1D* h, const char * name);
-void fill_histogram(std::vector<TH1D*> histos, std::vector<const char *> entries, hipo::bank & bank, std::vector<int> & rows);
-void count_atof_matching(std::string filename, TFile * rootFile);
-
 // main routine
 int main(int argc, char const *argv[]) {
     // record start time
     auto start = std::chrono::high_resolution_clock::now();
 
-    fOptions OPT({"-i", "-o", "-v"});
+    fOptions OPT({"-i", "-o", "-v", "-simu"});
     OPT.LoadOptions(argc, argv);
     OPT.Show();
 
     std::string filename = OPT.GetValue("-i");
     std::string output = OPT.GetValue("-o");
     std::string version = OPT.GetValue("-v");
+    bool IsMC = OPT.GetValue("-simu").compare("true") == 0;
 
     if (version.compare("") != 0) {
         filename = std::string("/home/touchte-codjo/Desktop/hipofiles/kalman-filter/rec-data-r22712-v") + version + ".hipo"; 
@@ -99,7 +85,7 @@ int main(int argc, char const *argv[]) {
     long unsigned int nevents =0;
 
     // example of 1D histograms
-    //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 100, 0, 250); 
+    //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 50, 0, 250); 
     // electrons
     TH1D* H1_W2_all = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 50, 2, 7);
     TH1D* H1_W2_sel = new TH1D("W2_sel", "W^{2}; W^{2} (GeV^{2}); count", 50, 2, 7);
@@ -113,21 +99,21 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -360, 360); 
     TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180); 
     TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180);
-    TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT_{e}; pT (MeV); #Sigma ADC", 50, 190, 400, 100, 0, 15000);
-    TH2D* H2_corr_pTt_Sadc = new TH2D("corr_pTt_Sadc", "#Sigma ADC vs pT_{t}; pT (MeV); #Sigma ADC", 50, 80, 600, 100, 0, 15000);
+    TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT_{e}; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
+    TH2D* H2_corr_pTt_Sadc = new TH2D("corr_pTt_Sadc", "#Sigma ADC vs pT_{t}; pT (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
     // correlations electron vs ahdc_track
     std::vector<TH2D*> H2_corr_phi;
-        H2_corr_phi.push_back(new TH2D("corr_phi_all", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 100, 0, 361)); // all elastics
-        H2_corr_phi.push_back(new TH2D("corr_phi_deuteron", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 100, 0, 361)); // deuteron
-        H2_corr_phi.push_back(new TH2D("corr_phi_proton", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 100, 0, 361)); // proton
+        H2_corr_phi.push_back(new TH2D("corr_phi_all", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // all elastics
+        H2_corr_phi.push_back(new TH2D("corr_phi_deuteron", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // deuteron
+        H2_corr_phi.push_back(new TH2D("corr_phi_proton", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // proton
     std::vector<TH2D*> H2_corr_pT;
-        H2_corr_pT.push_back(new TH2D("corr_pT_all", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 100, 80, 400)); // all elastics
-        H2_corr_pT.push_back(new TH2D("corr_pT_deuteron", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 100, 80, 400)); // deuteron
-        H2_corr_pT.push_back(new TH2D("corr_pT_proton", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 100, 80, 400)); // proton
+        H2_corr_pT.push_back(new TH2D("corr_pT_all", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 50, 80, 400)); // all elastics
+        H2_corr_pT.push_back(new TH2D("corr_pT_deuteron", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 50, 80, 400)); // deuteron
+        H2_corr_pT.push_back(new TH2D("corr_pT_proton", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 50, 80, 400)); // proton
     std::vector<TH2D*> H2_corr_vz;
-        H2_corr_vz.push_back(new TH2D("corr_vz_all", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 100, -20, 16)); // all elastics
-        H2_corr_vz.push_back(new TH2D("corr_vz_deuteron", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 100, -20, 16)); // deuteron
-        H2_corr_vz.push_back(new TH2D("corr_vz_proton", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 100, -20, 16)); // proton
+        H2_corr_vz.push_back(new TH2D("corr_vz_all", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // all elastics
+        H2_corr_vz.push_back(new TH2D("corr_vz_deuteron", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // deuteron
+        H2_corr_vz.push_back(new TH2D("corr_vz_proton", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // proton
     std::vector<TH1D*> H1_delta_vz;
         H1_delta_vz.push_back(new TH1D("delta_vz_all", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 50, -30, 30)); // all elastics
         H1_delta_vz.push_back(new TH1D("delta_vz_deuteron", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 50, -30, 30)); // deuteron
@@ -178,6 +164,14 @@ int main(int argc, char const *argv[]) {
         H1_diff_phi.push_back(new TH1D("diff_phi_all", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
         H1_diff_phi.push_back(new TH1D("diff_phi_deuteron", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
         H1_diff_phi.push_back(new TH1D("diff_phi_proton", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
+    /*std::vector<TH2D*> H2_corr_residual_time;
+        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // all elastics
+        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // deuteron
+        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // proton
+    std::vector<TH2D*> H2_corr_residual_ADC;
+        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // all elastics
+        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // deuteron
+        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // proton*/
 
     // example of 2D histograms
     
@@ -296,7 +290,10 @@ int main(int argc, char const *argv[]) {
                 std::vector<int> hitRows;
                 for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
                     if (hitBank.getInt("trackid", hitRow) == trackid) {
-                            hitRows.push_back(hitRow);
+                        hitRows.push_back(hitRow);
+                        /*int adcRow = hitBank.get("id", hitRow)-1;
+                        H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
+                        H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));*/
                     }
                 }
                 
@@ -455,8 +452,12 @@ int main(int argc, char const *argv[]) {
     //H1_mctime->Write("time");
     // ou H1_time->Write(H1_time->GetName());
 
-    // small atof study
+
+    ////////////////////////////////////////////
+    /// Others studies
+    ////////////////////////////////////////////
     count_atof_matching(filename, f);
+    if (IsMC) run_simulation(filename, f);
     // close file
     f->Close();
     printf("File created : %s\n", output.c_str());
@@ -633,6 +634,7 @@ void fill_histogram(std::vector<TH1D*> histos, std::vector<const char *> entries
 }
 
 void count_atof_matching(std::string filename, TFile * rootFile) {
+    printf("\n");
     printf("////////////////////////////////////////\n");
     printf("/// Count ATOF matching\n");
     printf("////////////////////////////////////////\n");
@@ -701,28 +703,188 @@ void count_atof_matching(std::string filename, TFile * rootFile) {
     atof_dir->cd();
     H1_atof_bar_time->Write("bar_time");
     H1_atof_wedge_time->Write("wedge_time");
-    printf("      Number of events : %ld\n", nevents);
-    printf("    Number of kftracks : %ld   ===>  %lf %%\n", ntracks, 100.0*ntracks/nevents);
-    printf("Number of atof matches : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
+    printf("   Number of events       : %ld\n", nevents);
+    printf("   Number of kftracks     : %ld   ===>  %lf %%\n", ntracks, 100.0*ntracks/nevents);
+    printf("   Number of atof matches : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
 }
 
-#include <filesystem>
-bool read_options(int argc, const char * argv, std::string filename, std::string outname) {
-    if (argc < 2) {
-        printf("Please provide 1 file name and 1 output name\n");
-        return false;
-    }
-    /*if (std::to_string(argv[1]).compare("-f") == 0) {
-        // require that the next argument should be a filename
-        filename = argv[2];
-        if (!std::filesystem::is_regular_file(filename.c_str())) {
-            printf("%s does not exist.\n", filename.c_str());
-            return false;
-        }
-        else {
-            if ()
-        }
+void run_simulation(std::string filename, TFile * rootFile) {
+    printf("\n");
+    printf("////////////////////////////////////////\n");
+    printf("/// Special routine for simulation\n");
+    printf("////////////////////////////////////////\n");
+    hipo::reader  reader(filename.c_str());
+    hipo::dictionary factory;
+    reader.readDictionary(factory);
 
-    }*/
-   return true;
+    // bank definitions
+    hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
+    hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+    hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+    hipo::bank  mcBank(factory.getSchema("MC::Particle"));
+    hipo::bank  trueBank(factory.getSchema("MC::True"));
+    hipo::bank  runConfigBank(factory.getSchema("RUN::config"));
+    hipo::bank  recBank(factory.getSchema("REC::Particle"));
+    hipo::event event;
+    long unsigned int nevents =0;
+    //long unsigned int nMCtracks =0;
+    //long unsigned int nKFtracks =0;
+
+    // Histograms (AHDC track)
+    TH2D* H2_ahdc_corr_phi = new TH2D("ahdc_corr_phi", "#phi_{mc} vs #phi_{track}; #phi_{track} (deg); #phi_{mc} (deg)", 50, 0, 361, 50, 0, 361); 
+    TH2D* H2_ahdc_corr_theta = new TH2D("ahdc_corr_theta", "#theta_{mc} vs #theta_{track}; #theta_{track} (deg); #theta_{mc} (deg)", 50, 0, 181, 50, 50, 130); 
+    TH2D* H2_ahdc_corr_pT = new TH2D("ahdc_corr_pT", "pT_{mc} vs pT_{track}; pT_{track} (MeV); pT_{mc} (MeV)", 50, 150, 310, 50, 150, 310); 
+    TH2D* H2_ahdc_corr_vz = new TH2D("ahdc_corr_vz", "vz_{mc} vs vz_{track}; vz_{track} (cm); vz_{mc} (cm)", 50, -16, 16, 50, -16, 16); 
+    TH1D* H1_ahdc_delta_phi = new TH1D("ahdc_delta_phi", "#Delta #phi = #phi_{mc} - #phi_{track}; #Delta #phi (deg); #count", 50, -12, 12);
+    TH1D* H1_ahdc_delta_vz = new TH1D("ahdc_delta_vz", "#Delta vz = vz_{mc} - vz_{track}; #Delta vz (cm); #count", 50, -10, 10);
+    TH1D* H1_ahdc_residual = new TH1D("ahdc_residual", "residual; residual (mm); #count", 50, -2, 2);
+    TH1D* H1_ahdc_time = new TH1D("ahdc_time", "time; time (ns); #count", 50, 0, 250);
+    TH1D* H1_ahdc_distance = new TH1D("ahdc_distance", "distance; distance (mm); #count", 50, 0, 4);
+    TH1I* H1_ahdc_wfType = new TH1I("ahdc_wfType", "wfType; wfType; #count", 7, 0, 7);
+    // Histograms (CLAS electron)
+    TH2D* H2_clas_corr_phi = new TH2D("clas_corr_phi", "#phi_{mc} vs #phi_{e}; #phi_{e} (deg); #phi_{mc} (deg)", 50, 0, 361, 50, 0, 361); 
+    TH2D* H2_clas_corr_theta = new TH2D("clas_corr_theta", "#theta_{mc} vs #theta_{e}; #theta_{e} (deg); #theta_{mc} (deg)", 50, 0, 181, 50, 50, 130); 
+    TH2D* H2_clas_corr_pT = new TH2D("clas_corr_pT", "pT_{mc} vs pT_{e}; pT_{e} (MeV); pT_{mc} (MeV)", 50, 150, 310, 50, 150, 310); 
+    TH2D* H2_clas_corr_vz = new TH2D("clas_corr_vz", "vz_{mc} vs vz_{e}; vz_{e} (cm); vz_{mc} (cm)", 50, -16, 16, 50, -16, 16); 
+    TH1D* H1_clas_delta_phi = new TH1D("clas_delta_phi", "#Delta #phi = #phi_{mc} - #phi_{e}; #Delta #phi (deg); #count", 50, -12, 12);
+    TH1D* H1_clas_delta_vz = new TH1D("clas_delta_vz", "#Delta vz = vz_{mc} - vz_{e}; #Delta vz (cm); #count", 50, -10, 10);
+
+    while( reader.next()){
+        nevents++;
+        // display progress Bar
+        if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
+            progressBar(100.0*nevents/reader.getEntries());
+        }
+        // load bank content for this event
+        reader.read(event);
+        event.getStructure(adcBank);
+        event.getStructure(wfBank);
+        event.getStructure(trackBank);
+        event.getStructure(hitBank);
+        event.getStructure(mcBank);
+        event.getStructure(recBank);
+        event.getStructure(trueBank);
+        event.getStructure(runConfigBank);
+
+        { // AHDC::kftrack Histograms
+            if (trackBank.getRows() < 1) continue;
+            // Find deuteron row
+            int mc_deuteron_row = -1;
+            int mcRow = 0;
+            while (mc_deuteron_row < 0 && mcRow < mcBank.getRows()) {
+                int pid = mcBank.get("pid", mcRow);
+                // in the current state of simulation, pid = 45 to deuteron in MC::Particle bank
+                // in place of 1000010020
+                if (pid == 45) mc_deuteron_row = mcRow;
+                mcRow++;
+            }
+            // mc deuteron
+            double mc_vz = mcBank.get("vz", mc_deuteron_row); // cm
+            double mc_px = mcBank.get("px", mc_deuteron_row)*1000; // GeV to MeV
+            double mc_py = mcBank.get("py", mc_deuteron_row)*1000;
+            double mc_pz = mcBank.get("pz", mc_deuteron_row)*1000;
+            double mc_pT = sqrt(pow(mc_px, 2) + pow(mc_py, 2));
+            double mc_p;
+            double mc_theta;
+            double mc_phi;
+            futils::cart2polarDEG(mc_px,mc_py,mc_pz,mc_p,mc_theta,mc_phi);
+            // track
+            double track_vz = trackBank.get("z", 0)*0.1; // mm to cm
+            double track_px = trackBank.get("px", 0); // MeV
+            double track_py = trackBank.get("py", 0);
+            double track_pz = trackBank.get("pz", 0);
+            double track_pT = sqrt(pow(track_px, 2) + pow(track_py, 2));
+            double track_p;
+            double track_theta;
+            double track_phi;
+            futils::cart2polarDEG(track_px,track_py,track_pz,track_p,track_theta,track_phi);
+            // Fill historgrams
+            H2_ahdc_corr_phi->Fill(track_phi, mc_phi);
+            H2_ahdc_corr_theta->Fill(track_theta, mc_theta);
+            H2_ahdc_corr_pT->Fill(track_pT, mc_pT);
+            H2_ahdc_corr_vz->Fill(track_vz, mc_vz);
+            H1_ahdc_delta_phi->Fill(mc_phi-track_phi);
+            H1_ahdc_delta_vz->Fill(mc_vz-track_vz);
+            for (int i = 0; i < hitBank.getRows(); i++) {
+                if ((int) hitBank.get("trackid", i) == (int) trackBank.get("trackid", 0)) {
+                    H1_ahdc_residual->Fill(hitBank.get("residual", i));
+                    H1_ahdc_time->Fill(hitBank.get("time", i));
+                    H1_ahdc_distance->Fill(hitBank.get("doca", i));
+                    H1_ahdc_wfType->Fill(adcBank.get("wfType", hitBank.get("id", i) - 1));
+                }
+            }
+        }
+        { // CLAS electron Histograms
+            if (recBank.getRows() < 1) continue;
+            // Find mc electron row
+            int mc_electron_row = -1;
+            int mcRow = 0;
+            while (mc_electron_row < 0 && mcRow < mcBank.getRows()) {
+                int pid = mcBank.get("pid", mcRow);
+                if (pid == 11) mc_electron_row = mcRow;
+                mcRow++;
+            }
+            // mc electron
+            double mc_vz = mcBank.get("vz", mc_electron_row); // cm
+            double mc_px = mcBank.get("px", mc_electron_row)*1000; // GeV to MeV
+            double mc_py = mcBank.get("py", mc_electron_row)*1000;
+            double mc_pz = mcBank.get("pz", mc_electron_row)*1000;
+            double mc_pT = sqrt(pow(mc_px, 2) + pow(mc_py, 2));
+            double mc_p;
+            double mc_theta;
+            double mc_phi;
+            futils::cart2polarDEG(mc_px,mc_py,mc_pz,mc_p,mc_theta,mc_phi);
+            // Find recon electron row
+            int rec_electron_row = -1;
+            int recRow = 0;
+            while (rec_electron_row < 0 && recRow < recBank.getRows()) {
+                int pid = recBank.get("pid", recRow);
+                if (pid == 11) rec_electron_row = recRow;
+                recRow++;
+            }
+            // recon
+            double rec_vz = recBank.get("vz",  rec_electron_row); // cm
+            double rec_px = recBank.get("px", rec_electron_row)*1000; // MeV
+            double rec_py = recBank.get("py", rec_electron_row)*1000;
+            double rec_pz = recBank.get("pz", rec_electron_row)*1000;
+            double rec_pT = sqrt(pow(rec_px, 2) + pow(rec_py, 2));
+            double rec_p;
+            double rec_theta;
+            double rec_phi;
+            futils::cart2polarDEG(rec_px,rec_py,rec_pz,rec_p,rec_theta,rec_phi);
+            // Fill historgrams
+            H2_clas_corr_phi->Fill(rec_phi, mc_phi);
+            H2_clas_corr_theta->Fill(rec_theta, mc_theta);
+            H2_clas_corr_pT->Fill(rec_pT, mc_pT);
+            H2_clas_corr_vz->Fill(rec_vz, mc_vz);
+            H1_clas_delta_phi->Fill(mc_phi-rec_phi);
+            H1_clas_delta_vz->Fill(mc_vz-rec_vz);
+        }
+    } // end loop over events
+    
+    // output
+    TDirectory *simu_dir = rootFile->mkdir("only_simu");
+        // ahdc
+    TDirectory *ahdc_dir = simu_dir->mkdir("ahdc");
+    ahdc_dir->cd();
+    H2_ahdc_corr_phi->Write("corr_phi");
+    H2_ahdc_corr_theta->Write("corr_theta");
+    H2_ahdc_corr_pT->Write("corr_pT");
+    H2_ahdc_corr_vz->Write("corr_vz");
+    H1_ahdc_delta_phi->Write("delta_phi");
+    H1_ahdc_delta_vz->Write("delta_vz");
+    H1_ahdc_residual->Write("residual");
+    H1_ahdc_time->Write("time");
+    H1_ahdc_distance->Write("distance");
+    H1_ahdc_wfType->Write("wfType");
+        // clas
+    TDirectory *clas_dir = simu_dir->mkdir("clas");
+    clas_dir->cd();
+    H2_clas_corr_phi->Write("corr_phi");
+    H2_clas_corr_theta->Write("corr_theta");
+    H2_clas_corr_pT->Write("corr_pT");
+    H2_clas_corr_vz->Write("corr_vz");
+    H1_clas_delta_phi->Write("delta_phi");
+    H1_clas_delta_vz->Write("delta_vz");
 }
