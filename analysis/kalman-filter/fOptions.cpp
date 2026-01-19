@@ -1,3 +1,10 @@
+/***********************************************
+ * Deal with options in C++
+ *
+ * @author Felix Touchte Codjo
+ * @date January 17, 2026
+ * ********************************************/
+
 #include "fOptions.h"
 #include <cstdio>
 
