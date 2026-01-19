@@ -21,7 +21,6 @@ public:
     bool IsOption(std::string str);
     std::string GetValue(std::string str);
     void Show();
-    void RunTest(int argc, const char * argv[]);
 };
 
 #endif
