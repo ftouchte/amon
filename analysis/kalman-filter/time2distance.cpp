@@ -107,7 +107,7 @@ int main(int argc, char const *argv[]) {
                 if (hitBank.getInt("trackid", h) != trackBank.getInt("trackid", t)) { 
                     continue;
                 }
-                int i = hitBank.getInt("id", h) - 1;
+                //int i = hitBank.getInt("id", h) - 1;
                 //int sector = wfBank.getShort("sector", i);
                 //int layer = wfBank.getShort("layer", i);
                 //int component = wfBank.getShort("component", i);
@@ -152,6 +152,7 @@ int main(int argc, char const *argv[]) {
         TCanvas* canvas3 = new TCanvas("c3", "c3_proj");
         canvas3->cd();
         TH1D* H1_projDistance = H2_time2distance_filtered->ProjectionY(TString::Format("_py_%d", i).Data(), i*proj_nbins, (i+1)*proj_nbins);
+
         H1_projDistance->Fit("gaus");
         projection_dir->cd();
         H1_projDistance->Write(TString::Format("_py_%d", i).Data());
