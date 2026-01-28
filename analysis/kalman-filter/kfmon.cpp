@@ -48,12 +48,12 @@ void computeSphericalVariance(double mu_x, double mu_y, double mu_z, double var_
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-   const char * output = "./output/kfmon-v43.root";
+   const char * output = "./output/kfmon-v33.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v43.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v33.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -89,10 +89,13 @@ int main(int argc, char const *argv[]) {
                     zpos = 0;
                     wire->set_z(zpos);
                     gr_ahdcView->SetPoint(nwires, wire->x, wire->y);
+                    // test
+                    printf("(%lf, %lf) , ", wire->x, wire->y);
                 }
             }
         }
     }
+    printf("\n");
     gr_ahdcView->SetTitle(TString::Format("AHDC XY view at z = %.2lf; x(mm); y(mm)", zpos).Data());
     gr_ahdcView->SetMarkerStyle(4);
     gr_ahdcView->SetMarkerColorAlpha(kBlue-10, 0.3);
