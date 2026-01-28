@@ -31,6 +31,7 @@
 #include "TText.h"
 #include "THStack.h"
 #include "TArrow.h"
+#include "TLine.h"
 
 #include "kfmon_data.h"
 #include "futils.h"
@@ -63,6 +64,10 @@ int main(int argc, char const *argv[]) {
     if (version.compare("") != 0) {
         filename = std::string("/home/touchte-codjo/Desktop/hipofiles/kalman-filter/rec-data-r22712-v") + version + ".hipo"; 
         output = std::string("./output/kfmon_data_r22712_v") + version + ".root";
+        if (IsMC) {
+            filename = std::string("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v") + version + ".hipo"; 
+            output = std::string("./output/kfmon_data_rsimu_v") + version + ".root";
+        }
     }
 
     if (filename.compare("") == 0 && output.compare("") == 0 && version.compare("") == 0) {
@@ -101,6 +106,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180);
     TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT_{e}; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
     TH2D* H2_corr_pTt_Sadc = new TH2D("corr_pTt_Sadc", "#Sigma ADC vs pT_{t}; pT (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
+    TH2D* H2_corr_time_adc = new TH2D("corr_time_adc", "time vs ADC; ADC; time", 50, 0, 3700, 50, 0, 250);
     // correlations electron vs ahdc_track
     std::vector<TH2D*> H2_corr_phi;
         H2_corr_phi.push_back(new TH2D("corr_phi_all", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // all elastics
@@ -128,29 +134,37 @@ int main(int argc, char const *argv[]) {
         H1_track_pT.push_back(new TH1D("track_pT_deuteron", "pT_{t} ; pT_{t} (MeV); count", 50, 0, 1000)); // deuteron
         H1_track_pT.push_back(new TH1D("track_pT_proton", "pT_{t} ; pT_{t} (MeV); count", 50, 0, 1000)); // proton
     std::vector<TH1D*> H1_track_theta;
-        H1_track_theta.push_back(new TH1D("track_theta_all", "#theta_{t} ; #theta_{t} (MeV); count", 50, 0, 180)); // all elastics
-        H1_track_theta.push_back(new TH1D("track_theta_deuteron", "#theta_{t} ; #theta_{t} (MeV); count", 50, 0, 180)); // deuteron
-        H1_track_theta.push_back(new TH1D("track_theta_proton", "#theta_{t} ; #theta_{t} (MeV); count", 50, 0, 180)); // proton
+        H1_track_theta.push_back(new TH1D("track_theta_all", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // all elastics
+        H1_track_theta.push_back(new TH1D("track_theta_deuteron", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // deuteron
+        H1_track_theta.push_back(new TH1D("track_theta_proton", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // proton
     std::vector<TH1D*> H1_track_phi;
-        H1_track_phi.push_back(new TH1D("track_phi_all", "#phi_{t} ; #phi_{t} (MeV); count", 50, 0, 361)); // all elastics
-        H1_track_phi.push_back(new TH1D("track_phi_deuteron", "#phi_{t} ; #phi_{t} (MeV); count", 50, 0, 361)); // deuteron
-        H1_track_phi.push_back(new TH1D("track_phi_proton", "#phi_{t} ; #phi_{t} (MeV); count", 50, 0, 361)); // proton
+        H1_track_phi.push_back(new TH1D("track_phi_all", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // all elastics
+        H1_track_phi.push_back(new TH1D("track_phi_deuteron", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // deuteron
+        H1_track_phi.push_back(new TH1D("track_phi_proton", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // proton
     std::vector<TH1D*> H1_track_residual;
         H1_track_residual.push_back(new TH1D("track_residual_all", "residual ; residual (mm); count", 50, -3, 3)); // all elastics
         H1_track_residual.push_back(new TH1D("track_residual_deuteron", "residual ; residual (mm); count", 50, -3, 3)); // deuteron
         H1_track_residual.push_back(new TH1D("track_residual_proton", "residual ; residual (mm); count", 50, -3, 3)); // proton
+    std::vector<TH1D*> H1_track_residual_LR;
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_all", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // all elastics
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_deuteron", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // deuteron
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_proton", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // proton
+    std::vector<TH1D*> H1_track_chi2;
+        H1_track_chi2.push_back(new TH1D("track_chi2_all", "chi2 ; chi2; count", 50, 0, 5)); // all elastics
+        H1_track_chi2.push_back(new TH1D("track_chi2_deuteron", "chi2 ; chi2; count", 50, 0, 5)); // deuteron
+        H1_track_chi2.push_back(new TH1D("track_chi2_proton", "chi2 ; chi2; count", 50, 0, 5)); // proton
     std::vector<TH1D*> H1_electron_pT;
         H1_electron_pT.push_back(new TH1D("electron_pT_all", "pT_{e} ; pT_{e} (MeV); count", 50, 190, 400)); // all elastics
         H1_electron_pT.push_back(new TH1D("electron_pT_deuteron", "pT_{e} ; pT_{e} (MeV); count", 50, 190, 400)); // deuteron
         H1_electron_pT.push_back(new TH1D("electron_pT_proton", "pT_{e} ; pT_{e} (MeV); count", 50, 190, 400)); // proton
     std::vector<TH1D*> H1_electron_theta;
-        H1_electron_theta.push_back(new TH1D("electron_theta_all", "#theta_{e} ; #theta_{e} (MeV); count", 50, 0, 20)); // all elastics
-        H1_electron_theta.push_back(new TH1D("electron_theta_deuteron", "#theta_{e} ; #theta_{e} (MeV); count", 50, 0, 20)); // deuteron 
-        H1_electron_theta.push_back(new TH1D("electron_theta_proton", "#theta_{e} ; #theta_{e} (MeV); count", 50, 0, 20)); // proton
+        H1_electron_theta.push_back(new TH1D("electron_theta_all", "#theta_{e} ; #theta_{e} (deg); count", 50, 0, 20)); // all elastics
+        H1_electron_theta.push_back(new TH1D("electron_theta_deuteron", "#theta_{e} ; #theta_{e} (deg); count", 50, 0, 20)); // deuteron 
+        H1_electron_theta.push_back(new TH1D("electron_theta_proton", "#theta_{e} ; #theta_{e} (deg); count", 50, 0, 20)); // proton
     std::vector<TH1D*> H1_electron_phi;
-        H1_electron_phi.push_back(new TH1D("electron_phi_all", "#phi_{e} ; #phi_{e} (MeV); count", 50, 0, 361)); // all elastics
-        H1_electron_phi.push_back(new TH1D("electron_phi_deuteron", "#phi_{e} ; #phi_{e} (MeV); count", 50, 0, 361)); // deuteron
-        H1_electron_phi.push_back(new TH1D("electron_phi_proton", "#phi_{e} ; #phi_{e} (MeV); count", 50, 0, 361)); // proton
+        H1_electron_phi.push_back(new TH1D("electron_phi_all", "#phi_{e} ; #phi_{e} (deg); count", 50, 0, 361)); // all elastics
+        H1_electron_phi.push_back(new TH1D("electron_phi_deuteron", "#phi_{e} ; #phi_{e} (deg); count", 50, 0, 361)); // deuteron
+        H1_electron_phi.push_back(new TH1D("electron_phi_proton", "#phi_{e} ; #phi_{e} (deg); count", 50, 0, 361)); // proton
     // for elastics only, comparison to expected track kinematics given the scattered electron kinematics
     std::vector<TH1D*> H1_diff_pT;
         H1_diff_pT.push_back(new TH1D("diff_pT_all", "(track) pT_{recon} - pT_{expected} ; pT_{recon} - pT_{expected} (MeV); count", 50, -400, 400));
@@ -164,15 +178,42 @@ int main(int argc, char const *argv[]) {
         H1_diff_phi.push_back(new TH1D("diff_phi_all", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
         H1_diff_phi.push_back(new TH1D("diff_phi_deuteron", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
         H1_diff_phi.push_back(new TH1D("diff_phi_proton", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
-    /*std::vector<TH2D*> H2_corr_residual_time;
+    std::vector<TH2D*> H2_corr_residual_time;
         H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // all elastics
-        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // deuteron
-        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_all", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // proton
+        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_deuteron", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // deuteron
+        H2_corr_residual_time.push_back(new TH2D("corr_residual_time_proton", "residual vs time; time (ns); residual (mm)", 50, 0, 250, 50, -3, 3)); // proton
     std::vector<TH2D*> H2_corr_residual_ADC;
         H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // all elastics
-        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // deuteron
-        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_all", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // proton*/
-
+        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_deuteron", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // deuteron
+        H2_corr_residual_ADC.push_back(new TH2D("corr_residual_ADC_proton", "residual vs ADC; ADC; residual (mm)", 50, 0, 3700, 50, -3, 3)); // proton
+    std::vector<TH2D*> H2_corr_residual_vz;
+        H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_all", "residual vs vz; vz (cm); residual (mm)", 50, -25, 20, 50, -3, 3)); // all elastics
+        H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_deuteron", "residual vs vz (cm); vz; residual (mm)", 50, -25, 20, 50, -3, 3)); // deuteron
+        H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_proton", "residual vs vz; vz (cm); residual (mm)", 50, -25, 30, 20, -3, 3)); // proton
+    std::vector<TH1D*> H1_residual_per_slayer;
+        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_1", "residual per super layer 1; residual (mm); count", 50, -3, 3));
+        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_2", "residual per super layer 2; residual (mm); count", 50, -3, 3));
+        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_3", "residual per super layer 3; residual (mm); count", 50, -3, 3));
+        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_4", "residual per super layer 4; residual (mm); count", 50, -3, 3));
+        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_5", "residual per super layer 5; residual (mm); count", 50, -3, 3));
+    std::vector<TH1D*> H1_residual_LR_per_slayer;
+        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_1", "residual_LR per super layer 1; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_2", "residual_LR per super layer 2; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_3", "residual_LR per super layer 3; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_4", "residual_LR per super layer 4; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_5", "residual_LR per super layer 5; residual_LR (mm); count", 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_per_slayer_vz;
+        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_1", "residual per super layer 1; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_2", "residual per super layer 2; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_3", "residual per super layer 3; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_4", "residual per super layer 4; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_5", "residual per super layer 5; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_LR_per_slayer_vz;
+        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_1", "residual_LR per super layer 1; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_2", "residual_LR per super layer 2; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_3", "residual_LR per super layer 3; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_4", "residual_LR per super layer 4; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_5", "residual_LR per super layer 5; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
     // example of 2D histograms
     
     /////////////////////////
@@ -287,21 +328,27 @@ int main(int argc, char const *argv[]) {
                 H2_corr_pTt_Sadc->Fill(pTt,sum_adc);
                 // select the hits of this track
                 int trackid = trackBank.getInt("trackid", ahdc_track.row);
-                std::vector<int> hitRows;
-                for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
-                    if (hitBank.getInt("trackid", hitRow) == trackid) {
-                        hitRows.push_back(hitRow);
-                        /*int adcRow = hitBank.get("id", hitRow)-1;
-                        H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
-                        H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));*/
-                    }
-                }
                 
-
                 //////////////////
                 // all
                 //////////////////
-                fill_histogram({H1_track_residual[0]}, {"residual"}, hitBank, hitRows);
+                // residuals
+                for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                    if (hitBank.getInt("trackid", hitRow) == trackid) {
+                        int adcRow = hitBank.get("id", hitRow)-1;
+                        H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
+                        H1_track_residual_LR[0]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                        H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                        H2_corr_residual_time[0]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                        H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
+                        H2_corr_time_adc->Fill(adcBank.get("ADC", adcRow), hitBank.get("time", hitRow));
+                        H1_residual_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("residual", hitRow));
+                        H1_residual_LR_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                        H2_corr_residual_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("residual", hitRow));
+                        H2_corr_residual_LR_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("timeOverThreshold", hitRow));
+                    }
+                }
+                H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
                 H2_corr_phi[0]->Fill(electron.phi, ahdc_track.phi);
                 H2_corr_pT[0]->Fill(pTe, pTt); // Mev
                 H2_corr_vz[0]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
@@ -321,7 +368,18 @@ int main(int argc, char const *argv[]) {
                 // deuteron cut
                 //////////////////
                 if (pTe > 200 && pTe < 300 && sum_adc > 5000 && sum_adc < 14000) {
-                    fill_histogram({H1_track_residual[1]}, {"residual"}, hitBank, hitRows);
+                    // residuals
+                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                        if (hitBank.getInt("trackid", hitRow) == trackid) {
+                            int adcRow = hitBank.get("id", hitRow)-1;
+                            H1_track_residual[1]->Fill(hitBank.get("residual", hitRow));
+                            H1_track_residual_LR[1]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                            H2_corr_residual_ADC[1]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_time[1]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                        }
+                    }
+                    H1_track_chi2[1]->Fill(trackBank.get("chi2", ahdc_track.row));
                     // 2D
                     H2_corr_phi[1]->Fill(electron.phi, ahdc_track.phi);
                     H2_corr_pT[1]->Fill(pTe, pTt); // Mev
@@ -344,7 +402,18 @@ int main(int argc, char const *argv[]) {
                 // proton cut
                 //////////////////
                 if (pTe > 200 && pTe < 300 && sum_adc > 1000 && sum_adc < 4500) {
-                    fill_histogram({H1_track_residual[2]}, {"residual"}, hitBank, hitRows);
+                    // residuals
+                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                        if (hitBank.getInt("trackid", hitRow) == trackid) {
+                            int adcRow = hitBank.get("id", hitRow)-1;
+                            H1_track_residual[2]->Fill(hitBank.get("residual", hitRow));
+                            H1_track_residual_LR[2]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                            H2_corr_residual_ADC[2]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_time[2]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                        }
+                    }
+                    H1_track_chi2[2]->Fill(trackBank.get("chi2", ahdc_track.row));
                     // 2D
                     H2_corr_phi[2]->Fill(electron.phi, ahdc_track.phi);
                     H2_corr_pT[2]->Fill(pTe, pTt); // Mev
@@ -400,8 +469,37 @@ int main(int argc, char const *argv[]) {
     H1_diff_pT[0]->Write("h1_diff_pT");
     H1_diff_theta[0]->Write("h1_diff_theta");
     H1_diff_phi[0]->Write("h1_diff_phi");
-    //H1_track_residual[0]->Write("residual");
     TCanvas* c_residual_0 = fit_histogram(H1_track_residual[0], "canvas_residual_0"); c_residual_0->Write("residual");
+    H1_track_residual_LR[0]->Write("residual_LR");
+    //H1_residual_per_slayer[0]->Write("residual_slayer_1");
+    for (auto h: H1_residual_per_slayer) {
+        h->Write(h->GetName());
+    }
+    for (auto h: H1_residual_LR_per_slayer) {
+        h->Write(h->GetName());
+    }
+    for (auto h: H2_corr_residual_per_slayer_vz) {
+        h->Write(h->GetName());
+    }
+    for (auto h: H2_corr_residual_LR_per_slayer_vz) {
+        h->Write(h->GetName());
+    }
+    H1_track_chi2[0]->Write("chi2");
+    H2_corr_residual_ADC[0]->Write("corr_residual_ADC");
+    H2_corr_residual_time[0]->Write("corr_residual_time");
+    H2_corr_residual_vz[0]->Write("corr_residual_vz");
+    
+    TDirectory *dir_residual_adc_proj = all_dir->mkdir("residual_adc_proj");
+    std::pair<TCanvas*, TGraph*> res_residual_ADC = projectionY(H2_corr_residual_ADC[0], 2, "residual_ADC", false, dir_residual_adc_proj);
+    all_dir->cd();
+    TDirectory *dir_residual_time_proj = all_dir->mkdir("residual_time_proj");
+    std::pair<TCanvas*, TGraph*> res_residual_time = projectionY(H2_corr_residual_time[0], 2, "residual_time", true, dir_residual_time_proj);
+    all_dir->cd();
+    res_residual_ADC.first->Write("corr_residual_ADC_extractions");
+    res_residual_ADC.second->Write("ADC_versus_ADC_error");
+    res_residual_time.first->Write("corr_residual_time_extractions");
+    res_residual_time.second->Write("ADC_versus_time_error");
+    H2_corr_time_adc->Write("corr_time_adc");
     // deuteron
     TDirectory *deuteron_dir = f->mkdir("deuterons");
     deuteron_dir->cd();
@@ -419,8 +517,12 @@ int main(int argc, char const *argv[]) {
     H1_diff_pT[1]->Write("h1_diff_pT");
     H1_diff_theta[1]->Write("h1_diff_theta");
     H1_diff_phi[1]->Write("h1_diff_phi");
-    //H1_track_residual[1]->Write("residual");
     TCanvas* c_residual_1 = fit_histogram(H1_track_residual[1], "canvas_residual_1"); c_residual_1->Write("residual");
+    H1_track_residual_LR[1]->Write("residual_LR");
+    H1_track_chi2[1]->Write("chi2");
+    H2_corr_residual_ADC[1]->Write("corr_residual_ADC");
+    H2_corr_residual_time[1]->Write("corr_residual_time");
+    H2_corr_residual_vz[1]->Write("corr_residual_vz");
     // proton
     TDirectory *proton_dir = f->mkdir("protons");
     proton_dir->cd();
@@ -438,20 +540,12 @@ int main(int argc, char const *argv[]) {
     H1_diff_pT[2]->Write("h1_diff_pT");
     H1_diff_theta[2]->Write("h1_diff_theta");
     H1_diff_phi[2]->Write("h1_diff_phi");
-    //H1_track_residual[2]->Write("residual");
     TCanvas* c_residual_2 = fit_histogram(H1_track_residual[2], "canvas_residual_2"); c_residual_2->Write("residual");
-    //H2_corr_pTe_Sadc->Write("corr_pT_Sadc");
-    //H1_W2_all->Write("W2_all");
-    //H1_delta_phi_nosym->Write("delta_phi_nosym_all");
-    //H1_delta_phi_sym->Write("delta_phi_sym_all");
-
-    // routine to create a directory in a TFile
-    // TDirectory *adc_dir = f->mkdir("adc");
-    // adc_dir->cd();
-    // save a histogram
-    //H1_mctime->Write("time");
-    // ou H1_time->Write(H1_time->GetName());
-
+    H1_track_residual_LR[2]->Write("residual_LR");
+    H1_track_chi2[2]->Write("chi2");
+    H2_corr_residual_ADC[2]->Write("corr_residual_ADC");
+    H2_corr_residual_time[2]->Write("corr_residual_time");
+    H2_corr_residual_vz[2]->Write("corr_residual_vz");
 
     ////////////////////////////////////////////
     /// Others studies
@@ -887,4 +981,119 @@ void run_simulation(std::string filename, TFile * rootFile) {
     H2_clas_corr_vz->Write("corr_vz");
     H1_clas_delta_phi->Write("delta_phi");
     H1_clas_delta_vz->Write("delta_vz");
+}
+
+
+std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, const char * name, bool flag, TDirectory * dir) {
+    printf("> projectionY %s\n", h->GetName());
+    TCanvas* c1 = new TCanvas(name);
+    c1->cd();
+    h->Draw("colz");
+    // rebin the X axis
+    int nbins = h->GetXaxis()->GetNbins();
+    int nprojs = nbins/nbins_per_projection;
+    TGraphErrors* gre = new TGraphErrors();
+    TGraph* gr = new TGraph();
+    // for each X bins, we plot the 1D histogram of Y var and we make a gaussian fit to extract the error
+    for (int i = 0; i < nprojs; i++) {
+        TCanvas* canvas_temp = new TCanvas(TString::Format("c_py_%d", i).Data(), TString::Format("c_py_%d", i).Data());
+        canvas_temp->cd();
+        TH1D* H1_proj = h->ProjectionY(TString::Format("_py_%d", i).Data(), i*nbins_per_projection, (i+1)*nbins_per_projection);
+        if (H1_proj->GetEntries() == 0) continue;
+        //printf("> nentries: %lf\n", H1_proj->GetEntries());
+        // H1_proj->Fit("gaus");
+        if (!flag) {
+            H1_proj->Fit("gaus");
+        }
+        else { // only fit the negative part of residual versus time
+            //H1_proj->Fit("gaus", "R", "", h->GetYaxis()->GetXmin(), 0);
+            // the first method didn't work, let try to symmetrise
+            int bin_for_zero = H1_proj->FindBin(0);
+            for (int bin = bin_for_zero+1; bin < H1_proj->GetNbinsX(); bin++) {
+                H1_proj->SetBinContent(bin, H1_proj->GetBinContent(bin_for_zero-(bin-bin_for_zero)));
+            }
+            H1_proj->SetBinContent(bin_for_zero, H1_proj->GetBinContent(bin_for_zero-1));
+            H1_proj->Fit("gaus");
+        }
+        if (dir != nullptr) {
+            dir->cd();
+            H1_proj->Write(H1_proj->GetName());
+        }
+        // write histogram: to done here
+        TF1 *fgaus = H1_proj->GetFunction("gaus");
+        double mean = fgaus->GetParameter("Mean");
+        double stdDev = fgaus->GetParameter("Sigma");
+        double x_bin_inf = h->GetXaxis()->GetBinCenter(i*nbins_per_projection);
+        double x_bin_sup = h->GetXaxis()->GetBinCenter((i+1)*nbins_per_projection);
+        gre->AddPointError(0.5*(x_bin_sup+x_bin_inf), mean, 0, stdDev);
+        gr->AddPoint(0.5*(x_bin_sup+x_bin_inf), stdDev);
+    }
+    c1->cd();
+    gre->SetMarkerColor(kBlack);
+    gre->SetMarkerStyle(21);
+    gre->SetLineWidth(2);
+    gre->SetLineColor(kRed);
+    gre->Draw("same p");
+    gr->SetTitle(TString::Format("Error study; %s; ERROR %s", h->GetXaxis()->GetTitle(), h->GetYaxis()->GetTitle()).Data());
+    gr->SetLineColor(kBlue);
+    gr->SetLineWidth(2);
+    gr->SetMarkerColor(2);
+    gr->SetMarkerStyle(21);
+    /////////////////////////////////////
+    /// Fit on the error graphs
+    /////////////////////////////////////
+    if (!flag) { // residual versus ADC
+        TF1* f1_adc = new TF1("f1_adc", "([0]*x + [1])/([2]*x + [3])", 0, 3700);
+        f1_adc->SetLineColor(kGreen+2);
+        f1_adc->SetLineWidth(2);
+        f1_adc->SetParameter(0, 1);
+        f1_adc->SetParameter(1, 1);
+        f1_adc->SetParameter(2, 1);
+        f1_adc->SetParameter(3, 1);
+        //f1_adc->SetParLimits(2, 0, 1000);
+        gr->Fit("f1_adc", "R", "", 0, 1000);
+        TCanvas* canvas_tmp = new TCanvas("c_f1_adc_0", "c_f1_adc_0");
+        canvas_tmp->cd();
+        gr->Draw("apl");
+        f1_adc->Draw("same l");
+        double value = f1_adc->GetParameter(0)/f1_adc->GetParameter(2);
+        TLine* line = new TLine(0, value, 3700, value);
+        line->SetLineColor(kGreen+2);
+        line->SetLineWidth(2);
+        line->SetLineStyle(2);
+        line->Draw("same l");
+        TText* text = new TText();
+        text->SetTextColor(kGreen+2);
+        text->SetTextSize(0.04);
+        text->DrawText(500, 0.75, f1_adc->GetExpFormula("P"));
+        canvas_tmp->Write("fit_residual_adc");
+    }
+    else { // residual versus Time
+        //TF1* f1_time = new TF1("f1_time", "[0]*pow(x,2) + [1]*x + [2]", 0, 250);
+        TF1* f1_time = new TF1("f1_time", "([0]*x + [1])/([2]*x + [3])", 0, 250);
+        f1_time->SetLineColor(kGreen+2);
+        f1_time->SetLineWidth(2);
+        f1_time->SetParameter(0, 1);
+        f1_time->SetParameter(1, 1);
+        f1_time->SetParameter(2, 1);
+        f1_time->SetParameter(3, 1);
+        gr->Fit("f1_time", "R", "", 0, 100);
+        TCanvas* canvas_tmp = new TCanvas("c_f1_time_0", "c_f1_time_0");
+        canvas_tmp->cd();
+        gr->Draw("apl");
+        f1_time->Draw("same l");
+        double value = f1_time->GetParameter(0)/f1_time->GetParameter(2);
+        TLine* line = new TLine(0, value, 250, value);
+        line->SetLineColor(kGreen+2);
+        line->SetLineWidth(2);
+        line->SetLineStyle(2);
+        line->Draw("same l");
+        TText* text = new TText();
+        text->SetTextColor(kGreen+2);
+        text->SetTextSize(0.04);
+        text->DrawText(50, 0.6, f1_time->GetExpFormula("P"));
+        canvas_tmp->Write("fit_residual_time");
+    }
+
+    return std::make_pair(c1, gr);
 }

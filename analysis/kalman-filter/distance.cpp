@@ -44,12 +44,12 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
     //const char * output = "./output/distance.root";
-    const char * output = "./output/distance-v17.root";
+    const char * output = "./output/distance-v16.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v17.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v16.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v7.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
@@ -225,7 +225,46 @@ int main(int argc, char const *argv[]) {
     printf("nMCtrack    : %ld \n", nMCtracks);
     printf("nKFtrack    : %ld \n", nKFtracks);
     printf("percentage  : %.2lf %%\n", 100.0*nKFtracks/nMCtracks);
+    
+    /////////////////////////////////////////////////
+    /// Error extraction in deltaTime versus ADC
+    /////////////////////////////////////////////////
+    TCanvas* canvas_timeError = new TCanvas("c_timeError", "c_timeError");
+    canvas_timeError->cd();
+    H2_deltaTime_adc->Draw("colz");
+    // Divide ADC axis in few bins
+    int nbins = H2_deltaTime_adc->GetXaxis()->GetNbins();
+    int nbins_per_projection = 2;
+    int nprojs = nbins/nbins_per_projection;
+    TGraphErrors* gr_timeError = new TGraphErrors();
+    TGraph* gr_timeError2 = new TGraph();
+    // for each ADC bins, we plot the 1D histogram of deltaTime and we make a gaussin fit to extract the error
+    for (int i = 0; i < nprojs; i++) {
+        TCanvas* canvas_temp = new TCanvas(TString::Format("c_py_%d", i).Data(), TString::Format("c_py_%d", i).Data());
+        canvas_temp->cd();
+        TH1D* H1_projTime = H2_deltaTime_adc->ProjectionY(TString::Format("_py_%d", i).Data(), i*nbins_per_projection, (i+1)*nbins_per_projection);
+        if (H1_projTime->GetEntries() == 0) continue;
+        printf("> nentries: %lf\n", H1_projTime->GetEntries());
+        H1_projTime->Fit("gaus");
+        // write histogram: to done here
+        TF1 *fgaus = H1_projTime->GetFunction("gaus");
+        double mean = fgaus->GetParameter("Mean");
+        double stdDev = fgaus->GetParameter("Sigma");
+        double x_bin_inf = H2_deltaTime_adc->GetXaxis()->GetBinCenter(i*nbins_per_projection);
+        double x_bin_sup = H2_deltaTime_adc->GetXaxis()->GetBinCenter((i+1)*nbins_per_projection);
+        gr_timeError->AddPointError(0.5*(x_bin_sup+x_bin_inf), mean, 0, stdDev);
+        gr_timeError2->AddPoint(0.5*(x_bin_sup+x_bin_inf), stdDev);
+    }
+    canvas_timeError->cd();
+    gr_timeError->SetMarkerColor(kBlack);
+    gr_timeError->SetMarkerStyle(21);
+    gr_timeError->SetLineWidth(2);
+    gr_timeError->SetLineColor(kRed);
+    gr_timeError->Draw("same p");
+    gr_timeError2->SetTitle("Error on #Delta t versus ADC; ADC; #Delta t (ns)");
+    ////////////////////
     // output
+    ////////////////////
     TFile *f = new TFile(output, "RECREATE");
     
     //H1_mcMeanTime->Write("mcMeanTime");
@@ -247,6 +286,8 @@ int main(int argc, char const *argv[]) {
     //H1_remcDoca->Write("remcDoca");
     H1_adc->Write("ADC");
     H2_deltaTime_adc->Write("corr_deltaTime_adc");
+    canvas_timeError->Write("corr_deltaTime_adc_ERRORS");
+    gr_timeError2->Write("timeError_versus_ADC");
     H2_deltaDistance_adc->Write("corr_deltaDistance_adc");
     H1_tot->Write("ToT");
     gr->Write("gr");
