@@ -214,6 +214,18 @@ int main(int argc, char const *argv[]) {
         H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_3", "residual_LR per super layer 3; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_4", "residual_LR per super layer 4; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_5", "residual_LR per super layer 5; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+    std::vector<TH2D*> H2_time2distance;
+        H2_time2distance.push_back(new TH2D("corr_t2d_all", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
+        H2_time2distance.push_back(new TH2D("corr_t2d_deuteron", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
+        H2_time2distance.push_back(new TH2D("corr_t2d_proton", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
+    std::vector<TH1D*> H1_time;
+        H1_time.push_back(new TH1D("time_all", "time ; time (ns); count",  50, 0, 320)); // all elastics
+        H1_time.push_back(new TH1D("time_deuteron", "time ; time (ns); count",  50, 0, 320)); // deuteron 
+        H1_time.push_back(new TH1D("time_proton", "time ; time (ns); count",  50, 0, 320)); // proton
+    std::vector<TH1D*> H1_distance;
+        H1_distance.push_back(new TH1D("AHDC::hits:doca_all", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // all elastics
+        H1_distance.push_back(new TH1D("AHDC::hits:doca_deuteron", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // deuteron 
+        H1_distance.push_back(new TH1D("AHDC::hits:doca_proton", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // proton
     // example of 2D histograms
     
     /////////////////////////
@@ -346,6 +358,9 @@ int main(int argc, char const *argv[]) {
                         H1_residual_LR_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("timeOverThreshold", hitRow));
                         H2_corr_residual_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("residual", hitRow));
                         H2_corr_residual_LR_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("timeOverThreshold", hitRow));
+                        H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                        H1_time[0]->Fill(hitBank.get("time", hitRow));
+                        H1_distance[0]->Fill(hitBank.get("doca", hitRow));
                     }
                 }
                 H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
@@ -377,6 +392,9 @@ int main(int argc, char const *argv[]) {
                             H2_corr_residual_ADC[1]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_time[1]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                            H2_time2distance[1]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                            H1_time[1]->Fill(hitBank.get("time", hitRow));
+                            H1_distance[1]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
                     H1_track_chi2[1]->Fill(trackBank.get("chi2", ahdc_track.row));
@@ -411,6 +429,9 @@ int main(int argc, char const *argv[]) {
                             H2_corr_residual_ADC[2]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_time[2]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                            H2_time2distance[2]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                            H1_time[2]->Fill(hitBank.get("time", hitRow));
+                            H1_distance[2]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
                     H1_track_chi2[2]->Fill(trackBank.get("chi2", ahdc_track.row));
@@ -429,7 +450,7 @@ int main(int argc, char const *argv[]) {
                     H1_electron_theta[2]->Fill(electron.theta);
                     H1_diff_pT[2]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
                     H1_diff_theta[2]->Fill(ahdc_track.theta - expected_track.theta);
-                    H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi);   
+                    H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi); 
                 }
             }
         }
@@ -500,6 +521,9 @@ int main(int argc, char const *argv[]) {
     res_residual_time.first->Write("corr_residual_time_extractions");
     res_residual_time.second->Write("ADC_versus_time_error");
     H2_corr_time_adc->Write("corr_time_adc");
+    H2_time2distance[0]->Write("time2distance");
+    H1_time[0]->Write("AHDC::hits:time");
+    H1_distance[0]->Write("AHDC::hits:doca");
     // deuteron
     TDirectory *deuteron_dir = f->mkdir("deuterons");
     deuteron_dir->cd();
@@ -523,6 +547,9 @@ int main(int argc, char const *argv[]) {
     H2_corr_residual_ADC[1]->Write("corr_residual_ADC");
     H2_corr_residual_time[1]->Write("corr_residual_time");
     H2_corr_residual_vz[1]->Write("corr_residual_vz");
+    H2_time2distance[1]->Write("time2distance");
+    H1_time[1]->Write("AHDC::hits:time");
+    H1_distance[1]->Write("AHDC::hits:doca");
     // proton
     TDirectory *proton_dir = f->mkdir("protons");
     proton_dir->cd();
@@ -546,6 +573,9 @@ int main(int argc, char const *argv[]) {
     H2_corr_residual_ADC[2]->Write("corr_residual_ADC");
     H2_corr_residual_time[2]->Write("corr_residual_time");
     H2_corr_residual_vz[2]->Write("corr_residual_vz");
+    H2_time2distance[2]->Write("time2distance");
+    H1_time[2]->Write("AHDC::hits:time");
+    H1_distance[2]->Write("AHDC::hits:doca");
 
     ////////////////////////////////////////////
     /// Others studies
