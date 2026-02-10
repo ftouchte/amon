@@ -68,12 +68,14 @@ int main(int argc, char const *argv[]) {
             filename = std::string("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v") + version + ".hipo"; 
             output = std::string("./output/kfmon_data_rsimu_v") + version + ".root";
         }
+    } else {
+        if (filename.compare("") == 0 || output.compare("") == 0) {
+            printf("Please provide options... (if you specify -i, you should also specify -o)\n");
+            return 1;
+        }
     }
 
-    if (filename.compare("") == 0 && output.compare("") == 0 && version.compare("") == 0) {
-        printf("Please provide options...\n");
-        return 1;
-    }
+    
 
     printf("> filename : %s\n", filename.c_str());
     hipo::reader  reader(filename.c_str());
@@ -104,8 +106,9 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -360, 360); 
     TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180); 
     TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180);
-    TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT_{e}; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
-    TH2D* H2_corr_pTt_Sadc = new TH2D("corr_pTt_Sadc", "#Sigma ADC vs pT_{t}; pT (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
+    TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
+    TH2D* H2_corr_p_Sadc = new TH2D("corr_p_Sadc", "#Sigma ADC vs p; p (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
+    TH2D* H2_corr_p_dEdx = new TH2D("corr_p_dEdx", "dEdx vs p; p (MeV); dEdx (MeV/mm)", 50, 80, 600, 50, 0, 180);
     TH2D* H2_corr_time_adc = new TH2D("corr_time_adc", "time vs ADC; ADC; time", 50, 0, 3700, 50, 0, 250);
     // correlations electron vs ahdc_track
     std::vector<TH2D*> H2_corr_phi;
@@ -336,8 +339,10 @@ int main(int argc, char const *argv[]) {
                 double pTe = 1000*sqrt(pow(electron.px,2) + pow(electron.py,2)); // MeV
                 double pTt = sqrt(pow(ahdc_track.px,2) + pow(ahdc_track.py,2)); // MeV
                 double sum_adc = trackBank.get("sum_adc", ahdc_track.row);
+                double dEdx = trackBank.get("dEdx", ahdc_track.row);
                 H2_corr_pTe_Sadc->Fill(pTe,sum_adc);
-                H2_corr_pTt_Sadc->Fill(pTt,sum_adc);
+                H2_corr_p_Sadc->Fill(ahdc_track.p,sum_adc);
+                H2_corr_p_dEdx->Fill(ahdc_track.p,dEdx);
                 // select the hits of this track
                 int trackid = trackBank.getInt("trackid", ahdc_track.row);
                 
@@ -472,7 +477,8 @@ int main(int argc, char const *argv[]) {
     c_delta_phi_sym->Write("delta_phi_sym");
     c_delta_phi_nosym->Write("delta_phi_nosym");
     c_elastics->Write("corr_pT(electron)_sum_adc");
-    H2_corr_pTt_Sadc->Write("corr_pT(track)_sum_adc");
+    H2_corr_p_Sadc->Write("corr_p(track)_sum_adc");
+    H2_corr_p_dEdx->Write("corr_p(track)_dEdx");
     // all
     TDirectory *all_dir = f->mkdir("all_elastics");
     all_dir->cd();
