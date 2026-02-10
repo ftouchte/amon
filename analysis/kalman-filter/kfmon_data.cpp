@@ -45,7 +45,7 @@ const double proton_mass = 938.272e-3; // energy mass of proton, GeV
 const double helium_mass = 3.73; // energy mass of Helium-4, GeV
 const double deuteron_mass = 1.875; // energy mass of Deuterium, GeV
 
-const double delta_phi_width = 45;
+const double delta_phi_width = 20;
 
 // main routine
 int main(int argc, char const *argv[]) {
@@ -94,18 +94,18 @@ int main(int argc, char const *argv[]) {
     // example of 1D histograms
     //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 50, 0, 250); 
     // electrons
-    TH1D* H1_W2_all = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 50, 2, 7);
-    TH1D* H1_W2_sel = new TH1D("W2_sel", "W^{2}; W^{2} (GeV^{2}); count", 50, 2, 7);
+    TH1D* H1_W2_all = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 7);
+    TH1D* H1_W2_sel = new TH1D("W2_sel", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 7);
     TH1D* H1_Q2_all = new TH1D("Q2", "Q^{2}; Q^{2} (GeV^{2}); count", 50, 0, 0.4);
     TH1D* H1_Q2_sel = new TH1D("Q2_sel", "Q^{2}; Q^{2} (GeV^{2}); count", 50, 0, 0.4);
     TH1D* H1_nu_all = new TH1D("nu", "#nu = E - E'; #nu (GeV); count", 50, 0, 2.24);
     TH1D* H1_nu_sel = new TH1D("nu_sel", "#nu = E - E'; #nu (GeV); count", 50, 0, 2.24);
     TH1D* H1_vz = new TH1D("vz_electron", "vz; vz (cm); count", 50, -60, 40);
     // ahdc track
-    TH1D* H1_delta_phi_nosym = new TH1D("delta_phi_nosym", "#Delta #phi; #Delta #phi (deg); count", 50, -360, 360); 
-    TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -360, 360); 
-    TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180); 
-    TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 50, -180, 180);
+    TH1D* H1_delta_phi_nosym = new TH1D("delta_phi_nosym", "#Delta #phi; #Delta #phi (deg); count", 100, -360, 360); 
+    TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi; #Delta #phi (deg); count", 100, -360, 360); 
+    TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi; #Delta #phi (deg); count", 100, -90, 90); 
+    TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 100, -90, 90);
     TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
     TH2D* H2_corr_p_Sadc = new TH2D("corr_p_Sadc", "#Sigma ADC vs p; p (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
     TH2D* H2_corr_p_dEdx = new TH2D("corr_p_dEdx", "dEdx vs p; p (MeV); dEdx (MeV/mm)", 50, 80, 600, 50, 0, 180);
@@ -156,6 +156,14 @@ int main(int argc, char const *argv[]) {
         H1_track_chi2.push_back(new TH1D("track_chi2_all", "chi2 ; chi2; count", 50, 0, 5)); // all elastics
         H1_track_chi2.push_back(new TH1D("track_chi2_deuteron", "chi2 ; chi2; count", 50, 0, 5)); // deuteron
         H1_track_chi2.push_back(new TH1D("track_chi2_proton", "chi2 ; chi2; count", 50, 0, 5)); // proton
+    std::vector<TH1D*> H1_track_nhits;
+        H1_track_nhits.push_back(new TH1D("track_nhits_all", "number of hits per track; nhits; count", 12, 5, 17)); // all elastics
+        H1_track_nhits.push_back(new TH1D("track_nhits_deuteron", "number of hits per track; nhits; count", 12, 5, 17)); // deuteron
+        H1_track_nhits.push_back(new TH1D("track_nhits_proton", "number of hits per track; nhits; count", 12, 5, 17)); // proton
+    std::vector<TH1D*> H1_track_sum_residual;
+        H1_track_sum_residual.push_back(new TH1D("track_sum_residual_all", "Sum of residuals per track; sum_residual (mm); count", 50, -10, 5)); // all elastics
+        H1_track_sum_residual.push_back(new TH1D("track_sum_residual_deuteron", "Sum of residuals per track; sum_residual (mm); count", 50, -10, 5)); // deuteron
+        H1_track_sum_residual.push_back(new TH1D("track_sum_residual_proton", "Sum of residuals per track; sum_residual (mm); count", 50, -10, 5)); // proton
     std::vector<TH1D*> H1_electron_pT;
         H1_electron_pT.push_back(new TH1D("electron_pT_all", "pT_{e} ; pT_{e} (MeV); count", 50, 190, 400)); // all elastics
         H1_electron_pT.push_back(new TH1D("electron_pT_deuteron", "pT_{e} ; pT_{e} (MeV); count", 50, 190, 400)); // deuteron
@@ -273,7 +281,7 @@ int main(int argc, char const *argv[]) {
                 
                 // we only look at the first trigger electron (i.e status < 0)
                 // + cut on W2 to select elastics
-                if (electron.row < 0 && W2 > 3.4 && W2 < 3.9) {
+                if (electron.row < 0 && W2 > 3.5 && W2 < 3.8) {
                         electron.row = recRow;
                         electron.px = px; // GeV
                         electron.py = py; // GeV
@@ -302,6 +310,7 @@ int main(int argc, char const *argv[]) {
         double dphi = 1e10; // arbitrary big number
         if (electron.row >= 0) {
             for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
+                if (trackBank.get("n_hits", trackRow) < 6) continue; // quality cut: ignore tracks with less than 6 hits
                 // read kinematic variables
                 double px = trackBank.getDouble("px", trackRow);
                 double py = trackBank.getDouble("py", trackRow);
@@ -368,6 +377,8 @@ int main(int argc, char const *argv[]) {
                         H1_distance[0]->Fill(hitBank.get("doca", hitRow));
                     }
                 }
+                H1_track_sum_residual[0]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                H1_track_nhits[0]->Fill(trackBank.get("n_hits", ahdc_track.row));
                 H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
                 H2_corr_phi[0]->Fill(electron.phi, ahdc_track.phi);
                 H2_corr_pT[0]->Fill(pTe, pTt); // Mev
@@ -402,6 +413,8 @@ int main(int argc, char const *argv[]) {
                             H1_distance[1]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
+                    H1_track_sum_residual[1]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                    H1_track_nhits[1]->Fill(trackBank.get("n_hits", ahdc_track.row));
                     H1_track_chi2[1]->Fill(trackBank.get("chi2", ahdc_track.row));
                     // 2D
                     H2_corr_phi[1]->Fill(electron.phi, ahdc_track.phi);
@@ -439,6 +452,8 @@ int main(int argc, char const *argv[]) {
                             H1_distance[2]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
+                    H1_track_sum_residual[2]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                    H1_track_nhits[2]->Fill(trackBank.get("n_hits", ahdc_track.row));
                     H1_track_chi2[2]->Fill(trackBank.get("chi2", ahdc_track.row));
                     // 2D
                     H2_corr_phi[2]->Fill(electron.phi, ahdc_track.phi);
@@ -530,6 +545,8 @@ int main(int argc, char const *argv[]) {
     H2_time2distance[0]->Write("time2distance");
     H1_time[0]->Write("AHDC::hits:time");
     H1_distance[0]->Write("AHDC::hits:doca");
+    H1_track_nhits[0]->Write("h1_track_nhits");
+    H1_track_sum_residual[0]->Write("h1_track_sum_residuals");
     // deuteron
     TDirectory *deuteron_dir = f->mkdir("deuterons");
     deuteron_dir->cd();
@@ -556,6 +573,8 @@ int main(int argc, char const *argv[]) {
     H2_time2distance[1]->Write("time2distance");
     H1_time[1]->Write("AHDC::hits:time");
     H1_distance[1]->Write("AHDC::hits:doca");
+    H1_track_nhits[1]->Write("h1_track_nhits");
+    H1_track_sum_residual[1]->Write("h1_track_sum_residuals");
     // proton
     TDirectory *proton_dir = f->mkdir("protons");
     proton_dir->cd();
@@ -582,6 +601,8 @@ int main(int argc, char const *argv[]) {
     H2_time2distance[2]->Write("time2distance");
     H1_time[2]->Write("AHDC::hits:time");
     H1_distance[2]->Write("AHDC::hits:doca");
+    H1_track_nhits[2]->Write("h1_track_nhits");
+    H1_track_sum_residual[2]->Write("h1_track_sum_residuals");
 
     ////////////////////////////////////////////
     /// Others studies
