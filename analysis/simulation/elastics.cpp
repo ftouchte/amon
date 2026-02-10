@@ -122,7 +122,8 @@ int main(int argc, char const *argv[]) {
     //all_filenames.push_back("");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/coat-13.4.0/rec_clas_022712.evio.00000.hipo");
     //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-22712-00000-v11.hipo");
-    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v31.hipo");
+    //all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-realrun-22712-p0v6.hipo");
+    all_filenames.push_back("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-realrun-dev.hipo");
 
     // Ouput file to save only elastics events
     hipo::writer writer;
@@ -949,7 +950,7 @@ int main(int argc, char const *argv[]) {
                     outAhdcHitsBank.putInt("wire", i, hitBank.getInt("wire", HitIndex[i]));
                     outAhdcHitsBank.putDouble("doca", i, hitBank.getDouble("doca", HitIndex[i]));
                     outAhdcHitsBank.putDouble("residual", i, hitBank.getDouble("residual", HitIndex[i]));
-                    outAhdcHitsBank.putDouble("residual_prefit", i, hitBank.getDouble("residual_prefit", HitIndex[i]));
+                    //outAhdcHitsBank.putDouble("residual_prefit", i, hitBank.getDouble("residual_prefit", HitIndex[i]));
                     outAhdcHitsBank.putDouble("time", i, hitBank.getDouble("time", HitIndex[i]));
                     outAhdcHitsBank.putInt("trackid", i, hitBank.getInt("trackid", HitIndex[i]));
                     // AHDC::adc

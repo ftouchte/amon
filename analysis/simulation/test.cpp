@@ -45,6 +45,26 @@ double breitwigner_pdf(double * x, double * par) {
 }
 
 int main(int argc, char const *argv[]) {
+    double mu = 3;
+    double sigma = 1;
+    double a = 0;
+    double b = 10;
+    int Npts = 100;
+    Genfun::Landau L;
+    L.peak()  = Genfun::Parameter("Peak", mu, -5, 5);
+    L.width() = Genfun::Parameter("Width", sigma, 0, 10);
+    for (int i = 0; i <= Npts; i++) {
+        double x = (b-a)*(1.0*i)/Npts + a;
+        double y = L(x);
+        printf("(%7.4lf,%6.4lf) -- ", x, y);
+    }
+
+
+    return 0;
+}
+
+
+/*int main(int argc, char const *argv[]) {
     TApplication app("ROOT App", nullptr, nullptr);
     /////////////////////////
     /// CCDB
@@ -152,7 +172,7 @@ int main(int argc, char const *argv[]) {
 	
 
     return 0;
-}
+}*/
 
 void progressBar(int state, int bar_length) { // state is a number between 0 and 100
     // for the moment the bar length is not variable

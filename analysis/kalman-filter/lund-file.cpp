@@ -121,7 +121,7 @@ int main(int argc, const char * argv[]) {
         return 0;
     }
     // total number of events = nevents*nfiles
-    int nevents = 2000;
+    int nevents = 500;
     int nfiles = 40;
     std::vector<std::ofstream> ofs;
     for (int i = 0; i < nfiles; i++) {
