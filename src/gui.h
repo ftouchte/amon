@@ -99,6 +99,7 @@ protected :
 	 * *****************************************/
 	
 	std::string filename;
+	std::string pdf_output_name;
 	hipo::reader hipo_reader;
 	hipo::dictionary hipo_factory;
 	hipo::event hipo_event;
@@ -179,6 +180,9 @@ public :
 	void on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_mouse_clicked(int n_press, double x, double y);
+	void ask_user_confirmation(int, double, double);
+	void select_file_to_save_as_pdf();
+	//void on_question_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
 	void on_zpos_value_changed();
 	void on_button_zpos_clicked();
 	void cairo_plot_waveform(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height, AhdcWire* wire, std::string annotation);
