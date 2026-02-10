@@ -314,9 +314,15 @@ Window::Window() :
 	/**************************
 	 * Go back in eventViewer
 	 * **********************/
-	auto mouse_click = Gtk::GestureClick::create();
-	mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
-	DrawingArea_event.add_controller(mouse_click);
+	auto primary_mouse_click = Gtk::GestureClick::create();
+	primary_mouse_click->set_button(GDK_BUTTON_PRIMARY);
+	primary_mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::on_mouse_clicked));
+	DrawingArea_event.add_controller(primary_mouse_click);
+	
+	auto secondary_mouse_click = Gtk::GestureClick::create();
+	secondary_mouse_click->set_button(GDK_BUTTON_SECONDARY);
+	secondary_mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::ask_user_confirmation));
+	DrawingArea_event.add_controller(secondary_mouse_click);
 }
 
 /** Destructor */
@@ -2378,6 +2384,85 @@ void Window::restart_histograms() {
 	hist1d_adcOffset.reset();
     hist1d_constantFractionTime.reset();
 	hist2d_occupancy.reset();
+}
+
+void Window::ask_user_confirmation(int, double, double) {
+	//auto dialog = Gtk::make_managed<Gtk::AlertDialog>();
+	auto dialog = Gtk::AlertDialog::create();
+	dialog->set_message("Do you want to save it as PDF?");
+	//dialog->set_detail("");
+	dialog->set_buttons({"YES", "NO"}); 
+	dialog->set_default_button(1); // 0 --> YES; 1 --> NO
+	//dialog->choose(*this, sigc::mem_fun(*this, &Window::on_question_dialog_finish));
+	dialog->choose(*this, [this, dialog] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
+		try {
+			const int response_id = dialog->choose_finish(result);
+			switch (response_id) {
+				case 0:
+					std::cout << "You ask to save this widget as PDF." << std::endl;
+					this->select_file_to_save_as_pdf();
+					break;
+				case 1:
+					std::cout << "You refuse to save this widget as PDF." << std::endl;
+					break;
+				default:
+					std::cout << "You refuse to save this widget as PDF." << std::endl;
+					break;
+			}
+		} 
+		catch (const Gtk::DialogError& err)	{
+		// Can be thrown by m_pDialog->choose_finish(result).
+			std::cout << "DialogError, " << err.what() << std::endl;
+		}
+		catch (const Glib::Error& err)
+		{
+			std::cout << "Unexpected exception. " << err.what() << std::endl;
+		}
+	});
+}
+
+void Window::select_file_to_save_as_pdf() {
+	// creata dialg
+	auto dialog = Gtk::FileDialog::create();
+	
+	// define filters
+	auto filters = Gio::ListStore<Gtk::FileFilter>::create();
+
+	auto filter_pdf = Gtk::FileFilter::create();
+	filter_pdf->set_name("PDF files");
+	filter_pdf->add_pattern("*.pdf");
+	filters->append(filter_pdf);
+
+	auto filter_any = Gtk::FileFilter::create();
+	filter_any->set_name("Any files");
+	filter_any->add_pattern("*");
+	filters->append(filter_any);
+
+	dialog->set_filters(filters);
+
+	dialog->save(*this,[this, dialog] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
+		try
+		{
+			auto file = dialog->save_finish(result);
+
+			// Notice that this is a std::string, not a Glib::ustring.
+			pdf_output_name = file->get_path();
+			// add suffix if necessary
+			if (!Glib::str_has_suffix(pdf_output_name, ".pdf")) pdf_output_name += ".pdf";
+
+			//std::cout << "PDF file created : " <<  pdf_output_name << std::endl;
+		}
+		catch (const Gtk::DialogError& err)
+		{
+			// Can be thrown by dialog->open_finish(result).
+			std::cout << "No file selected. " << err.what() << std::endl;
+		}
+		catch (const Glib::Error& err)
+		{
+			std::cout << "Unexpected exception. " << err.what() << std::endl;
+		}
+	});
+
 }
 
 /** Main function */
