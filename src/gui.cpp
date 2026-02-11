@@ -1667,10 +1667,26 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 			char buffer[50];
 			sprintf(buffer, "L%d W%d", layer, component);
 			auto area = Gtk::make_managed<Gtk::DrawingArea>();
-			area->set_draw_func([this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
+			auto draw_function = [this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
 								cairo_plot_waveform(cr, width, height, wire, buffer);
-						      } );
+						      };
+			area->set_draw_func(draw_function);
 			window->set_child(*area);
+			// event controller
+			area->set_name(buffer);
+			renderers[buffer] = draw_function;
+			auto secondary_mouse_click = Gtk::GestureClick::create();
+			secondary_mouse_click->set_button(GDK_BUTTON_SECONDARY);
+			secondary_mouse_click->signal_pressed().connect([this, secondary_mouse_click] (int, double, double) -> void {
+				auto widget = secondary_mouse_click->get_widget();
+				std::string name = widget->get_name();
+				int width = widget->get_width();
+				int height = widget->get_height();
+				std::cout << "Widget name : " << name << std::endl;
+				ask_user_confirmation(name, width, height);
+			});
+			area->add_controller(secondary_mouse_click);
+			// show window
 			window->show();
 		}
 		/*char buffer[100];
