@@ -122,6 +122,10 @@ Window::Window() :
 	Grid_eventViewer.set_row_homogeneous(true);
 	Grid_eventViewer.attach(DrawingArea_event,1,1);
 	DrawingArea_event.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_event) );
+	renderers["main_event_display"] = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) -> void {
+		this->on_draw_event(cr, width, height);
+	};
+	DrawingArea_event.set_name("main_event_display");
 	Grid_eventViewer.attach(Grid_waveforms,2,1);
 	Grid_waveforms.set_expand(true);
 	Grid_waveforms.set_column_homogeneous(true);
@@ -321,7 +325,15 @@ Window::Window() :
 	
 	auto secondary_mouse_click = Gtk::GestureClick::create();
 	secondary_mouse_click->set_button(GDK_BUTTON_SECONDARY);
-	secondary_mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::ask_user_confirmation));
+	//secondary_mouse_click->signal_pressed().connect(sigc::mem_fun(*this, &Window::ask_user_confirmation));
+	secondary_mouse_click->signal_pressed().connect([this, secondary_mouse_click] (int, double, double) -> void {
+		auto widget = secondary_mouse_click->get_widget();
+		std::string name = widget->get_name();
+		int width = widget->get_width();
+		int height = widget->get_height();
+		std::cout << "Widget name : " << name << std::endl;
+		ask_user_confirmation(name, width, height);
+	});
 	DrawingArea_event.add_controller(secondary_mouse_click);
 }
 
@@ -2386,7 +2398,7 @@ void Window::restart_histograms() {
 	hist2d_occupancy.reset();
 }
 
-void Window::ask_user_confirmation(int, double, double) {
+void Window::ask_user_confirmation(std::string name, int width, int height) {
 	//auto dialog = Gtk::make_managed<Gtk::AlertDialog>();
 	auto dialog = Gtk::AlertDialog::create();
 	dialog->set_message("Do you want to save it as PDF?");
@@ -2394,13 +2406,13 @@ void Window::ask_user_confirmation(int, double, double) {
 	dialog->set_buttons({"YES", "NO"}); 
 	dialog->set_default_button(1); // 0 --> YES; 1 --> NO
 	//dialog->choose(*this, sigc::mem_fun(*this, &Window::on_question_dialog_finish));
-	dialog->choose(*this, [this, dialog] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
+	dialog->choose(*this, [this, dialog, name, width, height] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
 		try {
 			const int response_id = dialog->choose_finish(result);
 			switch (response_id) {
 				case 0:
 					std::cout << "You ask to save this widget as PDF." << std::endl;
-					this->select_file_to_save_as_pdf();
+					this->select_file_to_save_as_pdf(name, width, height);
 					break;
 				case 1:
 					std::cout << "You refuse to save this widget as PDF." << std::endl;
@@ -2421,7 +2433,7 @@ void Window::ask_user_confirmation(int, double, double) {
 	});
 }
 
-void Window::select_file_to_save_as_pdf() {
+void Window::select_file_to_save_as_pdf(std::string name, int width, int height) {
 	// creata dialg
 	auto dialog = Gtk::FileDialog::create();
 	
@@ -2440,7 +2452,7 @@ void Window::select_file_to_save_as_pdf() {
 
 	dialog->set_filters(filters);
 
-	dialog->save(*this,[this, dialog] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
+	dialog->save(*this,[this, dialog, name, width, height] (const Glib::RefPtr<Gio::AsyncResult>& result) -> void {
 		try
 		{
 			auto file = dialog->save_finish(result);
@@ -2450,7 +2462,10 @@ void Window::select_file_to_save_as_pdf() {
 			// add suffix if necessary
 			if (!Glib::str_has_suffix(pdf_output_name, ".pdf")) pdf_output_name += ".pdf";
 
-			//std::cout << "PDF file created : " <<  pdf_output_name << std::endl;
+			// exorte as pdf
+			this->export_as_pdf(name, width, height);
+
+			std::cout << "PDF file created : " <<  pdf_output_name << std::endl;
 		}
 		catch (const Gtk::DialogError& err)
 		{
@@ -2463,6 +2478,14 @@ void Window::select_file_to_save_as_pdf() {
 		}
 	});
 
+}
+
+void Window::export_as_pdf(std::string name, int width, int height) {
+	auto functor = renderers[name];
+	auto surface = Cairo::PdfSurface::create(pdf_output_name, width, height);
+	auto cr = Cairo::Context::create(surface);
+	functor(cr, width, height);
+	cr->show_page();
 }
 
 /** Main function */

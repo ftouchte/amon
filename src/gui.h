@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <map>
 #include "hipo4/reader.h"
 
 #include "AhdcDetector.h"
@@ -147,6 +148,7 @@ protected :
 	fH1D hist1d_adcOffset;
 	fH1D hist1d_constantFractionTime;
 	fH2D hist2d_occupancy;
+	std::map<std::string, std::function<void(const Cairo::RefPtr<Cairo::Context>&, int, int)>> renderers;
 
 public :
 	Window();
@@ -180,8 +182,9 @@ public :
 	void on_draw_occupancy(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_draw_test(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height);
 	void on_mouse_clicked(int n_press, double x, double y);
-	void ask_user_confirmation(int, double, double);
-	void select_file_to_save_as_pdf();
+	void ask_user_confirmation(std::string name, int width, int height);
+	void select_file_to_save_as_pdf(std::string name, int width, int height);
+	void export_as_pdf(std::string name, int width, int height);
 	//void on_question_dialog_finish(const Glib::RefPtr<Gio::AsyncResult>& result);
 	void on_zpos_value_changed();
 	void on_button_zpos_clicked();
