@@ -33,13 +33,14 @@ protected :
 	
 	Gtk::Notebook Book;
 	Gtk::Box HBox_eventViewer;
-	Gtk::Grid Grid_eventViewer, Grid_waveforms; // 2x1 and NxP 
+	Gtk::Grid Grid_waveforms; // 2x1 and NxP 
 	Gtk::Grid Grid_waveformsPerLayer;
 	Gtk::DrawingArea DrawingArea_event;
 	Gtk::DrawingArea DrawingArea_test;
 	Gtk::Box HBox_histograms;
 	Gtk::Grid Grid_histograms;
 	Gtk::Grid Grid_occupancy;
+	Gtk::Paned HPaned_eventViewer;
 	
 	Gtk::Box HBox_3Dview;
 	Gtk::Box VBox_3Dview_settings;

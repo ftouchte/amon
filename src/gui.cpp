@@ -33,6 +33,7 @@ Window::Window() :
 	VBox_footer(Gtk::Orientation::VERTICAL,10),
 	HBox_eventViewer(Gtk::Orientation::HORIZONTAL,10),
 	HBox_histograms(Gtk::Orientation::HORIZONTAL,10),
+	HPaned_eventViewer(Gtk::Orientation::HORIZONTAL),
 	HBox_3Dview(Gtk::Orientation::HORIZONTAL,10),
 	VBox_3Dview_settings(Gtk::Orientation::VERTICAL,10),
 	// 3D view settings
@@ -117,16 +118,15 @@ Window::Window() :
 	
 	// Page 0
 	Book.append_page(HBox_eventViewer, "Event Viewer");
-	HBox_eventViewer.append(Grid_eventViewer);
-	Grid_eventViewer.set_column_homogeneous(true);
-	Grid_eventViewer.set_row_homogeneous(true);
-	Grid_eventViewer.attach(DrawingArea_event,1,1);
+	HBox_eventViewer.append(HPaned_eventViewer);
+	HPaned_eventViewer.set_start_child(DrawingArea_event);
+	HPaned_eventViewer.set_position(1000);
 	DrawingArea_event.set_draw_func(sigc::mem_fun(*this, &Window::on_draw_event) );
 	renderers["main_event_display"] = [this] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) -> void {
 		this->on_draw_event(cr, width, height);
 	};
 	DrawingArea_event.set_name("main_event_display");
-	Grid_eventViewer.attach(Grid_waveforms,2,1);
+	HPaned_eventViewer.set_end_child(Grid_waveforms);
 	Grid_waveforms.set_expand(true);
 	Grid_waveforms.set_column_homogeneous(true);
 	Grid_waveforms.set_row_homogeneous(true);
