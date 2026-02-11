@@ -1359,10 +1359,13 @@ void Window::drawWaveformsPerLayer() {
 						sum_samples[i] = sum_samples[i]/nhits;
 					}
 				}
+				// define layer name
+				char buffer[50];
+				sprintf(buffer, "Layer %d", 10*(sl+1) + (l+1));
 				// Drawings
 				auto button = Gtk::make_managed<Gtk::Button>();
 				auto area = Gtk::make_managed<Gtk::DrawingArea>();
-				auto draw_function = [this, sl, l, layer, ymin, ymax, sum_samples, nhits] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
+				auto draw_function = [this, sl, l, layer, ymin, ymax, sum_samples, nhits, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) { // lambda function
 					// Define main canvas
 					fCanvas canvas(width, height, 0, samplingTime*(NumberOfBins-1), ymin, ymax);
 					canvas.define_coord_system(cr);
@@ -1418,8 +1421,6 @@ void Window::drawWaveformsPerLayer() {
 					canvas.set_frame_line_width(0.005);
 					canvas.draw_frame(cr);
 					// add layer name
-					char buffer[50];
-					sprintf(buffer, "Layer %d", 10*(sl+1) + (l+1));
 					cr->set_source_rgb(1.0, 0.0, 0.0);
 					cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
 					cr->set_font_size(0.6*canvas.get_top_margin());
@@ -1430,12 +1431,27 @@ void Window::drawWaveformsPerLayer() {
 				};
 				area->set_draw_func(draw_function);
 				button->set_child(*area);
-				button->signal_clicked().connect([this, draw_function] () -> void {
+				button->signal_clicked().connect([this, draw_function, buffer] () -> void {
 							auto window = Gtk::make_managed<Gtk::Window>();
 							window->set_title("");
 							window->set_default_size(1200,800);
 							auto area_bis = Gtk::make_managed<Gtk::DrawingArea>();
 							area_bis->set_draw_func(draw_function);
+							// event controller
+							area_bis->set_name(buffer);
+							renderers[buffer] = draw_function;
+							auto secondary_mouse_click = Gtk::GestureClick::create();
+							secondary_mouse_click->set_button(GDK_BUTTON_SECONDARY);
+							secondary_mouse_click->signal_pressed().connect([this, secondary_mouse_click] (int, double, double) -> void {
+								auto widget = secondary_mouse_click->get_widget();
+								std::string name = widget->get_name();
+								int width = widget->get_width();
+								int height = widget->get_height();
+								std::cout << "Widget name : " << name << std::endl;
+								ask_user_confirmation(name, width, height);
+							});
+							area_bis->add_controller(secondary_mouse_click);
+							// show window
 							window->set_child(*area_bis);
 							window->show();
 						});
