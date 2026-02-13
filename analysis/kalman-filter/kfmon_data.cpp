@@ -124,13 +124,13 @@ int main(int argc, char const *argv[]) {
         H2_corr_vz.push_back(new TH2D("corr_vz_deuteron", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // deuteron
         H2_corr_vz.push_back(new TH2D("corr_vz_proton", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // proton
     std::vector<TH1D*> H1_delta_vz;
-        H1_delta_vz.push_back(new TH1D("delta_vz_all", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 50, -30, 30)); // all elastics
-        H1_delta_vz.push_back(new TH1D("delta_vz_deuteron", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 50, -30, 30)); // deuteron
-        H1_delta_vz.push_back(new TH1D("delta_vz_proton", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 50, -30, 30)); // proton
+        H1_delta_vz.push_back(new TH1D("delta_vz_all", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // all elastics
+        H1_delta_vz.push_back(new TH1D("delta_vz_deuteron", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // deuteron
+        H1_delta_vz.push_back(new TH1D("delta_vz_proton", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // proton
     std::vector<TH1D*> H1_delta_phi;
-        H1_delta_phi.push_back(new TH1D("delta_phi_sym_all", "#Delta #phi; #Delta #phi (deg); count", 50, -1.05*delta_phi_width, 1.05*delta_phi_width)); // all elastics
-        H1_delta_phi.push_back(new TH1D("delta_phi_sym_deuteron", "#Delta #phi; #Delta #phi (deg); count", 50, -1.05*delta_phi_width, 1.05*delta_phi_width)); // deuteron
-        H1_delta_phi.push_back(new TH1D("delta_phi_sym_proton", "#Delta #phi; #Delta #phi (deg); count", 50, -1.05*delta_phi_width, 1.05*delta_phi_width)); // proton
+        H1_delta_phi.push_back(new TH1D("delta_phi_sym_all", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width)); // all elastics
+        H1_delta_phi.push_back(new TH1D("delta_phi_sym_deuteron", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width)); // deuteron
+        H1_delta_phi.push_back(new TH1D("delta_phi_sym_proton", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width)); // proton
     // kinematics 1D
     std::vector<TH1D*> H1_track_pT;
         H1_track_pT.push_back(new TH1D("track_pT_all", "pT_{t} ; pT_{t} (MeV); count", 50, 0, 1000)); // all elastics
@@ -145,9 +145,9 @@ int main(int argc, char const *argv[]) {
         H1_track_phi.push_back(new TH1D("track_phi_deuteron", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // deuteron
         H1_track_phi.push_back(new TH1D("track_phi_proton", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // proton
     std::vector<TH1D*> H1_track_residual;
-        H1_track_residual.push_back(new TH1D("track_residual_all", "residual ; residual (mm); count", 50, -3, 3)); // all elastics
-        H1_track_residual.push_back(new TH1D("track_residual_deuteron", "residual ; residual (mm); count", 50, -3, 3)); // deuteron
-        H1_track_residual.push_back(new TH1D("track_residual_proton", "residual ; residual (mm); count", 50, -3, 3)); // proton
+        H1_track_residual.push_back(new TH1D("track_residual_all", "residual ; residual (mm); count", 100, -3, 3)); // all elastics
+        H1_track_residual.push_back(new TH1D("track_residual_deuteron", "residual ; residual (mm); count", 100, -3, 3)); // deuteron
+        H1_track_residual.push_back(new TH1D("track_residual_proton", "residual ; residual (mm); count", 100, -3, 3)); // proton
     std::vector<TH1D*> H1_track_residual_LR;
         H1_track_residual_LR.push_back(new TH1D("track_residual_LR_all", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // all elastics
         H1_track_residual_LR.push_back(new TH1D("track_residual_LR_deuteron", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // deuteron
@@ -713,84 +713,58 @@ TCanvas* fit_histogram(TH1D* h, const char * name) {
     c1->cd();
     //h->SetFillColor(kGray);
     h->Draw("hist");
-    double xmin = h->GetXaxis()->GetXmin();
-    double xmax = h->GetXaxis()->GetXmax();
-    TF1 *f1 = new TF1("f1", "gaus(0) + gaus(3) + pol0(6)", xmin, xmax);
-    //f1->SetLineColor(kGreen+2);
-    f1->SetLineWidth(4);
-    //f1->SetNpx(300);
-    /*f1->SetParameter(0,h->GetBinContent(h->GetMaximumBin())); // amplitude
-    f1->SetParameter(1,h->GetMean()); // mean 
-    f1->SetParameter(2,h->GetStdDev()); // stdev
-    f1->SetParameter(3,h->GetBinContent(h->GetMaximumBin())); // amplitude
-    f1->SetParameter(4,h->GetMean()); // mean
-    f1->SetParameter(5,h->GetStdDev()); // stdev
-    f1->SetParameter(6,1); // baseline
-    */
-    
-    f1->SetParameter(0,1); // amplitude
-    f1->SetParameter(1,1); // mean 
-    f1->SetParameter(2,1); // stdev
-    f1->SetParameter(3,1); // amplitude
-    f1->SetParameter(4,1); // mean
-    f1->SetParameter(5,1); // stdev
-    f1->SetParameter(6,1); // baseline
-    
-    h->Fit("f1", "", "", -xmin, xmax);
-    gPad->Update();
-    // get parameters
-    double amp1 = f1->GetParameter(0);
-    double mu1 = f1->GetParameter(1);
-    double sigma1 = f1->GetParameter(2);
-    double amp2 = f1->GetParameter(3);
-    double mu2 = f1->GetParameter(4);
-    double sigma2 = f1->GetParameter(5);
-    //double baseline = f1->GetParameter(6);
-    // compute stats
-    //double mean = mu1 + mu2 + 0.5*(xmin+xmax);
-    //double stdev = sqrt(pow(sigma1, 2) + pow(sigma2, 2));
-    double mean = (amp1*mu1 + amp2*mu2)/(amp1+amp2);
-    double mom1 = pow(sigma1,2) + pow(mu1,2); // moment of order 2: E(X^2)
-    double mom2 = pow(sigma2,2) + pow(mu2,2);
-    double mom = (amp1*mom1 + amp2*mom2)/(amp1+amp2);
-    double stdev = sqrt(mom - pow(mean,2));
-    double x1 = mean - stdev;
-    double x2 = mean + stdev;
-    // print info
-    double half_amplitude = 0.5*f1->GetMaximum();
-    //double x_for_max_value = f1->GetMaximumX();
-    /*double half_amplitude = 0.5*(baseline + f1->GetMaximum());
-    double x_for_max_value = f1->GetMaximumX();
-    double x1 = f1->GetX(half_amplitude, -xmin, x_for_max_value);
-    double x2 = f1->GetX(half_amplitude, x_for_max_value, xmax);*/
 
-    TText* text = new TText();
-    // SetTextAlign(10*h+v)
-    // h horizontal:  1=left adjusted, 2=centered, 3=right adjusted
-    // v vertical: 1=bottom adjusted, 2=centered, 3=top adjusted
-    text->SetTextSize(0.03);
-    text->SetTextAlign(12);
-    text->SetTextColor(kGreen+2);
-    text->DrawText(x2 + 0.05*(xmax-xmin), 1*half_amplitude, TString::Format("mean: %.3lf , error: %.3lf", 0.5*(x1+x2), 0.5*(x2-x1)).Data());
-    // Draw width
-    /*TGraph * gr = new TGraph();
-    gr->AddPoint(x1, 0);
-    gr->AddPoint(x1, half_amplitude);
-    gr->AddPoint(0.5*(x1+x2), half_amplitude);
-    gr->AddPoint(x2, half_amplitude);
-    gr->AddPoint(x2, 0);
-    gr->SetLineStyle(2);
-    gr->SetLineColor(kRed);
-    gr->Draw("same l");*/
-    // Error graph
-    TGraphErrors* gerr = new TGraphErrors();
-    gerr->SetLineColor(kGreen+2);
-    gerr->SetLineWidth(3);
-    gerr->SetMarkerColor(kGreen+2);
-    //gerr->SetMarkerSize(3);
-    gerr->SetMarkerStyle(8);
-    gerr->AddPointError(mean, 0.5*(f1->Eval(x1) + f1->Eval(x2)), stdev, 0);
-    gerr->Draw("same lp");
+    // double xmin = h->GetXaxis()->GetXmin();
+    // double xmax = h->GetXaxis()->GetXmax();
+    // TF1 *f1 = new TF1("f1", "gaus(0) + gaus(3) + pol0(6)", xmin, xmax);
+    // //f1->SetLineColor(kGreen+2);
+    // f1->SetLineWidth(4);
+    
+    // f1->SetParameter(0,1); // amplitude
+    // f1->SetParameter(1,1); // mean 
+    // f1->SetParameter(2,1); // stdev
+    // f1->SetParameter(3,1); // amplitude
+    // f1->SetParameter(4,1); // mean
+    // f1->SetParameter(5,1); // stdev
+    // f1->SetParameter(6,1); // baseline
+    
+    // h->Fit("f1", "", "", -xmin, xmax);
+    // gPad->Update();
+    // // get parameters
+    // double amp1 = f1->GetParameter(0);
+    // double mu1 = f1->GetParameter(1);
+    // double sigma1 = f1->GetParameter(2);
+    // double amp2 = f1->GetParameter(3);
+    // double mu2 = f1->GetParameter(4);
+    // double sigma2 = f1->GetParameter(5);
+
+    // double mean = (amp1*mu1 + amp2*mu2)/(amp1+amp2);
+    // double mom1 = pow(sigma1,2) + pow(mu1,2); // moment of order 2: E(X^2)
+    // double mom2 = pow(sigma2,2) + pow(mu2,2);
+    // double mom = (amp1*mom1 + amp2*mom2)/(amp1+amp2);
+    // double stdev = sqrt(mom - pow(mean,2));
+    // double x1 = mean - stdev;
+    // double x2 = mean + stdev;
+    // // print info
+    // double half_amplitude = 0.5*f1->GetMaximum();
+
+    // TText* text = new TText();
+    // // SetTextAlign(10*h+v)
+    // // h horizontal:  1=left adjusted, 2=centered, 3=right adjusted
+    // // v vertical: 1=bottom adjusted, 2=centered, 3=top adjusted
+    // text->SetTextSize(0.03);
+    // text->SetTextAlign(12);
+    // text->SetTextColor(kGreen+2);
+    // text->DrawText(x2 + 0.05*(xmax-xmin), 1*half_amplitude, TString::Format("mean: %.3lf , error: %.3lf", 0.5*(x1+x2), 0.5*(x2-x1)).Data());
+    // // Error graph
+    // TGraphErrors* gerr = new TGraphErrors();
+    // gerr->SetLineColor(kGreen+2);
+    // gerr->SetLineWidth(3);
+    // gerr->SetMarkerColor(kGreen+2);
+    // //gerr->SetMarkerSize(3);
+    // gerr->SetMarkerStyle(8);
+    // gerr->AddPointError(mean, 0.5*(f1->Eval(x1) + f1->Eval(x2)), stdev, 0);
+    // gerr->Draw("same lp");
     return c1;
 }
 void fill_histogram(std::vector<TH1D*> histos, std::vector<const char *> entries, hipo::bank & bank, std::vector<int> & rows) {
