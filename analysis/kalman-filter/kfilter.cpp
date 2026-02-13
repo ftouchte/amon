@@ -41,12 +41,12 @@ void progressBar(int state, int bar_length = 100);
 int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
-    const char * output = "./output/kfilter-deuteron-v45.root";
+    const char * output = "./output/kfilter-deuteron-v33.root";
     
     /////////////////////////
     /// simu
     /// /////////////////////
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v45.hipo";
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v33.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;

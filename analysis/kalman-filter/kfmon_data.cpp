@@ -230,9 +230,17 @@ int main(int argc, char const *argv[]) {
         H2_time2distance.push_back(new TH2D("corr_t2d_deuteron", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
         H2_time2distance.push_back(new TH2D("corr_t2d_proton", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
     std::vector<TH1D*> H1_time;
-        H1_time.push_back(new TH1D("time_all", "time ; time (ns); count",  50, 0, 320)); // all elastics
-        H1_time.push_back(new TH1D("time_deuteron", "time ; time (ns); count",  50, 0, 320)); // deuteron 
-        H1_time.push_back(new TH1D("time_proton", "time ; time (ns); count",  50, 0, 320)); // proton
+        H1_time.push_back(new TH1D("time_all", "time ; time (ns); count",  100, 0, 320)); // all elastics
+        H1_time.push_back(new TH1D("time_deuteron", "time ; time (ns); count",  100, 0, 320)); // deuteron 
+        H1_time.push_back(new TH1D("time_proton", "time ; time (ns); count",  100, 0, 320)); // proton
+    std::vector<TH1D*> H1_timeOverThreshold;
+        H1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_all", "timeOverThreshold ; timeOverThreshold (ns); count",  100, 250, 700)); // all elastics
+        H1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_deuteron", "timeOverThreshold ; timeOverThreshold (ns); count",  100, 250, 700)); // deuteron 
+        H1_timeOverThreshold.push_back(new TH1D("timeOverThreshold_proton", "timeOverThreshold ; timeOverThreshold (ns); count",  100, 250, 700)); // proton
+    std::vector<TH1D*> H1_amplitude;
+        H1_amplitude.push_back(new TH1D("amplitude_all", "amplitude ; amplitude (ADC); count",  100, 0, 4000)); // all elastics
+        H1_amplitude.push_back(new TH1D("amplitude_deuteron", "amplitude ; amplitude (ADC); count",  100, 0, 4000)); // deuteron 
+        H1_amplitude.push_back(new TH1D("amplitude_proton", "amplitude ; amplitude (ADC); count",  100, 0, 4000)); // proton
     std::vector<TH1D*> H1_distance;
         H1_distance.push_back(new TH1D("AHDC::hits:doca_all", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // all elastics
         H1_distance.push_back(new TH1D("AHDC::hits:doca_deuteron", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // deuteron 
@@ -375,6 +383,8 @@ int main(int argc, char const *argv[]) {
                         H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                         H1_time[0]->Fill(hitBank.get("time", hitRow));
                         H1_distance[0]->Fill(hitBank.get("doca", hitRow));
+                        H1_amplitude[0]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                        H1_timeOverThreshold[0]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                     }
                 }
                 H1_track_sum_residual[0]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
@@ -410,6 +420,8 @@ int main(int argc, char const *argv[]) {
                             H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
                             H2_time2distance[1]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                             H1_time[1]->Fill(hitBank.get("time", hitRow));
+                            H1_amplitude[1]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                            H1_timeOverThreshold[1]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                             H1_distance[1]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
@@ -449,6 +461,8 @@ int main(int argc, char const *argv[]) {
                             H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
                             H2_time2distance[2]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                             H1_time[2]->Fill(hitBank.get("time", hitRow));
+                            H1_amplitude[2]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                            H1_timeOverThreshold[2]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                             H1_distance[2]->Fill(hitBank.get("doca", hitRow));
                         }
                     }
@@ -544,6 +558,8 @@ int main(int argc, char const *argv[]) {
     H2_corr_time_adc->Write("corr_time_adc");
     H2_time2distance[0]->Write("time2distance");
     H1_time[0]->Write("AHDC::hits:time");
+    H1_amplitude[0]->Write("AHDC::adc:ADC");
+    H1_timeOverThreshold[0]->Write("AHDC::adc:timeOverThreshold");
     H1_distance[0]->Write("AHDC::hits:doca");
     H1_track_nhits[0]->Write("h1_track_nhits");
     H1_track_sum_residual[0]->Write("h1_track_sum_residuals");
@@ -572,6 +588,8 @@ int main(int argc, char const *argv[]) {
     H2_corr_residual_vz[1]->Write("corr_residual_vz");
     H2_time2distance[1]->Write("time2distance");
     H1_time[1]->Write("AHDC::hits:time");
+    H1_amplitude[1]->Write("AHDC::adc:ADC");
+    H1_timeOverThreshold[1]->Write("AHDC::adc:timeOverThreshold");
     H1_distance[1]->Write("AHDC::hits:doca");
     H1_track_nhits[1]->Write("h1_track_nhits");
     H1_track_sum_residual[1]->Write("h1_track_sum_residuals");
@@ -600,6 +618,8 @@ int main(int argc, char const *argv[]) {
     H2_corr_residual_vz[2]->Write("corr_residual_vz");
     H2_time2distance[2]->Write("time2distance");
     H1_time[2]->Write("AHDC::hits:time");
+    H1_timeOverThreshold[2]->Write("AHDC::adc:timeOverThreshold");
+    H1_amplitude[2]->Write("AHDC::adc:ADC");
     H1_distance[2]->Write("AHDC::hits:doca");
     H1_track_nhits[2]->Write("h1_track_nhits");
     H1_track_sum_residual[2]->Write("h1_track_sum_residuals");

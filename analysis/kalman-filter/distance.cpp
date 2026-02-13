@@ -88,7 +88,7 @@ int main(int argc, char const *argv[]) {
     //TH1D* H1_remcDoca    = new TH1D("remcDoca", "remcDoca from t2d; remcDoca (mm); #count", 100, 0, 4); 
     TH1D* H1_adc    = new TH1D("adc", "ADC; ADC (adc); #count", 100, 0, 4000); 
     TH1D* H1_tot    = new TH1D("tot", "timeOverThreshold; timeOverThreshold (ns); #count", 100, 150, 750); 
-    TH2D* H2_deltaTime_adc = new TH2D("corr_deltaTime_adc", "deltaTime vs ADC;ADC (adc); deltaTime (ns)", 100, 0, 4000, 100, -50, 50);
+    TH2D* H2_deltaTime_adc = new TH2D("corr_deltaTime_adc", "deltaTime vs amplitude; amplitude (ADC); deltaTime (ns)", 100, 0, 4000, 100, -50, 50);
     TH2D* H2_deltaDistance_adc = new TH2D("corr_deltaDistance_adc", "deltaDistance vs ADC;ADC (adc); deltaDistance (mm)", 100, 0, 4000, 100, -2.6, 2.6);
     AhdcCCDB ahdcConstants;
     //****** T2D inversion************************
