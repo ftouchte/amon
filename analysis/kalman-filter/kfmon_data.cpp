@@ -88,8 +88,16 @@ int main(int argc, char const *argv[]) {
     hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
     hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
     hipo::bank  recBank(factory.getSchema("REC::Particle"));
+    hipo::bank  atofHitBank(factory.getSchema("ATOF::hits"));
+    hipo::bank  aiMatchingBank(factory.getSchema("ALERT::ai:projections"));
     hipo::event event;
     long unsigned int nevents =0;
+
+    // ATOF study
+    long unsigned int ntracks =0;
+    long unsigned int nmatches =0;
+    long unsigned int ncomp =0;
+    long unsigned int ncomp_extended =0;
 
     // example of 1D histograms
     //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 50, 0, 250); 
@@ -112,9 +120,9 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_corr_time_adc = new TH2D("corr_time_adc", "time vs ADC; ADC; time", 50, 0, 3700, 50, 0, 250);
     // correlations electron vs ahdc_track
     std::vector<TH2D*> H2_corr_phi;
-        H2_corr_phi.push_back(new TH2D("corr_phi_all", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // all elastics
-        H2_corr_phi.push_back(new TH2D("corr_phi_deuteron", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // deuteron
-        H2_corr_phi.push_back(new TH2D("corr_phi_proton", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 50, 0, 361, 50, 0, 361)); // proton
+        H2_corr_phi.push_back(new TH2D("corr_phi_all", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 100, 0, 361, 50, 0, 361)); // all elastics
+        H2_corr_phi.push_back(new TH2D("corr_phi_deuteron", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 100, 0, 361, 50, 0, 361)); // deuteron
+        H2_corr_phi.push_back(new TH2D("corr_phi_proton", "#phi_{t} vs #phi_{e}; #phi_{e} (deg); #phi_{t} (deg)", 100, 0, 361, 50, 0, 361)); // proton
     std::vector<TH2D*> H2_corr_pT;
         H2_corr_pT.push_back(new TH2D("corr_pT_all", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 50, 80, 400)); // all elastics
         H2_corr_pT.push_back(new TH2D("corr_pT_deuteron", "pT_{t} vs pT_{e}; pT_{e} (MeV); pT_{t} (MeV)", 50, 190, 400, 50, 80, 400)); // deuteron
@@ -124,9 +132,9 @@ int main(int argc, char const *argv[]) {
         H2_corr_vz.push_back(new TH2D("corr_vz_deuteron", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // deuteron
         H2_corr_vz.push_back(new TH2D("corr_vz_proton", "vz_{t} vs vz_{e}; vz_{e} (cm); vz_{t} (cm)", 50, -35, 16, 50, -20, 16)); // proton
     std::vector<TH1D*> H1_delta_vz;
-        H1_delta_vz.push_back(new TH1D("delta_vz_all", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // all elastics
-        H1_delta_vz.push_back(new TH1D("delta_vz_deuteron", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // deuteron
-        H1_delta_vz.push_back(new TH1D("delta_vz_proton", "#Delta vz = vz_{e} - vz_{t}; #Delta vz (cm); #count", 100, -20, 10)); // proton
+        H1_delta_vz.push_back(new TH1D("delta_vz_all", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10)); // all elastics
+        H1_delta_vz.push_back(new TH1D("delta_vz_deuteron", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10)); // deuteron
+        H1_delta_vz.push_back(new TH1D("delta_vz_proton", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10)); // proton
     std::vector<TH1D*> H1_delta_phi;
         H1_delta_phi.push_back(new TH1D("delta_phi_sym_all", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width)); // all elastics
         H1_delta_phi.push_back(new TH1D("delta_phi_sym_deuteron", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width)); // deuteron
@@ -182,9 +190,9 @@ int main(int argc, char const *argv[]) {
         H1_diff_pT.push_back(new TH1D("diff_pT_deuteron", "(track) pT_{recon} - pT_{expected} ; pT_{recon} - pT_{expected} (MeV); count", 50, -400, 140));
         H1_diff_pT.push_back(new TH1D("diff_pT_proton", "(track) pT_{recon} - pT_{expected} ; pT_{recon} - pT_{expected} (MeV); count", 50, -400, 400));
     std::vector<TH1D*> H1_diff_theta;
-        H1_diff_theta.push_back(new TH1D("diff_theta_all", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -180, 100));
-        H1_diff_theta.push_back(new TH1D("diff_theta_deuteron", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -180, 100));
-        H1_diff_theta.push_back(new TH1D("diff_theta_proton", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -180, 100));
+        H1_diff_theta.push_back(new TH1D("diff_theta_all", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -80, 80));
+        H1_diff_theta.push_back(new TH1D("diff_theta_deuteron", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -80, 80));
+        H1_diff_theta.push_back(new TH1D("diff_theta_proton", "(track) theta_{recon} - theta_{expected} ; theta_{recon} - theta_{expected} (deg); count", 50, -80, 80));
     std::vector<TH1D*> H1_diff_phi;
         H1_diff_phi.push_back(new TH1D("diff_phi_all", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
         H1_diff_phi.push_back(new TH1D("diff_phi_deuteron", "(track) phi_{recon} - phi_{expected} ; phi_{recon} - phi_{expected} (deg); count", 50, -50, 50));
@@ -207,24 +215,12 @@ int main(int argc, char const *argv[]) {
         H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_3", "residual per super layer 3; residual (mm); count", 50, -3, 3));
         H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_4", "residual per super layer 4; residual (mm); count", 50, -3, 3));
         H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_5", "residual per super layer 5; residual (mm); count", 50, -3, 3));
-    std::vector<TH1D*> H1_residual_LR_per_slayer;
-        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_1", "residual_LR per super layer 1; residual_LR (mm); count", 50, -3, 3));
-        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_2", "residual_LR per super layer 2; residual_LR (mm); count", 50, -3, 3));
-        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_3", "residual_LR per super layer 3; residual_LR (mm); count", 50, -3, 3));
-        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_4", "residual_LR per super layer 4; residual_LR (mm); count", 50, -3, 3));
-        H1_residual_LR_per_slayer.push_back(new TH1D("track_residual_LR_slayer_5", "residual_LR per super layer 5; residual_LR (mm); count", 50, -3, 3));
     std::vector<TH2D*> H2_corr_residual_per_slayer_vz;
         H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_1", "residual per super layer 1; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_2", "residual per super layer 2; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_3", "residual per super layer 3; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_4", "residual per super layer 4; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_5", "residual per super layer 5; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
-    std::vector<TH2D*> H2_corr_residual_LR_per_slayer_vz;
-        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_1", "residual_LR per super layer 1; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_2", "residual_LR per super layer 2; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_3", "residual_LR per super layer 3; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_4", "residual_LR per super layer 4; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_LR_per_slayer_vz.push_back(new TH2D("track_residual_LR_slayer_vz_5", "residual_LR per super layer 5; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
     std::vector<TH2D*> H2_time2distance;
         H2_time2distance.push_back(new TH2D("corr_t2d_all", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
         H2_time2distance.push_back(new TH2D("corr_t2d_deuteron", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
@@ -245,7 +241,19 @@ int main(int argc, char const *argv[]) {
         H1_distance.push_back(new TH1D("AHDC::hits:doca_all", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // all elastics
         H1_distance.push_back(new TH1D("AHDC::hits:doca_deuteron", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // deuteron 
         H1_distance.push_back(new TH1D("AHDC::hits:doca_proton", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // proton
-    // example of 2D histograms
+    // ATOF
+    TH2D* H2_corr_atof_wedge_vz = new TH2D("corr_atof_wedge_vz", "ATOF wedge vz versus electron vz;electron vz (cm); ATOF wedge vz (cm)", 50, -30, 20, 10, -14, 14);
+    TH1D* H1_diff_atof_wedge_vz = new TH1D("diff_atof_wedge_vz", "#Delta vz = vz^{(electron)} - vz^{(ATOF wedge)}; #Delta vz (cm); count", 50, -30, 10);
+    TH1D* H1_nmatched_bar = new TH1D("nmatched_bar", "number of bars for a matched wegde; nbars; count", 6, 0, 6);
+    TH2D* H2_corr_atof_bar_vz = new TH2D("corr_atof_vz_all", "ATOF bar vz versus electron vz;electron vz (cm); ATOF bar vz (cm)", 50, -30, 20, 100, -20, 20);
+    TH1D* H1_diff_atof_bar_vz = new TH1D("diff_atof_vz_all", "#Delta vz = vz^{(electron)} - vz^{(ATOF bar)}; #Delta vz (cm); count", 50, -30, 10);
+    TH1D* H1_residual_with_atof = new TH1D("residual_with_atof", "residual; residual (mm); count", 50, -3, 3);
+    TH1D* H1_residual_without_atof = new TH1D("residual_without_atof", "residual; residual (mm); count", 50, -3, 3);
+    TH1D* H1_delta_phi_with_atof = new TH1D("delta_phi_with_atof", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width);
+    TH1D* H1_delta_phi_without_atof = new TH1D("delta_phi_without_atof", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width);
+    TH1D* H1_delta_vz_with_atof = new TH1D("delta_vz_with_atof", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10);
+    TH1D* H1_delta_vz_without_atof = new TH1D("delta_vz_without_atof", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10);
+    
     
     /////////////////////////
     // Loop over events
@@ -263,6 +271,8 @@ int main(int argc, char const *argv[]) {
         event.getStructure(trackBank);
         event.getStructure(hitBank);
         event.getStructure(recBank);
+        event.getStructure(atofHitBank);
+        event.getStructure(aiMatchingBank);
 
         // find the elastic electron
         //int electron_row = -1;
@@ -377,9 +387,7 @@ int main(int argc, char const *argv[]) {
                         H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
                         H2_corr_time_adc->Fill(adcBank.get("ADC", adcRow), hitBank.get("time", hitRow));
                         H1_residual_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("residual", hitRow));
-                        H1_residual_LR_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("timeOverThreshold", hitRow));
                         H2_corr_residual_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("residual", hitRow));
-                        H2_corr_residual_LR_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("timeOverThreshold", hitRow));
                         H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                         H1_time[0]->Fill(hitBank.get("time", hitRow));
                         H1_distance[0]->Fill(hitBank.get("doca", hitRow));
@@ -486,9 +494,85 @@ int main(int argc, char const *argv[]) {
                     H1_diff_theta[2]->Fill(ahdc_track.theta - expected_track.theta);
                     H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi); 
                 }
-            }
+                ////////////////////
+                // ATOF mathcing
+                ////////////////////
+                int atofid = -1;
+                ntracks++; // here we already have a elastics track // int trackid = -1;
+                bool isFirst = false;
+                for (int aiRow = 0; aiRow < aiMatchingBank.getRows(); aiRow++) {
+                    if (trackid == aiMatchingBank.get("trackid", aiRow)) {
+                        atofid = aiMatchingBank.get("matched_atof_hit_id", aiRow);
+                        if (atofid > 0 && !isFirst) {
+                            nmatches++; // do not count two different matched in the same event
+                            isFirst = true;
+                            //aiMatchingBank.show();
+                        }
+                    }
+                }
+                // find the layer/sector of the atof hit (here : wedge)
+                if (atofid > 0) {
+                    // fill residual
+                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                        if (hitBank.getInt("trackid", hitRow) == trackid) {
+                            H1_residual_with_atof->Fill(hitBank.get("residual", hitRow));
+                        }
+                    }
+                    H1_delta_phi_with_atof->Fill(delta_phi);
+                    H1_delta_vz_with_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                    // end fill residual
+                    int layer = -1;
+                    int sector = -1;
+                    for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+                        if (atofHitBank.get("id", hitRow) == atofid) {
+                            layer = atofHitBank.get("layer", hitRow);
+                            sector = atofHitBank.get("sector", hitRow);
+                            if (sector >= 0 && layer >= 0) {
+                                H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*atofHitBank.get("z", hitRow));
+                                H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*atofHitBank.get("z", hitRow));
+                            }
+                        }
+                    }
+                    // look for a bar close to this wedge
+                    if (layer >= 0 && sector >= 0) {
+                        int local_ncomp_extended = 0;
+                        bool IsBarCounted = false;
+                        for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+                            // a bar in the same sector
+                            if (atofHitBank.get("sector", hitRow) == sector && atofHitBank.get("component", hitRow) == 10) {
+                                // a bar with the same layer id
+                                if (atofHitBank.get("layer", hitRow) == layer) {
+                                    ncomp++;
+                                }
+                                // a bar with the same layer id or plus/minus 1
+                                if (atofHitBank.get("layer", hitRow) == layer || atofHitBank.get("layer", hitRow) == layer-1 || atofHitBank.get("layer", hitRow) == layer+1) {
+                                    if (!IsBarCounted) {
+                                        ncomp_extended++; // do not count twice, just want to know if a bar exists
+                                        IsBarCounted = true;
+                                    }
+                                    local_ncomp_extended++;
+                                    double vz = 0.1*atofHitBank.getFloat("z", hitRow); // cm
+                                    H2_corr_atof_bar_vz->Fill(electron.vz, vz);
+                                    H1_diff_atof_bar_vz->Fill(electron.vz-vz);
+                                }
+                            }
+                        }
+                        H1_nmatched_bar->Fill(local_ncomp_extended);
+                    }
+                } else {
+                    // fill residual
+                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                        if (hitBank.getInt("trackid", hitRow) == trackid) {
+                            H1_residual_without_atof->Fill(hitBank.get("residual", hitRow));
+                        }
+                    }
+                    H1_delta_phi_without_atof->Fill(delta_phi);
+                    H1_delta_vz_without_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                } // end atof matching
+            } // end cut on delta_phi caut
+        
         }
-
+        
     }
 
     // save the output in a ROOT file
@@ -515,7 +599,11 @@ int main(int argc, char const *argv[]) {
     H2_corr_pT[0]->Write("corr_pT");
     H2_corr_vz[0]->Write("corr_vz");
     TCanvas* c_delta_vz_0 = fit_histogram(H1_delta_vz[0], "canvas_delta_vz_0"); c_delta_vz_0->Write("delta_vz");
+    H1_delta_vz_with_atof->Write("delta_vz_with_atof");
+    H1_delta_vz_without_atof->Write("delta_vz_without_atof");
     TCanvas* c_delta_phi_0 = fit_histogram(H1_delta_phi[0], "canvas_delta_phi_0"); c_delta_phi_0->Write("delta_phi");
+    H1_delta_phi_with_atof->Write("delta_phi_with_atof");
+    H1_delta_phi_without_atof->Write("delta_phi_without_atof");
     H1_track_pT[0]->Write("h1_track_pT");
     H1_track_phi[0]->Write("h1_track_phi");
     H1_track_theta[0]->Write("h1_track_theta");
@@ -526,18 +614,12 @@ int main(int argc, char const *argv[]) {
     H1_diff_theta[0]->Write("h1_diff_theta");
     H1_diff_phi[0]->Write("h1_diff_phi");
     TCanvas* c_residual_0 = fit_histogram(H1_track_residual[0], "canvas_residual_0"); c_residual_0->Write("residual");
-    H1_track_residual_LR[0]->Write("residual_LR");
-    //H1_residual_per_slayer[0]->Write("residual_slayer_1");
+    H1_residual_with_atof->Write("residual_with_atof");
+    H1_residual_without_atof->Write("residual_without_atof");
     for (auto h: H1_residual_per_slayer) {
         h->Write(h->GetName());
     }
-    for (auto h: H1_residual_LR_per_slayer) {
-        h->Write(h->GetName());
-    }
     for (auto h: H2_corr_residual_per_slayer_vz) {
-        h->Write(h->GetName());
-    }
-    for (auto h: H2_corr_residual_LR_per_slayer_vz) {
         h->Write(h->GetName());
     }
     H1_track_chi2[0]->Write("chi2");
@@ -562,7 +644,12 @@ int main(int argc, char const *argv[]) {
     H1_timeOverThreshold[0]->Write("AHDC::adc:timeOverThreshold");
     H1_distance[0]->Write("AHDC::hits:doca");
     H1_track_nhits[0]->Write("h1_track_nhits");
-    H1_track_sum_residual[0]->Write("h1_track_sum_residuals");
+    H1_track_sum_residual[0]->Write("h1_track_sum_residuals");  
+    H2_corr_atof_wedge_vz->Write("corr_atof_wedge");
+    H1_diff_atof_wedge_vz->Write("diff_atof_wedge_vz");
+    H1_nmatched_bar->Write("nb_bars_per_wegde");
+    H2_corr_atof_bar_vz->Write("corr_atof_bar_vz");
+    H1_diff_atof_bar_vz->Write("diff_atof_bar_vz");
     // deuteron
     TDirectory *deuteron_dir = f->mkdir("deuterons");
     deuteron_dir->cd();
@@ -627,7 +714,12 @@ int main(int argc, char const *argv[]) {
     ////////////////////////////////////////////
     /// Others studies
     ////////////////////////////////////////////
-    count_atof_matching(filename, f);
+    //count_atof_matching(filename, f);
+    printf("ATOF-AHDC matching (elastics events without delta_phi cut)\n");
+    printf("   nb of kftracks/nevents   : %ld   ===>  %lf %%\n", ntracks, 100.0*ntracks/nevents);
+    printf("   nb of atof wedges matched / ntracks : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
+    printf("   nb of atof bars matched with the same wedge id/ ntracks: %ld   ===>  %lf %%\n", ncomp, 100.0*ncomp/ntracks);
+    printf("   nb of atof bars matched with the same wedge id or plus/minus 1 / ntracks: %ld   ===>  %lf %%\n", ncomp_extended, 100.0*ncomp_extended/ntracks);
     if (IsMC) run_simulation(filename, f);
     // close file
     f->Close();
@@ -787,8 +879,8 @@ void count_atof_matching(std::string filename, TFile * rootFile) {
     hipo::dictionary factory;
     reader.readDictionary(factory);
 
-    TH1D* H1_atof_bar_time = new TH1D("atof_bar_time", "time; time (ns); count", 50, 70, 112);
-    TH1D* H1_atof_wedge_time = new TH1D("atof_wedge_time", "time; time (ns); count", 50, 70, 112);
+    // TH1D* H1_atof_bar_time = new TH1D("atof_bar_time", "time; time (ns); count", 50, 70, 112);
+    // TH1D* H1_atof_wedge_time = new TH1D("atof_wedge_time", "time; time (ns); count", 50, 70, 112);
 
     // bank definition
     hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
@@ -798,6 +890,8 @@ void count_atof_matching(std::string filename, TFile * rootFile) {
     long unsigned int nevents =0;
     long unsigned int ntracks =0;
     long unsigned int nmatches =0;
+    long unsigned int ncomp =0;
+    long unsigned int ncomp_extended =0;
 
      while( reader.next()){
         nevents++;
@@ -813,13 +907,15 @@ void count_atof_matching(std::string filename, TFile * rootFile) {
         ///////////////////////////////////
         /// count ahdc aof matches
         ///////////////////////////////////
+        int atofid = -1;
+        int trackid = -1;
         if (trackBank.getRows() > 0 && atofHitBank.getRows() > 0) {
             //ntracks += trackBank.getRows();
             ntracks++;
             bool isFirst = false;
             for (int aiRow = 0; aiRow < aiMatchingBank.getRows(); aiRow++) {
-                int trackid = aiMatchingBank.get("trackid", aiRow);
-                int atofid = aiMatchingBank.get("matched_atof_hit_id", aiRow);
+                trackid = aiMatchingBank.get("trackid", aiRow);
+                atofid = aiMatchingBank.get("matched_atof_hit_id", aiRow);
                 if (trackid > 0 && atofid > 0 && !isFirst) {
                     nmatches++;
                     isFirst = true;
@@ -827,30 +923,65 @@ void count_atof_matching(std::string filename, TFile * rootFile) {
                 }
             }
         }
+        // find the layer/sector of the atof hit (here : wedge)
+        if (trackid > 0 && atofid > 0) {
+            int layer = -1;
+            int sector = -1;
+            for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+                if (atofHitBank.get("id", hitRow) == atofid) {
+                    layer = atofHitBank.get("layer", hitRow);
+                    sector = atofHitBank.get("sector", hitRow);
+                }
+            }
+            // look for a bar
+            if (layer > 0 && sector > 0) {
+                bool IsBarCounted = false;
+                for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+                    // a bar in the same sector
+                    if (atofHitBank.get("sector", hitRow) == sector && atofHitBank.get("component", hitRow) == 10) {
+                            // a bar with the same layer id
+                            if (atofHitBank.get("layer", hitRow) == layer) {
+                                ncomp++;
+                                ncomp_extended++;
+                            }
+                            // a bar with the same layer id or plus/minus 1
+                            if (!IsBarCounted && (atofHitBank.get("layer", hitRow) == layer || atofHitBank.get("layer", hitRow) == layer-1 || atofHitBank.get("layer", hitRow) == layer+1)) {
+                                ncomp_extended++;
+                                IsBarCounted = true;
+                            }
+                    }
+                }
+            }
+        }
+        
+
+
         //////////////////////////////////////
         /// atof bar time
         //////////////////////////////////////
-        for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
-            int component = atofHitBank.get("component", hitRow);
-            // bar selection
-            double time = atofHitBank.get("time", hitRow);
-            if (component == 10) {
-                H1_atof_bar_time->Fill(time);
-            } // else are wedges
-            else {
-                H1_atof_wedge_time->Fill(time);
-            }
-        }
+        // for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+        //     int component = atofHitBank.get("component", hitRow);
+        //     // bar selection
+        //     double time = atofHitBank.get("time", hitRow);
+        //     if (component == 10) {
+        //         H1_atof_bar_time->Fill(time);
+        //     } // else are wedges
+        //     else {
+        //         H1_atof_wedge_time->Fill(time);
+        //     }
+        // }
 
     }
 
-    TDirectory *atof_dir = rootFile->mkdir("atof");
-    atof_dir->cd();
-    H1_atof_bar_time->Write("bar_time");
-    H1_atof_wedge_time->Write("wedge_time");
+    // TDirectory *atof_dir = rootFile->mkdir("atof");
+    // atof_dir->cd();
+    // H1_atof_bar_time->Write("bar_time");
+    // H1_atof_wedge_time->Write("wedge_time");
     printf("   Number of events       : %ld\n", nevents);
-    printf("   Number of kftracks     : %ld   ===>  %lf %%\n", ntracks, 100.0*ntracks/nevents);
-    printf("   Number of atof matches : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
+    printf("   Number of kftracks/nevents   : %ld   ===>  %lf %%\n", ntracks, 100.0*ntracks/nevents);
+    printf("   Number of atof matches / ntracks : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
+    printf("   Number of atof bars matched / ntracks: %ld   ===>  %lf %%\n", ncomp, 100.0*ncomp/ntracks);
+    printf("   Number of extended atof bars matched / ntracks: %ld   ===>  %lf %%\n", ncomp, 100.0*ncomp_extended/ntracks);
 }
 
 void run_simulation(std::string filename, TFile * rootFile) {

@@ -33,7 +33,7 @@ public class BuildATOF {
         try {
             writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             // // header
-            writer.write("sector,superlayer,layer,component,z_top,z_bottom,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7");
+            writer.write("#sector,superlayer,layer,component,z_top,z_bottom,x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7");
             writer.newLine();
 
             for (int s = 0; s < detector.getNumSectors(); s++) {

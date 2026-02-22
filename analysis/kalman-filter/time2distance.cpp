@@ -47,7 +47,9 @@ TCanvas* time2distance(std::vector<double> & pars);
 int main(int argc, char const *argv[]) {
 
     // output
-    const char * output = "./output/time2distance-v10-bis.root";
+    //const char * output = "./output/time2distance-v10.root";
+    //const char * output = "./output/time2distance-v11.root";
+    const char * output = "./output/time2distance-v0-new.root";
     TFile *f = new TFile(output, "RECREATE");
     TDirectory *projection_dir = f->mkdir("t2d_fit_projection1D");
     //std::vector<double> pars;
@@ -61,8 +63,10 @@ int main(int argc, char const *argv[]) {
     /////////////////////////
     /// simu
     /// /////////////////////
+    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v0.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v11.hipo";
+    //const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v10.hipo";
     //const char* filename = "/home/touchte-codjo/Desktop/amon/analysis/simulation/elastics_events.hipo";
-    const char* filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/elastics_events-v10.hipo";
     printf("> filename : %s\n", filename);
     hipo::reader  reader(filename);
     hipo::dictionary factory;
@@ -79,9 +83,9 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_time = new TH1D("time", "time; time (ns); count", 100, 0, 250);
     TH1D* H1_distance = new TH1D("distance", "distance; distance (mm); count", 100, 0, 4);
     TH2D* H2_time2distance = new TH2D("corr_t2d", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4);
-    TH1D* H1_residual = new TH1D("residuals", "residuals; residuals (mm); #count", 100, -2, 2);
+    TH1D* H1_residual = new TH1D("residual", "residual; residual (mm); count", 100, -2, 2);
     TH2D* H2_time2distance_filtered = new TH2D("corr_t2d_filtered", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4);
-    TH1D* H1_residual_filtered = new TH1D("residuals_filtered", "residuals; residuals (mm); #count", 100, -2, 2);
+    TH1D* H1_residual_filtered = new TH1D("residual_filtered", "residual; residual (mm); count", 100, -2, 2);
     //TH1D* H1_t0  = new TH1D("t0", "t0; t0 (ns); count", 100, 0, 400);
     //TH1D* H1_testDistance = new TH1D("testDistance", "testDistance; testDistance (mm); count", 100, 0, 4);
     //TH1D* H1_leadingEdgeTime = new TH1D("leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 250, 700);
@@ -147,7 +151,7 @@ int main(int argc, char const *argv[]) {
     //int proj_nbins = 0.05*nbins;
     int proj_nbins = 2;
     int Npts = nbins/proj_nbins;
-    TGraphErrors* gr = new TGraphErrors(Npts);
+    TGraphErrors* gr = new TGraphErrors();
     for (int i = 0; i < Npts; i++) {
         TCanvas* canvas3 = new TCanvas("c3", "c3_proj");
         canvas3->cd();
@@ -164,8 +168,8 @@ int main(int argc, char const *argv[]) {
         printf(">   mean : %lf, stdDev : %lf\n", mean, stdDev);
         double x_bin_inf = H2_time2distance_filtered->GetXaxis()->GetBinCenter(i*proj_nbins);
         double x_bin_sup = H2_time2distance_filtered->GetXaxis()->GetBinCenter((i+1)*proj_nbins);
-        gr->SetPoint(i, 0.5*(x_bin_sup+x_bin_inf), mean);
-        gr->SetPointError(i, 0, stdDev);
+        //if (x_bin_inf > 250) continue;
+        gr->AddPointError(0.5*(x_bin_sup+x_bin_inf), mean, 0, stdDev);
         canvas2->cd();
         //text1->DrawText(0.5*(x_bin_sup+x_bin_inf), mean, TString::Format("%.2lf +/- %.2lf", mean, stdDev).Data());
     }
@@ -177,7 +181,7 @@ int main(int argc, char const *argv[]) {
     gr->Draw("same pl");
     TLegend* legend = new TLegend(0.1,0.7,0.6,0.9);
     //legend->SetHeader("deltaTime projection","C");
-    legend->AddEntry(gr, "most probable distance for a given time slot");
+    legend->AddEntry(gr, "mean and standard deviation within 2 bins");
     ///////////////////////
     // Fit the points
     // ////////////////////
@@ -193,7 +197,7 @@ int main(int argc, char const *argv[]) {
     pars.push_back(f1->GetParameter(0));
     pars.push_back(f1->GetParameter(1));
     pars.push_back(f1->GetParameter(2));
-    legend->AddEntry(f1, TString::Format("polynomial fit: %+lf#bf{t}%+lf#bf{t}^{2}%+lf#bf{t}^{3}", pars[0], pars[1], pars[2]).Data());
+    legend->AddEntry(f1, TString::Format("polynomial fit: %+lf#bf{x}%+e#bf{x}^{2}%+e#bf{x}^{3}", pars[0], pars[1], pars[2]).Data());
     canvas2->Update();
     legend->Draw();
 
