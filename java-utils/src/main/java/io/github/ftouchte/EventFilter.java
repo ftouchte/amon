@@ -19,6 +19,9 @@ import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.jnp.hipo4.io.HipoWriterSorted;
 import org.jlab.jnp.utils.benchmark.ProgressPrintout;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
 
 
 public class EventFilter {
@@ -28,7 +31,16 @@ public class EventFilter {
 		// String output = args[1];
 		
 		String filename = "/home/touchte-codjo/Desktop/hipofiles/kalman-filter/rec-data-r22712-v86.hipo";
+		//String filename = "/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v80.hipo";
 		String output = "out.hipo";
+
+		Path path = Path.of(output);
+
+		try {
+			Files.deleteIfExists(path);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
 
 		// Initialise HIPO reader for the file
@@ -67,12 +79,14 @@ public class EventFilter {
 		Event   outEvent   = new Event();
 		ProgressPrintout progress = new ProgressPrintout();
 		int counter = 0;
-		int track_counter = 0;
+		int ntracks = 0;
 		
 		// Bank to be loaded
 		Bank runConfigBank = new Bank(reader.getSchemaFactory().getSchema("RUN::config"));
 		Bank trackBank = new Bank(reader.getSchemaFactory().getSchema("AHDC::kftrack"));
 		Bank matchingBank = new Bank(reader.getSchemaFactory().getSchema("ALERT::ai:projections")); // matching of AHDC and ATOF
+		Bank atofHitBank = new Bank(reader.getSchemaFactory().getSchema("ATOF::hits"));
+		Bank mcBank = new Bank(reader.getSchemaFactory().getSchema("MC::Particle"));
 
 		// Loop over events
 		while(reader.hasNext()==true){ // just check if we have a next event but do not load it
@@ -86,6 +100,8 @@ public class EventFilter {
 			inputEvent.read(runConfigBank);
 			inputEvent.read(matchingBank);
 			inputEvent.read(trackBank);
+			inputEvent.read(atofHitBank);
+			inputEvent.read(mcBank);
 
 			// ---------------------------
 			// selection cuts
@@ -96,23 +112,59 @@ public class EventFilter {
 			// 	continue; // ignore this event
 			// }
 			// System.out.println("event number : " + event_number );
-			// if (counter > 0) break;
-			//if (trackBank.getRows() > 0) track_counter++;
-			if (trackBank.getInt("n_hits", 0) < 9) continue;
+			if (trackBank.getRows() > 0) ntracks++; // only count one track
 			boolean criteria = false;
+			int trackid = -1;
+			int atofid = -1;
 			for (int row = 0; row < matchingBank.getRows(); row++) {
-				int trackid = matchingBank.getInt("trackid", row);
-				int atof_wedge_id = matchingBank.getInt("matched_atof_hit_id", row);
-				if (trackid > 0 && atof_wedge_id > 0) {
+				trackid = matchingBank.getInt("trackid", row);
+				atofid = matchingBank.getInt("matched_atof_hit_id", row);
+				if (trackid > 0 && atofid > 0) {
 					criteria = true;
-					break; // the loop, we will keep this event
+					break; // break the loop, we will keep this event
 				}
 			}
-			if (!criteria) continue; // if the criteria is not good, ignore this event
+			/*if (trackid > 0 && atofid > 0) {
+				int sector = -1;
+				int layer = -1;
+				
+				// read sector/layer for this wedge
+				for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+					if (atofHitBank.getShort("id", hitRow) == atofid) {
+						sector = atofHitBank.getInt("sector", hitRow);
+						layer = atofHitBank.getInt("layer", hitRow);
+					}
+				}
+				// find the corresponding bar
+				if (sector > 0 && layer > 0) {
+					for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+						if (atofHitBank.getInt("sector", hitRow) == sector && atofHitBank.getInt("layer", hitRow) == layer && atofHitBank.getInt("component", hitRow) == 10) {
+							criteria = true;
+						}
+					}
+				}
+
+				// track study
+				// for (int row = 0; row < trackBank.getRows(); row++) {
+				// 	if (trackid == trackBank.getInt("trackid", row)) {
+				// 		double vz = 0.1*trackBank.getFloat("z", row); // cm
+				// 		// get deuteron vertex
+				// 		double mc_vz = mcBank.getFloat("vz", 1);
+				// 		if (Math.abs(vz-mc_vz) > 1) {
+				// 			criteria = criteria && false; // ignore this event
+				// 		}
+				// 	}
+				// }
+			}*/
+
+			if (counter > 0) continue; // select only one event
 			
-			counter++;
+			//if (trackBank.getInt("n_hits", 0) < 9) continue;
+			if (!criteria) continue; // if the criteria is not good, ignore this event
 			int event_number = runConfigBank.getInt("event", 0);
+			//if (event_number != 117 || counter > 0) continue;
 			System.out.println("> event : " + event_number);
+			counter++;
 			// ---------------------------
 			// Main routine
 			// ---------------------------
@@ -134,9 +186,8 @@ public class EventFilter {
 			progress.updateStatus();
 		}
 		System.out.println("Number of events : " + reader.getEventCount());
-		System.out.println("Number of tracks : " + track_counter);
-		System.out.println("Number of matches: " + counter);
-		System.out.printf ("Percentage       : %.2f %%\n", 1.0*counter/track_counter);
+		System.out.println("Number of tracks : " + ntracks);
+		System.out.println("Number of matches: " + counter + "==> " + 100.0*counter/ntracks + " %%");
 		
 		// ----------------
 		// Save file

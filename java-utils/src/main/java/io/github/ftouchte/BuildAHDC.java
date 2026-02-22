@@ -33,7 +33,7 @@ public class BuildAHDC {
         try {
             writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             // // header
-            writer.write("sector,superlayer,layer,component,z_origin,z_end,x1,y1,x2,y2");
+            writer.write("#sector,superlayer,layer,component,z_origin,z_end,x1,y1,x2,y2");
             writer.newLine();
 
             for (int s = 1; s <= detector.getNumSectors(); s++) {
