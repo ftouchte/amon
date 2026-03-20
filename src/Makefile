@@ -49,12 +49,11 @@ LDFLAGS   :=
 #all:  showFile histo plot benchmark simu
 all: gui  
 
-mapping: mapping.o 
-	$(CXX) -o mapping.exe $^
-
 gui: gui.o AhdcExtractor.o AhdcDetector.o Point3D.o fAxis.o fCanvas.o fH1D.o fH2D.o fColorPalette.o AhdcPulse.o AhdcMapping.o f3Dutils.o
 	$(CXX) -o gui.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(GTKLIBS)
 
+test_detector_geo: test_detector_geo.o AtofDetector.o AbstractDetector.o 
+	$(CXX) -o test_detector_geo.exe $^ $(ROOTLIBS)
 
 
 # $< représente la première de la cible, i.e histo.o

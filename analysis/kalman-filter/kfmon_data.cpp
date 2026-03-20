@@ -61,9 +61,12 @@ int main(int argc, char const *argv[]) {
     std::string version = OPT.GetValue("-v");
     bool IsMC = OPT.GetValue("-simu").compare("true") == 0;
 
+    int version_number = 1'000'000;
+
     if (version.compare("") != 0) {
         filename = std::string("/home/touchte-codjo/Desktop/hipofiles/kalman-filter/rec-data-r22712-v") + version + ".hipo"; 
         output = std::string("./output/kfmon_data_r22712_v") + version + ".root";
+        version_number = std::atoi(version.c_str());
         if (IsMC) {
             filename = std::string("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v") + version + ".hipo"; 
             output = std::string("./output/kfmon_data_rsimu_v") + version + ".root";
@@ -75,7 +78,6 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-    
 
     printf("> filename : %s\n", filename.c_str());
     hipo::reader  reader(filename.c_str());
@@ -89,7 +91,10 @@ int main(int argc, char const *argv[]) {
     hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
     hipo::bank  recBank(factory.getSchema("REC::Particle"));
     hipo::bank  atofHitBank(factory.getSchema("ATOF::hits"));
+    hipo::bank  atofTdcBank(factory.getSchema("ATOF::tdc"));
     hipo::bank  aiMatchingBank(factory.getSchema("ALERT::ai:projections"));
+    hipo::bank  aiPrePIDBank(factory.getSchema("ALERT::ai:prepid"));
+    //hipo::bank  aiPrePIDBank(factory.getSchema("AHDC::track"));
     hipo::event event;
     long unsigned int nevents =0;
 
@@ -98,9 +103,19 @@ int main(int argc, char const *argv[]) {
     long unsigned int nmatches =0;
     long unsigned int ncomp =0;
     long unsigned int ncomp_extended =0;
+    long unsigned int nmatches_ai_proj_s2 =0;
+    long unsigned int nmatches_ai_proj_s2_res =0;
+    long unsigned int nmatches_ai_proj_s3 =0;
+    long unsigned int nmatches_ai_proj_s23 =0;
+    long unsigned int nmatches_proj_based=0;
+    long unsigned int nmatches_proj_based_tdc=0;
+    long unsigned int nmatches_proj_based_res=0; // here we are aware of the indetermination on wedge, layer and sector (+- 1 resolution on these quantities) 
 
+    
     // example of 1D histograms
     //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 50, 0, 250); 
+    TH1D* H1_cuts = new TH1D("cuts", "Nb. events over cuts", 8, 0, 8);
+    std::vector<std::string> cutNames = {"trigger electron", "w2cut & 1st electron", "all tracks", "tracks n_hits >= 6", "best track (dphi)", "delta phi cut", "deuteron", "proton"};
     // electrons
     TH1D* H1_W2_all = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 7);
     TH1D* H1_W2_sel = new TH1D("W2_sel", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 7);
@@ -145,9 +160,9 @@ int main(int argc, char const *argv[]) {
         H1_track_pT.push_back(new TH1D("track_pT_deuteron", "pT_{t} ; pT_{t} (MeV); count", 50, 0, 1000)); // deuteron
         H1_track_pT.push_back(new TH1D("track_pT_proton", "pT_{t} ; pT_{t} (MeV); count", 50, 0, 1000)); // proton
     std::vector<TH1D*> H1_track_theta;
-        H1_track_theta.push_back(new TH1D("track_theta_all", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // all elastics
-        H1_track_theta.push_back(new TH1D("track_theta_deuteron", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // deuteron
-        H1_track_theta.push_back(new TH1D("track_theta_proton", "#theta_{t} ; #theta_{t} (deg); count", 50, 0, 180)); // proton
+        H1_track_theta.push_back(new TH1D("track_theta_all", "#theta ; #theta (deg); count", 50, 0, 180)); // all elastics
+        H1_track_theta.push_back(new TH1D("track_theta_deuteron", "#theta ; #theta (deg); count", 50, 0, 180)); // deuteron
+        H1_track_theta.push_back(new TH1D("track_theta_proton", "#theta ; #theta (deg); count", 50, 0, 180)); // proton
     std::vector<TH1D*> H1_track_phi;
         H1_track_phi.push_back(new TH1D("track_phi_all", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // all elastics
         H1_track_phi.push_back(new TH1D("track_phi_deuteron", "#phi_{t} ; #phi_{t} (deg); count", 50, 0, 361)); // deuteron
@@ -157,9 +172,9 @@ int main(int argc, char const *argv[]) {
         H1_track_residual.push_back(new TH1D("track_residual_deuteron", "residual ; residual (mm); count", 100, -3, 3)); // deuteron
         H1_track_residual.push_back(new TH1D("track_residual_proton", "residual ; residual (mm); count", 100, -3, 3)); // proton
     std::vector<TH1D*> H1_track_residual_LR;
-        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_all", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // all elastics
-        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_deuteron", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // deuteron
-        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_proton", "residual_LR ; residual_LR (mm); count", 50, -3, 3)); // proton
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_all", "residual_LR ; residual_LR (mm); count", 100, -3, 3)); // all elastics
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_deuteron", "residual_LR ; residual_LR (mm); count", 100, -3, 3)); // deuteron
+        H1_track_residual_LR.push_back(new TH1D("track_residual_LR_proton", "residual_LR ; residual_LR (mm); count", 100, -3, 3)); // proton
     std::vector<TH1D*> H1_track_chi2;
         H1_track_chi2.push_back(new TH1D("track_chi2_all", "chi2 ; chi2; count", 50, 0, 5)); // all elastics
         H1_track_chi2.push_back(new TH1D("track_chi2_deuteron", "chi2 ; chi2; count", 50, 0, 5)); // deuteron
@@ -209,18 +224,102 @@ int main(int argc, char const *argv[]) {
         H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_all", "residual vs vz; vz (cm); residual (mm)", 50, -25, 20, 50, -3, 3)); // all elastics
         H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_deuteron", "residual vs vz (cm); vz; residual (mm)", 50, -25, 20, 50, -3, 3)); // deuteron
         H2_corr_residual_vz.push_back(new TH2D("corr_residual_vz_proton", "residual vs vz; vz (cm); residual (mm)", 50, -25, 30, 20, -3, 3)); // proton
-    std::vector<TH1D*> H1_residual_per_slayer;
-        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_1", "residual per super layer 1; residual (mm); count", 50, -3, 3));
-        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_2", "residual per super layer 2; residual (mm); count", 50, -3, 3));
-        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_3", "residual per super layer 3; residual (mm); count", 50, -3, 3));
-        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_4", "residual per super layer 4; residual (mm); count", 50, -3, 3));
-        H1_residual_per_slayer.push_back(new TH1D("track_residual_slayer_5", "residual per super layer 5; residual (mm); count", 50, -3, 3));
-    std::vector<TH2D*> H2_corr_residual_per_slayer_vz;
-        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_1", "residual per super layer 1; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_2", "residual per super layer 2; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_3", "residual per super layer 3; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_4", "residual per super layer 4; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
-        H2_corr_residual_per_slayer_vz.push_back(new TH2D("track_residual_slayer_vz_5", "residual per super layer 5; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+    std::vector<TH1D*> H1_residual_per_layer;
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_all", "residual (all); residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_11", "residual per layer 11; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_21", "residual per layer 21; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_22", "residual per layer 22; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_31", "residual per layer 31; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_32", "residual per layer 32; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_41", "residual per layer 41; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_42", "residual per layer 42; residual (mm); count", 50, -3, 3));
+        H1_residual_per_layer.push_back(new TH1D("track_residual_layer_51", "residual per layer 51; residual (mm); count", 50, -3, 3));
+    std::vector<TH1D*> H1_residual_LR_per_layer;
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_all", "residual_LR (all); residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_11", "residual_LR per layer 11; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_21", "residual_LR per layer 21; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_22", "residual_LR per layer 22; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_31", "residual_LR per layer 31; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_32", "residual_LR per layer 32; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_41", "residual_LR per layer 41; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_42", "residual_LR per layer 42; residual_LR (mm); count", 50, -3, 3));
+        H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_51", "residual_LR per layer 51; residual_LR (mm); count", 50, -3, 3));
+    std::vector<TH1D*> H1_residual_phi_LR_per_layer;
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_all", "residual_phi_LR (all); residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_11", "residual_phi_LR per layer 11; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_21", "residual_phi_LR per layer 21; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_22", "residual_phi_LR per layer 22; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_31", "residual_phi_LR per layer 31; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_32", "residual_phi_LR per layer 32; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_41", "residual_phi_LR per layer 41; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_42", "residual_phi_LR per layer 42; residual_phi_LR (deg); count", 50, -8, 8));
+        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_51", "residual_phi_LR per layer 51; residual_phi_LR (deg); count", 50, -8, 8));
+    std::vector<TH1D*> H1_residual_per_wire;
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        H1_residual_per_wire.push_back(new TH1D(TString::Format("track_residual_l%2d_w%02d", layer, component).Data(), TString::Format("residual, layer %2d wire %02d; residual (mm); count", layer, component).Data(), 50, -3, 3));
+    }
+    std::vector<TH2D*> H2_corr_residual_per_layer_vz;
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_all", "residual (all); vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_11", "residual per layer 11; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_21", "residual per layer 21; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_22", "residual per layer 22; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_31", "residual per layer 31; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_32", "residual per layer 32; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_41", "residual per layer 41; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_42", "residual per layer 42; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_51", "residual per layer 51; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_per_layer_phi;
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_all", "residual (all); phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_11", "residual per layer 11; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_21", "residual per layer 21; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_22", "residual per layer 22; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_31", "residual per layer 31; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_32", "residual per layer 32; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_41", "residual per layer 41; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_42", "residual per layer 42; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_per_layer_phi.push_back(new TH2D("track_residual_layer_phi_51", "residual per layer 51; phi (deg); residual (mm)",  50, 0, 360, 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_LR_per_layer_vz;
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_all", "residual_LR (all); vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_11", "residual_LR per layer 11; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_21", "residual_LR per layer 21; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_22", "residual_LR per layer 22; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_31", "residual_LR per layer 31; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_32", "residual_LR per layer 32; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_41", "residual_LR per layer 41; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_42", "residual_LR per layer 42; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_vz.push_back(new TH2D("track_residual_LR_layer_vz_51", "residual_LR per layer 51; vz (cm); residual_LR (mm)",  50, -25, 20, 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_LR_per_layer_phi;
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_all", "residual_LR (all); phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_11", "residual_LR per layer 11; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_21", "residual_LR per layer 21; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_22", "residual_LR per layer 22; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_31", "residual_LR per layer 31; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_32", "residual_LR per layer 32; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_41", "residual_LR per layer 41; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_42", "residual_LR per layer 42; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+        H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_51", "residual_LR per layer 51; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
+    std::vector<TH2D*> H2_corr_residual_phi_LR_per_layer_vz;
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_all", "residual_phi_LR (all); vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_11", "residual_phi_LR per layer 11; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_21", "residual_phi_LR per layer 21; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_22", "residual_phi_LR per layer 22; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_31", "residual_phi_LR per layer 31; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_32", "residual_phi_LR per layer 32; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_41", "residual_phi_LR per layer 41; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_42", "residual_phi_LR per layer 42; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_51", "residual_phi_LR per layer 51; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
+    std::vector<TH2D*> H2_corr_residual_phi_LR_per_layer_phi;
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_all", "residual_phi_LR (all); phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_11", "residual_phi_LR per layer 11; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_21", "residual_phi_LR per layer 21; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_22", "residual_phi_LR per layer 22; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_31", "residual_phi_LR per layer 31; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_32", "residual_phi_LR per layer 32; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_41", "residual_phi_LR per layer 41; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_42", "residual_phi_LR per layer 42; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
+        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_51", "residual_phi_LR per layer 51; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
     std::vector<TH2D*> H2_time2distance;
         H2_time2distance.push_back(new TH2D("corr_t2d_all", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
         H2_time2distance.push_back(new TH2D("corr_t2d_deuteron", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
@@ -253,6 +352,30 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_phi_without_atof = new TH1D("delta_phi_without_atof", "#Delta #phi; #Delta #phi (deg); count", 100, -1.05*delta_phi_width, 1.05*delta_phi_width);
     TH1D* H1_delta_vz_with_atof = new TH1D("delta_vz_with_atof", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10);
     TH1D* H1_delta_vz_without_atof = new TH1D("delta_vz_without_atof", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10);
+    TH1D* H1_track_theta_with_atof = new TH1D("track_theta_with_atof", "#theta ; #theta (deg); count", 50, 0, 180);
+    TH1D* H1_track_theta_without_atof = new TH1D("track_theta_without_atof", "#theta ; #theta (deg); count", 50, 0, 180);
+    TH1D* H1_track_atof_region = new TH1D("track_atof_region", "ATOF region ; region; count", 4, 0, 4);
+
+    TH1D* H1_track_atof_s2_sigma_z = new TH1D("H1_track_atof_s2_sigma_z", "#sigma_{z} ; #sigma_{z} (cm); count", 100, 2.95, 3.8);
+    TH1D* H1_track_atof_s2_sigma_phi = new TH1D("H1_track_atof_s2_sigma_phi", "#sigma_{#phi} ; #sigma_{#phi} (deg); count", 100, 4.9, 8);
+    TH1D* H1_atof_match_status = new TH1D("H1_atof_match", "ATOF match status ; status; count", 3, 0, 3);
+    std::map<int,int> map_pid = {{2212, 0}, {45,1}, {46,2}, {47,3}, {49,4}, {-1,-1}};
+    std::vector<std::string> pid_name = {"no prepid", "p", "D2", "H3", "He3", "He4"};
+    std::vector<TH1D*> H1_prepid;
+        H1_prepid.push_back(new TH1D("H1_pid_all", "PID; particle; count", 6, -1, 5));
+        H1_prepid.push_back(new TH1D("H1_pid_deuteron", "PID, expect D2; particle; count", 6, -1, 5));
+        H1_prepid.push_back(new TH1D("H1_pid_proton", "PID, expect proton; particle; count", 6, -1, 5));
+    for (auto h1 : H1_prepid) {
+        for (int bin = 1; bin <= h1->GetXaxis()->GetNbins(); bin++) {
+            if (bin-1 >= 0 && bin-1 < (int) pid_name.size()) {
+                //h1->GetXaxis()->ChangeLabel(bin,0,-1,33,-1,-1,pid_name[bin-1].c_str());
+                h1->GetXaxis()->SetBinLabel(bin,pid_name[bin-1].c_str());
+            } else {
+                //h1->GetXaxis()->ChangeLabel(bin,70,0,33,-1,-1,"");
+                h1->GetXaxis()->SetBinLabel(bin,"");
+            }
+        }
+    }
     
     
     /////////////////////////
@@ -272,7 +395,9 @@ int main(int argc, char const *argv[]) {
         event.getStructure(hitBank);
         event.getStructure(recBank);
         event.getStructure(atofHitBank);
+        event.getStructure(atofTdcBank);
         event.getStructure(aiMatchingBank);
+        event.getStructure(aiPrePIDBank);
 
         // find the elastic electron
         //int electron_row = -1;
@@ -296,6 +421,7 @@ int main(int argc, char const *argv[]) {
                 H1_Q2_all->Fill(Q2);
                 H1_W2_all->Fill(W2);
                 H1_vz->Fill(recBank.getDouble("vz", recRow));
+                H1_cuts->Fill(0);
                 
                 // we only look at the first trigger electron (i.e status < 0)
                 // + cut on W2 to select elastics
@@ -318,6 +444,7 @@ int main(int argc, char const *argv[]) {
                         expected_track.vz = electron.vz;
                         expected_track.row = electron.row;
                         futils::cart2polarDEG(expected_track.px, expected_track.py, expected_track.pz, expected_track.p, expected_track.theta, expected_track.phi);
+                        H1_cuts->Fill(1);
                 }
             }
         }
@@ -328,7 +455,9 @@ int main(int argc, char const *argv[]) {
         double dphi = 1e10; // arbitrary big number
         if (electron.row >= 0) {
             for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
+                H1_cuts->Fill(2);
                 if (trackBank.get("n_hits", trackRow) < 6) continue; // quality cut: ignore tracks with less than 6 hits
+                H1_cuts->Fill(3);
                 // read kinematic variables
                 double px = trackBank.getDouble("px", trackRow);
                 double py = trackBank.getDouble("py", trackRow);
@@ -355,11 +484,13 @@ int main(int argc, char const *argv[]) {
             double delta_phi = fabs(electron.phi - ahdc_track.phi) - 180;
             H1_delta_phi_sym->Fill(delta_phi);
             H1_delta_phi_nosym->Fill(electron.phi - ahdc_track.phi);
+            H1_cuts->Fill(4);
             /////////////////////////////
             // elastics event
             // cut on delta_phi
             ////////////////////////////
             if (fabs(delta_phi) <= delta_phi_width) {
+                H1_cuts->Fill(5);
                 H1_delta_phi_sym_sel->Fill(delta_phi);
                 H1_delta_phi_nosym_sel->Fill(electron.phi - ahdc_track.phi);
                 // correlations
@@ -372,6 +503,18 @@ int main(int argc, char const *argv[]) {
                 H2_corr_p_dEdx->Fill(ahdc_track.p,dEdx);
                 // select the hits of this track
                 int trackid = trackBank.getInt("trackid", ahdc_track.row);
+
+                // ai prepid row
+                int prepid = -1;
+                if (version_number >= 98) {
+                    for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
+                        if (trackid == aiPrePIDBank.get("trackid", row)) {
+                            prepid = aiPrePIDBank.get("prepid", row);
+                            break;
+                        }
+                    }
+                }
+                
                 
                 //////////////////
                 // all
@@ -386,15 +529,45 @@ int main(int argc, char const *argv[]) {
                         H2_corr_residual_time[0]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                         H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
                         H2_corr_time_adc->Fill(adcBank.get("ADC", adcRow), hitBank.get("time", hitRow));
-                        H1_residual_per_slayer[hitBank.get("superlayer", hitRow)-1]->Fill(hitBank.get("residual", hitRow));
-                        H2_corr_residual_per_slayer_vz[hitBank.get("superlayer", hitRow)-1]->Fill(0.1*ahdc_track.vz,hitBank.get("residual", hitRow));
+                        
                         H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                         H1_time[0]->Fill(hitBank.get("time", hitRow));
                         H1_distance[0]->Fill(hitBank.get("doca", hitRow));
                         H1_amplitude[0]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
                         H1_timeOverThreshold[0]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
+                        
+                        // residual per wire
+                        int layer = 10*hitBank.get("superlayer", hitRow) + hitBank.get("layer", hitRow);
+                        int component = hitBank.get("wire", hitRow);
+                        double residual = hitBank.get("residual", hitRow);
+                        double residual_LR = hitBank.get("timeOverThreshold", hitRow);
+                        double residual_phi_LR = hitBank.get("time", hitRow)*180/M_PI;
+                        H1_residual_per_wire[slc2wire(1,layer,component)]->Fill(residual);
+
+                        //all
+                        H1_residual_per_layer[0]->Fill(residual);
+                        H1_residual_LR_per_layer[0]->Fill(residual_LR);
+                        H1_residual_phi_LR_per_layer[0]->Fill(residual_LR);
+                        H2_corr_residual_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual);
+                        H2_corr_residual_per_layer_phi[0]->Fill(ahdc_track.phi,residual);
+                        H2_corr_residual_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_LR);
+                        H2_corr_residual_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_LR);
+                        H2_corr_residual_phi_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
+                        H2_corr_residual_phi_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_phi_LR);
+                        // par layer
+                        H1_residual_per_layer[layer2number(layer)]->Fill(residual);
+                        H1_residual_LR_per_layer[layer2number(layer)]->Fill(residual_LR);
+                        H1_residual_phi_LR_per_layer[layer2number(layer)]->Fill(residual_phi_LR);
+                        H2_corr_residual_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual);
+                        H2_corr_residual_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual);
+                        H2_corr_residual_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_LR);
+                        H2_corr_residual_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_LR);
+                        H2_corr_residual_phi_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
+                        H2_corr_residual_phi_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_phi_LR);
+
                     }
                 }
+                H1_prepid[0]->Fill(map_pid[prepid]);
                 H1_track_sum_residual[0]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
                 H1_track_nhits[0]->Fill(trackBank.get("n_hits", ahdc_track.row));
                 H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
@@ -417,6 +590,8 @@ int main(int argc, char const *argv[]) {
                 // deuteron cut
                 //////////////////
                 if (pTe > 200 && pTe < 300 && sum_adc > 5000 && sum_adc < 14000) {
+                    H1_cuts->Fill(6);
+                    H1_prepid[1]->Fill(map_pid[prepid]);
                     // residuals
                     for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
                         if (hitBank.getInt("trackid", hitRow) == trackid) {
@@ -458,6 +633,8 @@ int main(int argc, char const *argv[]) {
                 // proton cut
                 //////////////////
                 if (pTe > 200 && pTe < 300 && sum_adc > 1000 && sum_adc < 4500) {
+                    H1_cuts->Fill(7);
+                    H1_prepid[2]->Fill(map_pid[prepid]);
                     // residuals
                     for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
                         if (hitBank.getInt("trackid", hitRow) == trackid) {
@@ -494,6 +671,7 @@ int main(int argc, char const *argv[]) {
                     H1_diff_theta[2]->Fill(ahdc_track.theta - expected_track.theta);
                     H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi); 
                 }
+
                 ////////////////////
                 // ATOF mathcing
                 ////////////////////
@@ -520,13 +698,16 @@ int main(int argc, char const *argv[]) {
                     }
                     H1_delta_phi_with_atof->Fill(delta_phi);
                     H1_delta_vz_with_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                    H1_track_theta_with_atof->Fill(ahdc_track.theta);
                     // end fill residual
                     int layer = -1;
                     int sector = -1;
+                    int wedge = -1;
                     for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
                         if (atofHitBank.get("id", hitRow) == atofid) {
                             layer = atofHitBank.get("layer", hitRow);
                             sector = atofHitBank.get("sector", hitRow);
+                            wedge = atofHitBank.get("component", hitRow);
                             if (sector >= 0 && layer >= 0) {
                                 H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*atofHitBank.get("z", hitRow));
                                 H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*atofHitBank.get("z", hitRow));
@@ -558,6 +739,33 @@ int main(int argc, char const *argv[]) {
                             }
                         }
                         H1_nmatched_bar->Fill(local_ncomp_extended);
+                        // predicted atof component after a projection : starting -v 98
+                        int version_number = std::atoi(version.c_str());
+                        if (version_number >= 100  && version_number < 102) {
+                            // lower surface of the wedges
+                            int atof_s2_comp = trackBank.get("atof_s2_comp", ahdc_track.row);
+                            int ss2 = atof_s2_comp/10000;
+                            int ls2 = (atof_s2_comp % 10000)/100;
+                            int cs2 = (atof_s2_comp % 10000) % 100;
+                            // upper surface of the wedges
+                            int atof_s3_comp = trackBank.get("atof_s3_comp", ahdc_track.row);
+                            int ss3 = atof_s3_comp/10000;
+                            int ls3 = (atof_s3_comp % 10000)/100;
+                            int cs3 = (atof_s3_comp % 10000) % 100;
+                            if (sector == ss2 && layer == ls2 && wedge == cs2) {
+                                nmatches_ai_proj_s2++;
+                            }
+                            if (sector == ss3 && layer == ls3 && wedge == cs3) {
+                                nmatches_ai_proj_s3++;
+                            }
+                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                nmatches_ai_proj_s23++;
+                            } /*else {
+                                printf("lower : %d , upper : %d , ai : %d \n", atof_s2_comp, atof_s3_comp, sector*10000 + layer*100 + wedge);
+                            }*/
+                           if (IsAMatch(sector, layer, wedge, ss2, ls2, cs2)) nmatches_ai_proj_s2_res++;
+                        }
+                        
                     }
                 } else {
                     // fill residual
@@ -568,7 +776,78 @@ int main(int argc, char const *argv[]) {
                     }
                     H1_delta_phi_without_atof->Fill(delta_phi);
                     H1_delta_vz_without_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                    H1_track_theta_without_atof->Fill(ahdc_track.theta);
                 } // end atof matching
+                { // look at the hit on the lower surface of the ATOF wedge: check if it exists in ATOF::hits
+                    int version_number = std::atoi(version.c_str());
+                    if (version_number >= 100 && version_number < 102) {
+                        // lower surface of the wedges
+                        int atof_s2_comp = trackBank.get("atof_s2_comp", ahdc_track.row);
+                        int ss2 = atof_s2_comp/10000;
+                        int ls2 = (atof_s2_comp % 10000)/100;
+                        int cs2 = (atof_s2_comp % 10000) % 100;
+                        // upper surface of the wedges
+                        int atof_s3_comp = trackBank.get("atof_s3_comp", ahdc_track.row);
+                        int ss3 = atof_s3_comp/10000;
+                        int ls3 = (atof_s3_comp % 10000)/100;
+                        int cs3 = (atof_s3_comp % 10000) % 100;
+                        for (int row = 0; row < atofHitBank.getRows(); row++) {
+                            int layer = atofHitBank.get("layer", row);
+                            int sector = atofHitBank.get("sector", row);
+                            int wedge = atofHitBank.get("component", row);
+                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                nmatches_proj_based++;
+                            }
+                        }
+                        for (int row = 0; row < atofHitBank.getRows(); row++) {
+                            int layer = atofTdcBank.get("layer", row);
+                            int sector = atofTdcBank.get("sector", row);
+                            int wedge = atofTdcBank.get("component", row);
+                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                nmatches_proj_based_tdc++;
+                            }
+                        }
+                        // take into account error, look at neighborhood (study case for S2 only)
+                        for (int row = 0; row < atofHitBank.getRows(); row++) {
+                            int layer = atofHitBank.get("layer", row);
+                            int sector = atofHitBank.get("sector", row);
+                            int comp = atofHitBank.get("component", row);
+                            if (IsAMatch(sector, layer, comp, ss2, ls2, cs2)) {
+                                nmatches_proj_based_res++;
+                                break; // we already found one, do not search for other
+                            }
+                        }
+                    }
+                    if (version_number == 101) {
+                        double dx = trackBank.get("atof_s2_sigma_x", ahdc_track.row);
+                        double dy = trackBank.get("atof_s2_sigma_y", ahdc_track.row);
+                        double dz = trackBank.get("atof_s2_sigma_z", ahdc_track.row);
+                        double x = trackBank.get("atof_s2_x", ahdc_track.row);
+                        double y = trackBank.get("atof_s2_y", ahdc_track.row);
+                        //double z = trackBank.get("atof_s2_z", ahdc_track.row);
+                        
+
+                        double dphidx = -y/(x*x+y*y);
+                        double dphidy = x/(x*x+y*y);
+
+                        double dphi2 = pow(dphidx,2)*pow(dx,2) + pow(dphidy,2)*pow(dy,2);
+
+                        H1_track_atof_s2_sigma_z->Fill(dz*0.1); // mm
+                        H1_track_atof_s2_sigma_phi->Fill(sqrt(dphi2)*180/M_PI); // deg
+                        //printf("%lf \n", dz);
+                    }
+                }
+                H1_track_atof_region->Fill(trackBank.get("atof_region",ahdc_track.row));
+                //int version_number = std::atoi(version.c_str());
+                if (version_number >= 102)
+                    H1_atof_match_status->Fill(trackBank.get("atof_match", ahdc_track.row));
+                // // look at prepid
+                // for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
+                //     if (trackid == aiPrePIDBank.get("trackid", row)) {
+                //         aiPrePIDBank.show();
+                //         break;
+                //     }
+                // }
             } // end cut on delta_phi caut
         
         }
@@ -592,6 +871,37 @@ int main(int argc, char const *argv[]) {
     c_elastics->Write("corr_pT(electron)_sum_adc");
     H2_corr_p_Sadc->Write("corr_p(track)_sum_adc");
     H2_corr_p_dEdx->Write("corr_p(track)_dEdx");
+
+    // Monitoring the numbe rof events over the cuts
+    TCanvas* canvas_cuts = new TCanvas();
+    canvas_cuts->SetBottomMargin(0.35);
+    for (int bin = 0; bin <= H1_cuts->GetXaxis()->GetNbins()+1; bin++) {
+        if (bin-1 >= 0 && bin-1 < (int) cutNames.size()) {
+            H1_cuts->GetXaxis()->ChangeLabel(bin,70,-1,33,-1,-1,cutNames[bin-1].c_str());
+        } else {
+            H1_cuts->GetXaxis()->ChangeLabel(bin,70,0,33,-1,-1,"");
+        }
+    }
+    H1_cuts->SetStats(0);
+    H1_cuts->SetLabelOffset(0.18);
+    H1_cuts->GetYaxis()->SetLabelSize(0);
+    H1_cuts->Draw();
+    TText text;
+    text.SetTextSize(0.02);
+    text.SetTextAlign(21);
+    for (int bin = 1; bin <= H1_cuts->GetXaxis()->GetNbins(); bin++) {
+        int count = (int) H1_cuts->GetBinContent(bin);
+        double center = H1_cuts->GetBinCenter(bin);
+        if (cutNames[bin-1].compare("proton") != 0 && cutNames[bin-1].compare("deuteron") != 0 && cutNames[bin-1].compare("trigger electron") != 0) {
+            int prev_count = (int) H1_cuts->GetBinContent(bin-1);
+            text.DrawText(center, 1.0*count, TString::Format("%d (%.2lf %%)",count, 100.0*count/prev_count).Data());
+        } else {
+            text.DrawText(center, 1.0*count, TString::Format("%d",count).Data());
+        }
+        
+    }
+    canvas_cuts->Write("nevents_versus_cuts");
+    //H1_cuts->Write("nevents_versus_cuts");
     // all
     TDirectory *all_dir = f->mkdir("all_elastics");
     all_dir->cd();
@@ -607,6 +917,8 @@ int main(int argc, char const *argv[]) {
     H1_track_pT[0]->Write("h1_track_pT");
     H1_track_phi[0]->Write("h1_track_phi");
     H1_track_theta[0]->Write("h1_track_theta");
+    H1_track_theta_with_atof->Write("h1_track_theta_with_atof");
+    H1_track_theta_without_atof->Write("h1_track_theta_without_atof");
     H1_electron_pT[0]->Write("h1_electron_pT");
     H1_electron_phi[0]->Write("h1_electron_phi");
     H1_electron_theta[0]->Write("h1_electron_theta");
@@ -614,14 +926,54 @@ int main(int argc, char const *argv[]) {
     H1_diff_theta[0]->Write("h1_diff_theta");
     H1_diff_phi[0]->Write("h1_diff_phi");
     TCanvas* c_residual_0 = fit_histogram(H1_track_residual[0], "canvas_residual_0"); c_residual_0->Write("residual");
-    H1_residual_with_atof->Write("residual_with_atof");
-    H1_residual_without_atof->Write("residual_without_atof");
-    for (auto h: H1_residual_per_slayer) {
-        h->Write(h->GetName());
+    //H1_residual_with_atof->Write("residual_with_atof");
+    //H1_residual_without_atof->Write("residual_without_atof");
+    writeHistoVector(H1_residual_per_layer, all_dir, "ALL_H1_residual_per_layer");
+    writeHistoVector(H2_corr_residual_per_layer_vz, all_dir, "ALL_H2_corr_residual_per_layer_vz");
+    writeHistoVector(H2_corr_residual_per_layer_phi, all_dir, "ALL_H2_corr_residual_per_layer_phi");
+    writeHistoVector(H1_residual_LR_per_layer, all_dir, "ALL_H1_residual_LR_per_layer");
+    writeHistoVector(H2_corr_residual_LR_per_layer_vz, all_dir, "ALL_H2_corr_residual_LR_per_layer_vz");
+    writeHistoVector(H2_corr_residual_LR_per_layer_phi, all_dir, "ALL_H2_corr_residual_LR_per_layer_phi");
+    writeHistoVector(H1_residual_phi_LR_per_layer, all_dir, "ALL_H1_residual_phi_LR_per_layer");
+    writeHistoVector(H2_corr_residual_phi_LR_per_layer_vz, all_dir, "ALL_H2_corr_residual_phi_LR_per_layer_vz");
+    writeHistoVector(H2_corr_residual_phi_LR_per_layer_phi, all_dir, "ALL_H2_corr_residual_phi_LR_per_layer_phi");
+    
+    // for (auto h: H1_residual_per_layer) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_per_layer_vz) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_per_layer_phi) {
+    //     h->Write(h->GetName());
+    // }
+    //H1_track_residual_LR[0]->Write("residual_LR");
+    // for (auto h: H1_residual_LR_per_layer) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H1_residual_phi_LR_per_layer) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_LR_per_layer_vz) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_LR_per_layer_phi) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_phi_LR_per_layer_vz) {
+    //     h->Write(h->GetName());
+    // }
+    // for (auto h: H2_corr_residual_phi_LR_per_layer_phi) {
+    //     h->Write(h->GetName());
+    // }
+    TDirectory *dir_residual_per_wire = all_dir->mkdir("residual_per_wire");
+    dir_residual_per_wire->cd();
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        H1_residual_per_wire[i]->Write(TString::Format("l%2d_w%02d", layer, component).Data());
     }
-    for (auto h: H2_corr_residual_per_slayer_vz) {
-        h->Write(h->GetName());
-    }
+    all_dir->cd();
     H1_track_chi2[0]->Write("chi2");
     H2_corr_residual_ADC[0]->Write("corr_residual_ADC");
     H2_corr_residual_time[0]->Write("corr_residual_time");
@@ -650,6 +1002,11 @@ int main(int argc, char const *argv[]) {
     H1_nmatched_bar->Write("nb_bars_per_wegde");
     H2_corr_atof_bar_vz->Write("corr_atof_bar_vz");
     H1_diff_atof_bar_vz->Write("diff_atof_bar_vz");
+    H1_track_atof_region->Write("track_atof_region");
+    H1_track_atof_s2_sigma_z->Write("track_atof_s2_sigma_z");
+    H1_track_atof_s2_sigma_phi->Write("track_atof_s2_sigma_phi");
+    H1_atof_match_status->Write("atof_match_status");
+    H1_prepid[0]->Write("prepid");
     // deuteron
     TDirectory *deuteron_dir = f->mkdir("deuterons");
     deuteron_dir->cd();
@@ -680,6 +1037,7 @@ int main(int argc, char const *argv[]) {
     H1_distance[1]->Write("AHDC::hits:doca");
     H1_track_nhits[1]->Write("h1_track_nhits");
     H1_track_sum_residual[1]->Write("h1_track_sum_residuals");
+    H1_prepid[1]->Write("prepid");
     // proton
     TDirectory *proton_dir = f->mkdir("protons");
     proton_dir->cd();
@@ -710,6 +1068,7 @@ int main(int argc, char const *argv[]) {
     H1_distance[2]->Write("AHDC::hits:doca");
     H1_track_nhits[2]->Write("h1_track_nhits");
     H1_track_sum_residual[2]->Write("h1_track_sum_residuals");
+    H1_prepid[2]->Write("prepid");
 
     ////////////////////////////////////////////
     /// Others studies
@@ -720,6 +1079,13 @@ int main(int argc, char const *argv[]) {
     printf("   nb of atof wedges matched / ntracks : %ld   ===>  %lf %%\n", nmatches, 100.0*nmatches/ntracks);
     printf("   nb of atof bars matched with the same wedge id/ ntracks: %ld   ===>  %lf %%\n", ncomp, 100.0*ncomp/ntracks);
     printf("   nb of atof bars matched with the same wedge id or plus/minus 1 / ntracks: %ld   ===>  %lf %%\n", ncomp_extended, 100.0*ncomp_extended/ntracks);
+    printf("\033[1m   nb ai and proj matches s2 : %ld   ===> %lf %%\033[0m\n", nmatches_ai_proj_s2, 100.0*nmatches_ai_proj_s2/nmatches);
+    printf("\033[1m   nb ai and proj matches s2 or its neighbor: %ld   ===> %lf %%\033[0m\n", nmatches_ai_proj_s2_res, 100.0*nmatches_ai_proj_s2_res/nmatches);
+    printf("\033[1m   nb ai and proj matches s3 : %ld   ===> %lf %%\033[0m\n", nmatches_ai_proj_s3, 100.0*nmatches_ai_proj_s3/nmatches);
+    printf("\033[1m   nb ai and proj matches s2 or s3 : %ld   ===> %lf %%\033[0m\n", nmatches_ai_proj_s23, 100.0*nmatches_ai_proj_s23/nmatches);
+    printf("\033[1m   how much a proj predicted wedge exists in ATOF::hits / ntracks: %ld   ===> %lf %%\033[0m\n", nmatches_proj_based, 100.0*nmatches_proj_based/ntracks);
+    printf("\033[1m   how much a proj predicted wedge or its neighbor exists in ATOF::hits / ntracks: %ld   ===> %lf %%\033[0m\n", nmatches_proj_based_res, 100.0*nmatches_proj_based_res/ntracks);
+    printf("\033[1m   how much a proj predicted wedge exists in ATOF::tdc / ntracks: %ld   ===> %lf %%\033[0m\n", nmatches_proj_based_tdc, 100.0*nmatches_proj_based_tdc/ntracks);
     if (IsMC) run_simulation(filename, f);
     // close file
     f->Close();
@@ -1216,7 +1582,12 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
     gre->SetLineWidth(2);
     gre->SetLineColor(kRed);
     gre->Draw("same p");
-    gr->SetTitle(TString::Format("Error study; %s; ERROR %s", h->GetXaxis()->GetTitle(), h->GetYaxis()->GetTitle()).Data());
+    if (!flag) { // residual versus ADC
+        gr->SetTitle(";ADC; #sigma_{residual} (mm)");
+    } else {
+        gr->SetTitle(";time (ns); #sigma_{residual} (mm)");
+    }
+    //gr->SetMinimum(0);
     gr->SetLineColor(kBlue);
     gr->SetLineWidth(2);
     gr->SetMarkerColor(2);
@@ -1226,7 +1597,7 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
     /////////////////////////////////////
     if (!flag) { // residual versus ADC
         TF1* f1_adc = new TF1("f1_adc", "([0]*x + [1])/([2]*x + [3])", 0, 3700);
-        f1_adc->SetLineColor(kGreen+2);
+        //f1_adc->SetLineColor(kGreen+2);
         f1_adc->SetLineWidth(2);
         f1_adc->SetParameter(0, 1);
         f1_adc->SetParameter(1, 1);
@@ -1238,22 +1609,27 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
         canvas_tmp->cd();
         gr->Draw("apl");
         f1_adc->Draw("same l");
-        double value = f1_adc->GetParameter(0)/f1_adc->GetParameter(2);
-        TLine* line = new TLine(0, value, 3700, value);
-        line->SetLineColor(kGreen+2);
-        line->SetLineWidth(2);
-        line->SetLineStyle(2);
-        line->Draw("same l");
-        TText* text = new TText();
-        text->SetTextColor(kGreen+2);
-        text->SetTextSize(0.04);
-        text->DrawText(500, 0.75, f1_adc->GetExpFormula("P"));
+        // double value = f1_adc->GetParameter(0)/f1_adc->GetParameter(2);
+        // TLine* line = new TLine(0, value, 3700, value);
+        // line->SetLineColor(kGreen+2);
+        // line->SetLineWidth(2);
+        // line->SetLineStyle(2);
+        // line->Draw("same l");
+        // TText* text = new TText();
+        // text->SetTextColor(kGreen+2);
+        // text->SetTextSize(0.04);
+        // text->DrawText(500, 0.75, f1_adc->GetExpFormula("P"));
+        TLegend* legend = new TLegend(0.1,0.7,0.48,0.9);
+        legend->AddEntry(gr,"Points");
+        legend->AddEntry(f1_adc,"Fit between 0 and 1000");
+        legend->AddEntry(f1_adc,TString::Format("f(x) = %s", f1_adc->GetExpFormula("P").Data()).Data(), "");
+        legend->Draw();
         canvas_tmp->Write("fit_residual_adc");
     }
     else { // residual versus Time
         //TF1* f1_time = new TF1("f1_time", "[0]*pow(x,2) + [1]*x + [2]", 0, 250);
         TF1* f1_time = new TF1("f1_time", "([0]*x + [1])/([2]*x + [3])", 0, 250);
-        f1_time->SetLineColor(kGreen+2);
+        //f1_time->SetLineColor(kGreen+2);
         f1_time->SetLineWidth(2);
         f1_time->SetParameter(0, 1);
         f1_time->SetParameter(1, 1);
@@ -1264,18 +1640,177 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
         canvas_tmp->cd();
         gr->Draw("apl");
         f1_time->Draw("same l");
-        double value = f1_time->GetParameter(0)/f1_time->GetParameter(2);
-        TLine* line = new TLine(0, value, 250, value);
-        line->SetLineColor(kGreen+2);
-        line->SetLineWidth(2);
-        line->SetLineStyle(2);
-        line->Draw("same l");
-        TText* text = new TText();
-        text->SetTextColor(kGreen+2);
-        text->SetTextSize(0.04);
-        text->DrawText(50, 0.6, f1_time->GetExpFormula("P"));
+        // double value = f1_time->GetParameter(0)/f1_time->GetParameter(2);
+        // TLine* line = new TLine(0, value, 250, value);
+        // line->SetLineColor(kGreen+2);
+        // line->SetLineWidth(2);
+        // line->SetLineStyle(2);
+        // line->Draw("same l");
+        // TText* text = new TText();
+        // text->SetTextColor(kGreen+2);
+        // text->SetTextSize(0.04);
+        // text->DrawText(50, 0.6, f1_time->GetExpFormula("P"));
+        TLegend* legend = new TLegend(0.1,0.7,0.48,0.9);
+        legend->AddEntry(gr,"Points");
+        legend->AddEntry(f1_time,"Fit between 0 and 100");
+        legend->AddEntry(f1_time,TString::Format("f(x) = %s", f1_time->GetExpFormula("P").Data()).Data(), "");
+        legend->Draw();
         canvas_tmp->Write("fit_residual_time");
     }
 
     return std::make_pair(c1, gr);
+}
+
+// (sector, layer, wedge) or its neighborhood match sà, l0, w0
+bool IsAMatch(int s0, int l0, int w0, int sector, int layer, int wedge) {
+    // find adjacent layer and sector
+    int wedge_plus = wedge+1;
+    int wedge_minus = wedge-1;
+    if (wedge == 0) {
+        wedge_minus = wedge;
+    }
+    else if (wedge == 9) {
+        wedge_plus = wedge;
+    }
+    int sector_plus = sector;
+    int sector_minus = sector;
+    int layer_plus = layer+1;
+    int layer_minus = layer-1;
+    if (layer == 0) {
+        sector_plus = sector;
+        sector_minus = (sector != 0) ? sector-1 : 14;
+        layer_plus = layer+1;
+        layer_minus = 3;
+    }
+    else if (layer == 3) {
+        sector_plus = (sector != 14) ? sector+1 : 0;
+        sector_minus = sector;
+        layer_plus = 0;
+        layer_minus = layer-1;
+    }
+    return compareWedge(s0, l0, w0, sector, layer, wedge) || compareWedge(s0, l0, w0, sector, layer, wedge_plus) || compareWedge(s0, l0, w0, sector, layer, wedge_minus) || compareWedge(s0, l0, w0, sector_plus, layer_plus, wedge) || compareWedge(s0, l0, w0, sector_plus, layer_plus, wedge_plus) || compareWedge(s0, l0, w0, sector_plus, layer_plus, wedge_minus) || compareWedge(s0, l0, w0, sector_minus, layer_minus, wedge) || compareWedge(s0, l0, w0, sector_minus, layer_minus, wedge_plus) || compareWedge(s0, l0, w0, sector_minus, layer_minus, wedge_minus);
+}
+
+bool compareWedge(int s0, int l0, int w0, int sector, int layer, int wedge) {
+    return (s0 == sector && l0 == layer && w0 == wedge);
+}
+
+
+
+/**
+ * @brief Convert (sector, layer, component) to a unqiue wire id (number betwwen 0 and 575)
+ * 
+ * @param sector (not used)
+ * @param layer 
+ * @param component 
+ * @return unique wire id
+ */
+int slc2wire(int sector, int layer, int component) {
+    if (layer == 11) {
+        return component - 1;
+    } 
+    else if (layer == 21) {
+        return 47 + component - 1;
+    } 
+    else if (layer == 22) {
+        return 47 + 56 + component - 1;
+    } 
+    else if (layer == 31) {
+        return 47 + 56 + 56 + component - 1;
+    } 
+    else if (layer == 32) {
+        return 47 + 56 + 56 + 72 + component - 1;
+    } 
+    else if (layer == 41) {
+        return 47 + 56 + 56 + 72 + 72 + component - 1;
+    } 
+    else if (layer == 42) {
+        return 47 + 56 + 56 + 72 + 72 + 87 + component - 1;
+    } 
+    else if (layer == 51) {
+        return 47 + 56 + 56 + 72 + 72 + 87 + 87 + component - 1;
+    } else {
+        return -1; // not a ahdc wire
+    }
+}
+
+/**
+ * @brief Convert wire number (number from 0 to 575) to (sector,layer,component) ids
+ * 
+ * This is the invert operation of  @link slc2wire(int, int, int) @endlink 
+ * 
+ * @param wire wire number between 0 and  576 (excluded)
+ * @param sector sector (always 1 for the AHDC)
+ * @param layer is actually (superlayerId*10 + layerId)
+ * @param component component id
+ */
+void wire2slc(int wire, int & sector, int & layer, int & component) {
+        sector = 1;
+        if (wire < 47) {
+            layer = 11;
+            component = wire + 1;
+        }
+        else if ((47 <= wire) && (wire < 47 + 56)) {
+            layer = 21;
+            component = wire - 47 + 1;
+        }
+        else if ((47 + 56 <= wire) && (wire < 47 + 56 + 56)) {
+            layer = 22;
+            component = wire - 47 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 <= wire) && (wire < 47 + 56 + 56 + 72)) {
+            layer = 31;
+            component = wire - 47 - 56 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72)) {
+            layer = 32;
+            component = wire - 47 - 56 - 56 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87)) {
+            layer = 41;
+            component = wire - 47 - 56 - 56 - 72 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87)) {
+            layer = 42;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 + 1;
+        }
+        else { // ((47 + 56 + 56 + 72 + 72 + 87 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87 + 99)) {
+            layer = 51;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 - 87 + 1;
+        }
+}
+
+/**
+ * @brief Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
+ * 
+ * @param digit 
+ * @return layer number
+ */
+int layer2number(int digit) {
+	if      (digit == 11) {
+		return 1;
+	} 
+	else if (digit == 21) {
+		return 2;
+	} 
+	else if (digit == 22) {
+		return 3;
+	} 
+	else if (digit == 31) {
+		return 4;
+	} 
+	else if (digit == 32) {
+		return 5;
+	} 
+	else if (digit == 41) {
+		return 6;
+	} 
+	else if (digit == 42) {
+		return 7;
+	} 
+	else if (digit == 51) {
+		return 8;
+	} else {
+		return -1; // not a layer
+	}
 }
