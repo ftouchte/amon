@@ -57,6 +57,7 @@ int main(int argc, char const *argv[]) {
     OPT.Show();
 
     std::string filename = OPT.GetValue("-i");
+    std::vector<std::string> filenames = OPT.GetValues("-i");
     std::string output = OPT.GetValue("-o");
     std::string version = OPT.GetValue("-v");
     bool IsMC = OPT.GetValue("-simu").compare("true") == 0;
@@ -71,6 +72,7 @@ int main(int argc, char const *argv[]) {
             filename = std::string("/home/touchte-codjo/Desktop/hipofiles/simulation/kalmanFilterTest/rec-simu-deuteron-v") + version + ".hipo"; 
             output = std::string("./output/kfmon_data_rsimu_v") + version + ".root";
         }
+        filenames = {filename};
     } else {
         if (filename.compare("") == 0 || output.compare("") == 0) {
             printf("Please provide options... (if you specify -i, you should also specify -o)\n");
@@ -78,40 +80,8 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-
-    printf("> filename : %s\n", filename.c_str());
-    hipo::reader  reader(filename.c_str());
-    hipo::dictionary factory;
-    reader.readDictionary(factory);
-
-    // bank definition
-    hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
-    hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
-    hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
-    hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
-    hipo::bank  recBank(factory.getSchema("REC::Particle"));
-    hipo::bank  atofHitBank(factory.getSchema("ATOF::hits"));
-    hipo::bank  atofTdcBank(factory.getSchema("ATOF::tdc"));
-    hipo::bank  aiMatchingBank(factory.getSchema("ALERT::ai:projections"));
-    hipo::bank  aiPrePIDBank(factory.getSchema("ALERT::ai:prepid"));
-    //hipo::bank  aiPrePIDBank(factory.getSchema("AHDC::track"));
-    hipo::event event;
-    long unsigned int nevents =0;
-
-    // ATOF study
-    long unsigned int ntracks =0;
-    long unsigned int nmatches =0;
-    long unsigned int ncomp =0;
-    long unsigned int ncomp_extended =0;
-    long unsigned int nmatches_ai_proj_s2 =0;
-    long unsigned int nmatches_ai_proj_s2_res =0;
-    long unsigned int nmatches_ai_proj_s3 =0;
-    long unsigned int nmatches_ai_proj_s23 =0;
-    long unsigned int nmatches_proj_based=0;
-    long unsigned int nmatches_proj_based_tdc=0;
-    long unsigned int nmatches_proj_based_res=0; // here we are aware of the indetermination on wedge, layer and sector (+- 1 resolution on these quantities) 
-
-    
+    //return 0;
+  
     // example of 1D histograms
     //TH1D* H1_mctime = new TH1D("mctime", "mctime; mctime (ns); count", 50, 0, 250); 
     TH1D* H1_cuts = new TH1D("cuts", "Nb. events over cuts", 8, 0, 8);
@@ -376,372 +346,450 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
-    
-    
-    /////////////////////////
-    // Loop over events
-    /////////////////////////
-    while( reader.next()){
-        nevents++;
-        // display progress Bar
-        if ((nevents % 1000 == 0) || ((int) nevents == reader.getEntries())) {
-            progressBar(100.0*nevents/reader.getEntries());
-        }
-        // load bank content for this event
-        reader.read(event);
-        event.getStructure(adcBank);
-        event.getStructure(wfBank);
-        event.getStructure(trackBank);
-        event.getStructure(hitBank);
-        event.getStructure(recBank);
-        event.getStructure(atofHitBank);
-        event.getStructure(atofTdcBank);
-        event.getStructure(aiMatchingBank);
-        event.getStructure(aiPrePIDBank);
 
-        // find the elastic electron
-        //int electron_row = -1;
-        Particle_kinematics electron; 
-        Particle_kinematics expected_track;
-        for (int recRow = 0; recRow < recBank.getRows(); recRow++) {
-            // electron pid
-            if (recBank.getInt("pid", recRow) == 11 && recBank.getShort("status", recRow) < 0) {
-                // compute kinematic variables
-                double px = recBank.getDouble("px", recRow);
-                double py = recBank.getDouble("py", recRow);
-                double pz = recBank.getDouble("pz", recRow);
-                double p, theta, phi;
-                futils::cart2polarDEG(px,py,pz,p, theta, phi);
-                double scattered_beam_energy = sqrt(pow(p,2) + pow(electron_mass,2));
-                double nu = beam_energy - scattered_beam_energy;
-                double Q2 = 4*beam_energy*scattered_beam_energy*pow(sin((theta/2)*M_PI/180),2);
-                double W2 = pow(deuteron_mass,2) + 2*deuteron_mass*nu - Q2;
-                //double xB = Q2/(2*proton_mass*nu);
-                H1_nu_all->Fill(nu);
-                H1_Q2_all->Fill(Q2);
-                H1_W2_all->Fill(W2);
-                H1_vz->Fill(recBank.getDouble("vz", recRow));
-                H1_cuts->Fill(0);
-                
-                // we only look at the first trigger electron (i.e status < 0)
-                // + cut on W2 to select elastics
-                if (electron.row < 0 && W2 > 3.5 && W2 < 3.8) {
-                        electron.row = recRow;
-                        electron.px = px; // GeV
-                        electron.py = py; // GeV
-                        electron.pz = pz; // GeV
-                        electron.vz = recBank.getDouble("vz", recRow); // cm
-                        electron.p = p;
-                        electron.theta = theta;
-                        electron.phi = phi;
-                        H1_nu_sel->Fill(nu);
-                        H1_Q2_sel->Fill(Q2);
-                        H1_W2_sel->Fill(W2);
-                        // for elastics only, comparison to expected track kinematics given the scattered electron kinematics
-                        expected_track.px = -scattered_beam_energy*sin(electron.theta*M_PI/180)*cos(electron.phi*M_PI/180)*1000; // MeV
-                        expected_track.py = -scattered_beam_energy*sin(electron.theta*M_PI/180)*sin(electron.phi*M_PI/180)*1000; // MeV
-                        expected_track.pz = (beam_energy - scattered_beam_energy*cos(electron.theta*M_PI/180))*1000; // MeV
-                        expected_track.vz = electron.vz;
-                        expected_track.row = electron.row;
-                        futils::cart2polarDEG(expected_track.px, expected_track.py, expected_track.pz, expected_track.p, expected_track.theta, expected_track.phi);
-                        H1_cuts->Fill(1);
-                }
+    // ATOF study // counters
+    long unsigned int ntracks =0;
+    long unsigned int nmatches =0;
+    long unsigned int ncomp =0;
+    long unsigned int ncomp_extended =0;
+    long unsigned int nmatches_ai_proj_s2 =0;
+    long unsigned int nmatches_ai_proj_s2_res =0;
+    long unsigned int nmatches_ai_proj_s3 =0;
+    long unsigned int nmatches_ai_proj_s23 =0;
+    long unsigned int nmatches_proj_based=0;
+    long unsigned int nmatches_proj_based_tdc=0;
+    long unsigned int nmatches_proj_based_res=0; // here we are aware of the indetermination on wedge, layer and sector (+- 1 resolution on these quantities) 
+
+    ///////////////////////
+    // Loop over files
+    ///////////////////////
+    long unsigned int nevents =0;
+    int nfile = 0;
+    for (auto file : filenames) {
+        nfile++;
+        printf("> Open file %d/%d : %s\n", nfile, (int) filenames.size(), file.c_str());
+        hipo::reader  reader(file.c_str());
+        hipo::dictionary factory;
+        reader.readDictionary(factory);
+
+        // bank definition
+        hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+        hipo::bank  wfBank(factory.getSchema("AHDC::wf"));
+        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+        hipo::bank  recBank(factory.getSchema("REC::Particle"));
+        hipo::bank  atofHitBank(factory.getSchema("ATOF::hits"));
+        hipo::bank  atofTdcBank(factory.getSchema("ATOF::tdc"));
+        hipo::bank  aiMatchingBank(factory.getSchema("ALERT::ai:projections"));
+        hipo::bank  aiPrePIDBank(factory.getSchema("ALERT::ai:prepid"));
+        //hipo::bank  aiPrePIDBank(factory.getSchema("AHDC::track"));
+        hipo::event event;
+        long unsigned int nevents_per_file =0;
+        
+        /////////////////////////
+        // Loop over events
+        /////////////////////////
+        while( reader.next()){
+            nevents++;
+            nevents_per_file++;
+            // display progress Bar
+            if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
+                progressBar(100.0*nevents_per_file/reader.getEntries());
             }
-        }
+            // load bank content for this event
+            reader.read(event);
+            event.getStructure(adcBank);
+            event.getStructure(wfBank);
+            event.getStructure(trackBank);
+            event.getStructure(hitBank);
+            event.getStructure(recBank);
+            event.getStructure(atofHitBank);
+            event.getStructure(atofTdcBank);
+            event.getStructure(aiMatchingBank);
+            event.getStructure(aiPrePIDBank);
 
-        // we have an elastic electron
-        // we now look at the AHDC::kftrack
-        Particle_kinematics ahdc_track;
-        double dphi = 1e10; // arbitrary big number
-        if (electron.row >= 0) {
-            for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
-                H1_cuts->Fill(2);
-                if (trackBank.get("n_hits", trackRow) < 6) continue; // quality cut: ignore tracks with less than 6 hits
-                H1_cuts->Fill(3);
-                // read kinematic variables
-                double px = trackBank.getDouble("px", trackRow);
-                double py = trackBank.getDouble("py", trackRow);
-                double pz = trackBank.getDouble("pz", trackRow);
-                double p, theta, phi;
-                futils::cart2polarDEG(px,py,pz,p, theta, phi);
-                double delta_phi = fabs(electron.phi - phi) - 180;
-                // select the best track (the one with the best delta_phi)
-                if (fabs(delta_phi) < dphi) {
-                    ahdc_track.row = trackRow;
-                    ahdc_track.px = px; // MeV
-                    ahdc_track.py = py; // MeV
-                    ahdc_track.pz = pz; // MeV
-                    ahdc_track.vz = trackBank.getFloat("z", trackRow); // mm
-                    ahdc_track.p = p;
-                    ahdc_track.theta = theta;
-                    ahdc_track.phi = phi;
-                    dphi = delta_phi;
-                }
-            }
-        }
-        // at this stage we have an electron and the best ahdc_track
-        if (electron.row >= 0 && ahdc_track.row >= 0) {
-            double delta_phi = fabs(electron.phi - ahdc_track.phi) - 180;
-            H1_delta_phi_sym->Fill(delta_phi);
-            H1_delta_phi_nosym->Fill(electron.phi - ahdc_track.phi);
-            H1_cuts->Fill(4);
-            /////////////////////////////
-            // elastics event
-            // cut on delta_phi
-            ////////////////////////////
-            if (fabs(delta_phi) <= delta_phi_width) {
-                H1_cuts->Fill(5);
-                H1_delta_phi_sym_sel->Fill(delta_phi);
-                H1_delta_phi_nosym_sel->Fill(electron.phi - ahdc_track.phi);
-                // correlations
-                double pTe = 1000*sqrt(pow(electron.px,2) + pow(electron.py,2)); // MeV
-                double pTt = sqrt(pow(ahdc_track.px,2) + pow(ahdc_track.py,2)); // MeV
-                double sum_adc = trackBank.get("sum_adc", ahdc_track.row);
-                double dEdx = trackBank.get("dEdx", ahdc_track.row);
-                H2_corr_pTe_Sadc->Fill(pTe,sum_adc);
-                H2_corr_p_Sadc->Fill(ahdc_track.p,sum_adc);
-                H2_corr_p_dEdx->Fill(ahdc_track.p,dEdx);
-                // select the hits of this track
-                int trackid = trackBank.getInt("trackid", ahdc_track.row);
-
-                // ai prepid row
-                int prepid = -1;
-                if (version_number >= 98) {
-                    for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
-                        if (trackid == aiPrePIDBank.get("trackid", row)) {
-                            prepid = aiPrePIDBank.get("prepid", row);
-                            break;
-                        }
-                    }
-                }
-                
-                
-                //////////////////
-                // all
-                //////////////////
-                // residuals
-                for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
-                    if (hitBank.getInt("trackid", hitRow) == trackid) {
-                        int adcRow = hitBank.get("id", hitRow)-1;
-                        H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
-                        H1_track_residual_LR[0]->Fill(hitBank.get("timeOverThreshold", hitRow));
-                        H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
-                        H2_corr_residual_time[0]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
-                        H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
-                        H2_corr_time_adc->Fill(adcBank.get("ADC", adcRow), hitBank.get("time", hitRow));
-                        
-                        H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
-                        H1_time[0]->Fill(hitBank.get("time", hitRow));
-                        H1_distance[0]->Fill(hitBank.get("doca", hitRow));
-                        H1_amplitude[0]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
-                        H1_timeOverThreshold[0]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
-                        
-                        // residual per wire
-                        int layer = 10*hitBank.get("superlayer", hitRow) + hitBank.get("layer", hitRow);
-                        int component = hitBank.get("wire", hitRow);
-                        double residual = hitBank.get("residual", hitRow);
-                        double residual_LR = hitBank.get("timeOverThreshold", hitRow);
-                        double residual_phi_LR = hitBank.get("time", hitRow)*180/M_PI;
-                        H1_residual_per_wire[slc2wire(1,layer,component)]->Fill(residual);
-
-                        //all
-                        H1_residual_per_layer[0]->Fill(residual);
-                        H1_residual_LR_per_layer[0]->Fill(residual_LR);
-                        H1_residual_phi_LR_per_layer[0]->Fill(residual_LR);
-                        H2_corr_residual_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual);
-                        H2_corr_residual_per_layer_phi[0]->Fill(ahdc_track.phi,residual);
-                        H2_corr_residual_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_LR);
-                        H2_corr_residual_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_LR);
-                        H2_corr_residual_phi_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
-                        H2_corr_residual_phi_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_phi_LR);
-                        // par layer
-                        H1_residual_per_layer[layer2number(layer)]->Fill(residual);
-                        H1_residual_LR_per_layer[layer2number(layer)]->Fill(residual_LR);
-                        H1_residual_phi_LR_per_layer[layer2number(layer)]->Fill(residual_phi_LR);
-                        H2_corr_residual_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual);
-                        H2_corr_residual_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual);
-                        H2_corr_residual_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_LR);
-                        H2_corr_residual_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_LR);
-                        H2_corr_residual_phi_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
-                        H2_corr_residual_phi_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_phi_LR);
-
-                    }
-                }
-                H1_prepid[0]->Fill(map_pid[prepid]);
-                H1_track_sum_residual[0]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
-                H1_track_nhits[0]->Fill(trackBank.get("n_hits", ahdc_track.row));
-                H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
-                H2_corr_phi[0]->Fill(electron.phi, ahdc_track.phi);
-                H2_corr_pT[0]->Fill(pTe, pTt); // Mev
-                H2_corr_vz[0]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
-                H1_delta_vz[0]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
-                H1_delta_phi[0]->Fill(delta_phi);
-                // 1D
-                H1_track_pT[0]->Fill(pTt);
-                H1_track_phi[0]->Fill(ahdc_track.phi);
-                H1_track_theta[0]->Fill(ahdc_track.theta);
-                H1_electron_pT[0]->Fill(pTe);
-                H1_electron_phi[0]->Fill(electron.phi);
-                H1_electron_theta[0]->Fill(electron.theta);
-                H1_diff_pT[0]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
-                H1_diff_theta[0]->Fill(ahdc_track.theta - expected_track.theta);
-                H1_diff_phi[0]->Fill(ahdc_track.phi - expected_track.phi);
-                //////////////////
-                // deuteron cut
-                //////////////////
-                if (pTe > 200 && pTe < 300 && sum_adc > 5000 && sum_adc < 14000) {
-                    H1_cuts->Fill(6);
-                    H1_prepid[1]->Fill(map_pid[prepid]);
-                    // residuals
-                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
-                        if (hitBank.getInt("trackid", hitRow) == trackid) {
-                            int adcRow = hitBank.get("id", hitRow)-1;
-                            H1_track_residual[1]->Fill(hitBank.get("residual", hitRow));
-                            H1_track_residual_LR[1]->Fill(hitBank.get("timeOverThreshold", hitRow));
-                            H2_corr_residual_ADC[1]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
-                            H2_corr_residual_time[1]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
-                            H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
-                            H2_time2distance[1]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
-                            H1_time[1]->Fill(hitBank.get("time", hitRow));
-                            H1_amplitude[1]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
-                            H1_timeOverThreshold[1]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
-                            H1_distance[1]->Fill(hitBank.get("doca", hitRow));
-                        }
-                    }
-                    H1_track_sum_residual[1]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
-                    H1_track_nhits[1]->Fill(trackBank.get("n_hits", ahdc_track.row));
-                    H1_track_chi2[1]->Fill(trackBank.get("chi2", ahdc_track.row));
-                    // 2D
-                    H2_corr_phi[1]->Fill(electron.phi, ahdc_track.phi);
-                    H2_corr_pT[1]->Fill(pTe, pTt); // Mev
-                    H2_corr_vz[1]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
-                    H1_delta_vz[1]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
-                    H1_delta_phi[1]->Fill(delta_phi);
-                    // 1D
-                    H1_track_pT[1]->Fill(pTt);
-                    H1_track_phi[1]->Fill(ahdc_track.phi);
-                    H1_track_theta[1]->Fill(ahdc_track.theta);
-                    H1_electron_pT[1]->Fill(pTe);
-                    H1_electron_phi[1]->Fill(electron.phi);
-                    H1_electron_theta[1]->Fill(electron.theta);
-                    H1_diff_pT[1]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
-                    H1_diff_theta[1]->Fill(ahdc_track.theta - expected_track.theta);
-                    H1_diff_phi[1]->Fill(ahdc_track.phi - expected_track.phi);
+            // find the elastic electron
+            //int electron_row = -1;
+            Particle_kinematics electron; 
+            Particle_kinematics expected_track;
+            for (int recRow = 0; recRow < recBank.getRows(); recRow++) {
+                // electron pid
+                if (recBank.getInt("pid", recRow) == 11 && recBank.getShort("status", recRow) < 0) {
+                    // compute kinematic variables
+                    double px = recBank.getDouble("px", recRow);
+                    double py = recBank.getDouble("py", recRow);
+                    double pz = recBank.getDouble("pz", recRow);
+                    double p, theta, phi;
+                    futils::cart2polarDEG(px,py,pz,p, theta, phi);
+                    double scattered_beam_energy = sqrt(pow(p,2) + pow(electron_mass,2));
+                    double nu = beam_energy - scattered_beam_energy;
+                    double Q2 = 4*beam_energy*scattered_beam_energy*pow(sin((theta/2)*M_PI/180),2);
+                    double W2 = pow(deuteron_mass,2) + 2*deuteron_mass*nu - Q2;
+                    //double xB = Q2/(2*proton_mass*nu);
+                    H1_nu_all->Fill(nu);
+                    H1_Q2_all->Fill(Q2);
+                    H1_W2_all->Fill(W2);
+                    H1_vz->Fill(recBank.getDouble("vz", recRow));
+                    H1_cuts->Fill(0);
                     
+                    // we only look at the first trigger electron (i.e status < 0)
+                    // + cut on W2 to select elastics
+                    if (electron.row < 0 && W2 > 3.5 && W2 < 3.8) {
+                            electron.row = recRow;
+                            electron.px = px; // GeV
+                            electron.py = py; // GeV
+                            electron.pz = pz; // GeV
+                            electron.vz = recBank.getDouble("vz", recRow); // cm
+                            electron.p = p;
+                            electron.theta = theta;
+                            electron.phi = phi;
+                            H1_nu_sel->Fill(nu);
+                            H1_Q2_sel->Fill(Q2);
+                            H1_W2_sel->Fill(W2);
+                            // for elastics only, comparison to expected track kinematics given the scattered electron kinematics
+                            expected_track.px = -scattered_beam_energy*sin(electron.theta*M_PI/180)*cos(electron.phi*M_PI/180)*1000; // MeV
+                            expected_track.py = -scattered_beam_energy*sin(electron.theta*M_PI/180)*sin(electron.phi*M_PI/180)*1000; // MeV
+                            expected_track.pz = (beam_energy - scattered_beam_energy*cos(electron.theta*M_PI/180))*1000; // MeV
+                            expected_track.vz = electron.vz;
+                            expected_track.row = electron.row;
+                            futils::cart2polarDEG(expected_track.px, expected_track.py, expected_track.pz, expected_track.p, expected_track.theta, expected_track.phi);
+                            H1_cuts->Fill(1);
+                    }
                 }
-                //////////////////
-                // proton cut
-                //////////////////
-                if (pTe > 200 && pTe < 300 && sum_adc > 1000 && sum_adc < 4500) {
-                    H1_cuts->Fill(7);
-                    H1_prepid[2]->Fill(map_pid[prepid]);
+            }
+
+            // we have an elastic electron
+            // we now look at the AHDC::kftrack
+            Particle_kinematics ahdc_track;
+            double dphi = 1e10; // arbitrary big number
+            if (electron.row >= 0) {
+                for (int trackRow = 0; trackRow < trackBank.getRows(); trackRow++) {
+                    H1_cuts->Fill(2);
+                    if (trackBank.get("n_hits", trackRow) < 6) continue; // quality cut: ignore tracks with less than 6 hits
+                    H1_cuts->Fill(3);
+                    // read kinematic variables
+                    double px = trackBank.getDouble("px", trackRow);
+                    double py = trackBank.getDouble("py", trackRow);
+                    double pz = trackBank.getDouble("pz", trackRow);
+                    double p, theta, phi;
+                    futils::cart2polarDEG(px,py,pz,p, theta, phi);
+                    double delta_phi = fabs(electron.phi - phi) - 180;
+                    // select the best track (the one with the best delta_phi)
+                    if (fabs(delta_phi) < dphi) {
+                        ahdc_track.row = trackRow;
+                        ahdc_track.px = px; // MeV
+                        ahdc_track.py = py; // MeV
+                        ahdc_track.pz = pz; // MeV
+                        ahdc_track.vz = trackBank.getFloat("z", trackRow); // mm
+                        ahdc_track.p = p;
+                        ahdc_track.theta = theta;
+                        ahdc_track.phi = phi;
+                        dphi = delta_phi;
+                    }
+                }
+            }
+            // at this stage we have an electron and the best ahdc_track
+            if (electron.row >= 0 && ahdc_track.row >= 0) {
+                double delta_phi = fabs(electron.phi - ahdc_track.phi) - 180;
+                H1_delta_phi_sym->Fill(delta_phi);
+                H1_delta_phi_nosym->Fill(electron.phi - ahdc_track.phi);
+                H1_cuts->Fill(4);
+                /////////////////////////////
+                // elastics event
+                // cut on delta_phi
+                ////////////////////////////
+                if (fabs(delta_phi) <= delta_phi_width) {
+                    H1_cuts->Fill(5);
+                    H1_delta_phi_sym_sel->Fill(delta_phi);
+                    H1_delta_phi_nosym_sel->Fill(electron.phi - ahdc_track.phi);
+                    // correlations
+                    double pTe = 1000*sqrt(pow(electron.px,2) + pow(electron.py,2)); // MeV
+                    double pTt = sqrt(pow(ahdc_track.px,2) + pow(ahdc_track.py,2)); // MeV
+                    double sum_adc = trackBank.get("sum_adc", ahdc_track.row);
+                    double dEdx = trackBank.get("dEdx", ahdc_track.row);
+                    H2_corr_pTe_Sadc->Fill(pTe,sum_adc);
+                    H2_corr_p_Sadc->Fill(ahdc_track.p,sum_adc);
+                    H2_corr_p_dEdx->Fill(ahdc_track.p,dEdx);
+                    // select the hits of this track
+                    int trackid = trackBank.getInt("trackid", ahdc_track.row);
+
+                    // ai prepid row
+                    int prepid = -1;
+                    if (version_number >= 98) {
+                        for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
+                            if (trackid == aiPrePIDBank.get("trackid", row)) {
+                                prepid = aiPrePIDBank.get("prepid", row);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    
+                    //////////////////
+                    // all
+                    //////////////////
                     // residuals
                     for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
                         if (hitBank.getInt("trackid", hitRow) == trackid) {
                             int adcRow = hitBank.get("id", hitRow)-1;
-                            H1_track_residual[2]->Fill(hitBank.get("residual", hitRow));
-                            H1_track_residual_LR[2]->Fill(hitBank.get("timeOverThreshold", hitRow));
-                            H2_corr_residual_ADC[2]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
-                            H2_corr_residual_time[2]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
-                            H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
-                            H2_time2distance[2]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
-                            H1_time[2]->Fill(hitBank.get("time", hitRow));
-                            H1_amplitude[2]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
-                            H1_timeOverThreshold[2]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
-                            H1_distance[2]->Fill(hitBank.get("doca", hitRow));
-                        }
-                    }
-                    H1_track_sum_residual[2]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
-                    H1_track_nhits[2]->Fill(trackBank.get("n_hits", ahdc_track.row));
-                    H1_track_chi2[2]->Fill(trackBank.get("chi2", ahdc_track.row));
-                    // 2D
-                    H2_corr_phi[2]->Fill(electron.phi, ahdc_track.phi);
-                    H2_corr_pT[2]->Fill(pTe, pTt); // Mev
-                    H2_corr_vz[2]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
-                    H1_delta_vz[2]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
-                    H1_delta_phi[2]->Fill(delta_phi);
-                    // 1D
-                    H1_track_pT[2]->Fill(pTt);
-                    H1_track_phi[2]->Fill(ahdc_track.phi);
-                    H1_track_theta[2]->Fill(ahdc_track.theta);
-                    H1_electron_pT[2]->Fill(pTe);
-                    H1_electron_phi[2]->Fill(electron.phi);
-                    H1_electron_theta[2]->Fill(electron.theta);
-                    H1_diff_pT[2]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
-                    H1_diff_theta[2]->Fill(ahdc_track.theta - expected_track.theta);
-                    H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi); 
-                }
+                            H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
+                            H1_track_residual_LR[0]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                            H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_time[0]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                            H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
+                            H2_corr_time_adc->Fill(adcBank.get("ADC", adcRow), hitBank.get("time", hitRow));
+                            
+                            H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                            H1_time[0]->Fill(hitBank.get("time", hitRow));
+                            H1_distance[0]->Fill(hitBank.get("doca", hitRow));
+                            H1_amplitude[0]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                            H1_timeOverThreshold[0]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
+                            
+                            // residual per wire
+                            int layer = 10*hitBank.get("superlayer", hitRow) + hitBank.get("layer", hitRow);
+                            int component = hitBank.get("wire", hitRow);
+                            double residual = hitBank.get("residual", hitRow);
+                            double residual_LR = hitBank.get("timeOverThreshold", hitRow);
+                            double residual_phi_LR = hitBank.get("time", hitRow)*180/M_PI;
+                            H1_residual_per_wire[slc2wire(1,layer,component)]->Fill(residual);
 
-                ////////////////////
-                // ATOF mathcing
-                ////////////////////
-                int atofid = -1;
-                ntracks++; // here we already have a elastics track // int trackid = -1;
-                bool isFirst = false;
-                for (int aiRow = 0; aiRow < aiMatchingBank.getRows(); aiRow++) {
-                    if (trackid == aiMatchingBank.get("trackid", aiRow)) {
-                        atofid = aiMatchingBank.get("matched_atof_hit_id", aiRow);
-                        if (atofid > 0 && !isFirst) {
-                            nmatches++; // do not count two different matched in the same event
-                            isFirst = true;
-                            //aiMatchingBank.show();
+                            //all
+                            H1_residual_per_layer[0]->Fill(residual);
+                            H1_residual_LR_per_layer[0]->Fill(residual_LR);
+                            H1_residual_phi_LR_per_layer[0]->Fill(residual_LR);
+                            H2_corr_residual_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual);
+                            H2_corr_residual_per_layer_phi[0]->Fill(ahdc_track.phi,residual);
+                            H2_corr_residual_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_LR);
+                            H2_corr_residual_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_LR);
+                            H2_corr_residual_phi_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
+                            H2_corr_residual_phi_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_phi_LR);
+                            // par layer
+                            H1_residual_per_layer[layer2number(layer)]->Fill(residual);
+                            H1_residual_LR_per_layer[layer2number(layer)]->Fill(residual_LR);
+                            H1_residual_phi_LR_per_layer[layer2number(layer)]->Fill(residual_phi_LR);
+                            H2_corr_residual_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual);
+                            H2_corr_residual_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual);
+                            H2_corr_residual_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_LR);
+                            H2_corr_residual_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_LR);
+                            H2_corr_residual_phi_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
+                            H2_corr_residual_phi_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_phi_LR);
+
                         }
                     }
-                }
-                // find the layer/sector of the atof hit (here : wedge)
-                if (atofid > 0) {
-                    // fill residual
-                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
-                        if (hitBank.getInt("trackid", hitRow) == trackid) {
-                            H1_residual_with_atof->Fill(hitBank.get("residual", hitRow));
+                    H1_prepid[0]->Fill(map_pid[prepid]);
+                    H1_track_sum_residual[0]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                    H1_track_nhits[0]->Fill(trackBank.get("n_hits", ahdc_track.row));
+                    H1_track_chi2[0]->Fill(trackBank.get("chi2", ahdc_track.row));
+                    H2_corr_phi[0]->Fill(electron.phi, ahdc_track.phi);
+                    H2_corr_pT[0]->Fill(pTe, pTt); // Mev
+                    H2_corr_vz[0]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
+                    H1_delta_vz[0]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
+                    H1_delta_phi[0]->Fill(delta_phi);
+                    // 1D
+                    H1_track_pT[0]->Fill(pTt);
+                    H1_track_phi[0]->Fill(ahdc_track.phi);
+                    H1_track_theta[0]->Fill(ahdc_track.theta);
+                    H1_electron_pT[0]->Fill(pTe);
+                    H1_electron_phi[0]->Fill(electron.phi);
+                    H1_electron_theta[0]->Fill(electron.theta);
+                    H1_diff_pT[0]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
+                    H1_diff_theta[0]->Fill(ahdc_track.theta - expected_track.theta);
+                    H1_diff_phi[0]->Fill(ahdc_track.phi - expected_track.phi);
+                    //////////////////
+                    // deuteron cut
+                    //////////////////
+                    if (pTe > 200 && pTe < 300 && sum_adc > 5000 && sum_adc < 14000) {
+                        H1_cuts->Fill(6);
+                        H1_prepid[1]->Fill(map_pid[prepid]);
+                        // residuals
+                        for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                            if (hitBank.getInt("trackid", hitRow) == trackid) {
+                                int adcRow = hitBank.get("id", hitRow)-1;
+                                H1_track_residual[1]->Fill(hitBank.get("residual", hitRow));
+                                H1_track_residual_LR[1]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                                H2_corr_residual_ADC[1]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                                H2_corr_residual_time[1]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                                H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                                H2_time2distance[1]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                                H1_time[1]->Fill(hitBank.get("time", hitRow));
+                                H1_amplitude[1]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                                H1_timeOverThreshold[1]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
+                                H1_distance[1]->Fill(hitBank.get("doca", hitRow));
+                            }
                         }
+                        H1_track_sum_residual[1]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                        H1_track_nhits[1]->Fill(trackBank.get("n_hits", ahdc_track.row));
+                        H1_track_chi2[1]->Fill(trackBank.get("chi2", ahdc_track.row));
+                        // 2D
+                        H2_corr_phi[1]->Fill(electron.phi, ahdc_track.phi);
+                        H2_corr_pT[1]->Fill(pTe, pTt); // Mev
+                        H2_corr_vz[1]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
+                        H1_delta_vz[1]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
+                        H1_delta_phi[1]->Fill(delta_phi);
+                        // 1D
+                        H1_track_pT[1]->Fill(pTt);
+                        H1_track_phi[1]->Fill(ahdc_track.phi);
+                        H1_track_theta[1]->Fill(ahdc_track.theta);
+                        H1_electron_pT[1]->Fill(pTe);
+                        H1_electron_phi[1]->Fill(electron.phi);
+                        H1_electron_theta[1]->Fill(electron.theta);
+                        H1_diff_pT[1]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
+                        H1_diff_theta[1]->Fill(ahdc_track.theta - expected_track.theta);
+                        H1_diff_phi[1]->Fill(ahdc_track.phi - expected_track.phi);
+                        
                     }
-                    H1_delta_phi_with_atof->Fill(delta_phi);
-                    H1_delta_vz_with_atof->Fill(electron.vz-0.1*ahdc_track.vz);
-                    H1_track_theta_with_atof->Fill(ahdc_track.theta);
-                    // end fill residual
-                    int layer = -1;
-                    int sector = -1;
-                    int wedge = -1;
-                    for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
-                        if (atofHitBank.get("id", hitRow) == atofid) {
-                            layer = atofHitBank.get("layer", hitRow);
-                            sector = atofHitBank.get("sector", hitRow);
-                            wedge = atofHitBank.get("component", hitRow);
-                            if (sector >= 0 && layer >= 0) {
-                                H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*atofHitBank.get("z", hitRow));
-                                H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*atofHitBank.get("z", hitRow));
+                    //////////////////
+                    // proton cut
+                    //////////////////
+                    if (pTe > 200 && pTe < 300 && sum_adc > 1000 && sum_adc < 4500) {
+                        H1_cuts->Fill(7);
+                        H1_prepid[2]->Fill(map_pid[prepid]);
+                        // residuals
+                        for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                            if (hitBank.getInt("trackid", hitRow) == trackid) {
+                                int adcRow = hitBank.get("id", hitRow)-1;
+                                H1_track_residual[2]->Fill(hitBank.get("residual", hitRow));
+                                H1_track_residual_LR[2]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                                H2_corr_residual_ADC[2]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
+                                H2_corr_residual_time[2]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
+                                H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
+                                H2_time2distance[2]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
+                                H1_time[2]->Fill(hitBank.get("time", hitRow));
+                                H1_amplitude[2]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
+                                H1_timeOverThreshold[2]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
+                                H1_distance[2]->Fill(hitBank.get("doca", hitRow));
+                            }
+                        }
+                        H1_track_sum_residual[2]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
+                        H1_track_nhits[2]->Fill(trackBank.get("n_hits", ahdc_track.row));
+                        H1_track_chi2[2]->Fill(trackBank.get("chi2", ahdc_track.row));
+                        // 2D
+                        H2_corr_phi[2]->Fill(electron.phi, ahdc_track.phi);
+                        H2_corr_pT[2]->Fill(pTe, pTt); // Mev
+                        H2_corr_vz[2]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
+                        H1_delta_vz[2]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
+                        H1_delta_phi[2]->Fill(delta_phi);
+                        // 1D
+                        H1_track_pT[2]->Fill(pTt);
+                        H1_track_phi[2]->Fill(ahdc_track.phi);
+                        H1_track_theta[2]->Fill(ahdc_track.theta);
+                        H1_electron_pT[2]->Fill(pTe);
+                        H1_electron_phi[2]->Fill(electron.phi);
+                        H1_electron_theta[2]->Fill(electron.theta);
+                        H1_diff_pT[2]->Fill(pTt - sqrt(pow(expected_track.px, 2) + pow(expected_track.py, 2)));
+                        H1_diff_theta[2]->Fill(ahdc_track.theta - expected_track.theta);
+                        H1_diff_phi[2]->Fill(ahdc_track.phi - expected_track.phi); 
+                    }
+
+                    ////////////////////
+                    // ATOF mathcing
+                    ////////////////////
+                    int atofid = -1;
+                    ntracks++; // here we already have a elastics track // int trackid = -1;
+                    bool isFirst = false;
+                    for (int aiRow = 0; aiRow < aiMatchingBank.getRows(); aiRow++) {
+                        if (trackid == aiMatchingBank.get("trackid", aiRow)) {
+                            atofid = aiMatchingBank.get("matched_atof_hit_id", aiRow);
+                            if (atofid > 0 && !isFirst) {
+                                nmatches++; // do not count two different matched in the same event
+                                isFirst = true;
+                                //aiMatchingBank.show();
                             }
                         }
                     }
-                    // look for a bar close to this wedge
-                    if (layer >= 0 && sector >= 0) {
-                        int local_ncomp_extended = 0;
-                        bool IsBarCounted = false;
+                    // find the layer/sector of the atof hit (here : wedge)
+                    if (atofid > 0) {
+                        // fill residual
+                        for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                            if (hitBank.getInt("trackid", hitRow) == trackid) {
+                                H1_residual_with_atof->Fill(hitBank.get("residual", hitRow));
+                            }
+                        }
+                        H1_delta_phi_with_atof->Fill(delta_phi);
+                        H1_delta_vz_with_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                        H1_track_theta_with_atof->Fill(ahdc_track.theta);
+                        // end fill residual
+                        int layer = -1;
+                        int sector = -1;
+                        int wedge = -1;
                         for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
-                            // a bar in the same sector
-                            if (atofHitBank.get("sector", hitRow) == sector && atofHitBank.get("component", hitRow) == 10) {
-                                // a bar with the same layer id
-                                if (atofHitBank.get("layer", hitRow) == layer) {
-                                    ncomp++;
-                                }
-                                // a bar with the same layer id or plus/minus 1
-                                if (atofHitBank.get("layer", hitRow) == layer || atofHitBank.get("layer", hitRow) == layer-1 || atofHitBank.get("layer", hitRow) == layer+1) {
-                                    if (!IsBarCounted) {
-                                        ncomp_extended++; // do not count twice, just want to know if a bar exists
-                                        IsBarCounted = true;
-                                    }
-                                    local_ncomp_extended++;
-                                    double vz = 0.1*atofHitBank.getFloat("z", hitRow); // cm
-                                    H2_corr_atof_bar_vz->Fill(electron.vz, vz);
-                                    H1_diff_atof_bar_vz->Fill(electron.vz-vz);
+                            if (atofHitBank.get("id", hitRow) == atofid) {
+                                layer = atofHitBank.get("layer", hitRow);
+                                sector = atofHitBank.get("sector", hitRow);
+                                wedge = atofHitBank.get("component", hitRow);
+                                if (sector >= 0 && layer >= 0) {
+                                    H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*atofHitBank.get("z", hitRow));
+                                    H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*atofHitBank.get("z", hitRow));
                                 }
                             }
                         }
-                        H1_nmatched_bar->Fill(local_ncomp_extended);
-                        // predicted atof component after a projection : starting -v 98
+                        // look for a bar close to this wedge
+                        if (layer >= 0 && sector >= 0) {
+                            int local_ncomp_extended = 0;
+                            bool IsBarCounted = false;
+                            for (int hitRow = 0; hitRow < atofHitBank.getRows(); hitRow++) {
+                                // a bar in the same sector
+                                if (atofHitBank.get("sector", hitRow) == sector && atofHitBank.get("component", hitRow) == 10) {
+                                    // a bar with the same layer id
+                                    if (atofHitBank.get("layer", hitRow) == layer) {
+                                        ncomp++;
+                                    }
+                                    // a bar with the same layer id or plus/minus 1
+                                    if (atofHitBank.get("layer", hitRow) == layer || atofHitBank.get("layer", hitRow) == layer-1 || atofHitBank.get("layer", hitRow) == layer+1) {
+                                        if (!IsBarCounted) {
+                                            ncomp_extended++; // do not count twice, just want to know if a bar exists
+                                            IsBarCounted = true;
+                                        }
+                                        local_ncomp_extended++;
+                                        double vz = 0.1*atofHitBank.getFloat("z", hitRow); // cm
+                                        H2_corr_atof_bar_vz->Fill(electron.vz, vz);
+                                        H1_diff_atof_bar_vz->Fill(electron.vz-vz);
+                                    }
+                                }
+                            }
+                            H1_nmatched_bar->Fill(local_ncomp_extended);
+                            // predicted atof component after a projection : starting -v 98
+                            int version_number = std::atoi(version.c_str());
+                            if (version_number >= 100  && version_number < 102) {
+                                // lower surface of the wedges
+                                int atof_s2_comp = trackBank.get("atof_s2_comp", ahdc_track.row);
+                                int ss2 = atof_s2_comp/10000;
+                                int ls2 = (atof_s2_comp % 10000)/100;
+                                int cs2 = (atof_s2_comp % 10000) % 100;
+                                // upper surface of the wedges
+                                int atof_s3_comp = trackBank.get("atof_s3_comp", ahdc_track.row);
+                                int ss3 = atof_s3_comp/10000;
+                                int ls3 = (atof_s3_comp % 10000)/100;
+                                int cs3 = (atof_s3_comp % 10000) % 100;
+                                if (sector == ss2 && layer == ls2 && wedge == cs2) {
+                                    nmatches_ai_proj_s2++;
+                                }
+                                if (sector == ss3 && layer == ls3 && wedge == cs3) {
+                                    nmatches_ai_proj_s3++;
+                                }
+                                if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                    nmatches_ai_proj_s23++;
+                                } /*else {
+                                    printf("lower : %d , upper : %d , ai : %d \n", atof_s2_comp, atof_s3_comp, sector*10000 + layer*100 + wedge);
+                                }*/
+                            if (IsAMatch(sector, layer, wedge, ss2, ls2, cs2)) nmatches_ai_proj_s2_res++;
+                            }
+                            
+                        }
+                    } else {
+                        // fill residual
+                        for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
+                            if (hitBank.getInt("trackid", hitRow) == trackid) {
+                                H1_residual_without_atof->Fill(hitBank.get("residual", hitRow));
+                            }
+                        }
+                        H1_delta_phi_without_atof->Fill(delta_phi);
+                        H1_delta_vz_without_atof->Fill(electron.vz-0.1*ahdc_track.vz);
+                        H1_track_theta_without_atof->Fill(ahdc_track.theta);
+                    } // end atof matching
+                    { // look at the hit on the lower surface of the ATOF wedge: check if it exists in ATOF::hits
                         int version_number = std::atoi(version.c_str());
-                        if (version_number >= 100  && version_number < 102) {
+                        if (version_number >= 100 && version_number < 102) {
                             // lower surface of the wedges
                             int atof_s2_comp = trackBank.get("atof_s2_comp", ahdc_track.row);
                             int ss2 = atof_s2_comp/10000;
@@ -752,107 +800,69 @@ int main(int argc, char const *argv[]) {
                             int ss3 = atof_s3_comp/10000;
                             int ls3 = (atof_s3_comp % 10000)/100;
                             int cs3 = (atof_s3_comp % 10000) % 100;
-                            if (sector == ss2 && layer == ls2 && wedge == cs2) {
-                                nmatches_ai_proj_s2++;
+                            for (int row = 0; row < atofHitBank.getRows(); row++) {
+                                int layer = atofHitBank.get("layer", row);
+                                int sector = atofHitBank.get("sector", row);
+                                int wedge = atofHitBank.get("component", row);
+                                if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                    nmatches_proj_based++;
+                                }
                             }
-                            if (sector == ss3 && layer == ls3 && wedge == cs3) {
-                                nmatches_ai_proj_s3++;
+                            for (int row = 0; row < atofHitBank.getRows(); row++) {
+                                int layer = atofTdcBank.get("layer", row);
+                                int sector = atofTdcBank.get("sector", row);
+                                int wedge = atofTdcBank.get("component", row);
+                                if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
+                                    nmatches_proj_based_tdc++;
+                                }
                             }
-                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
-                                nmatches_ai_proj_s23++;
-                            } /*else {
-                                printf("lower : %d , upper : %d , ai : %d \n", atof_s2_comp, atof_s3_comp, sector*10000 + layer*100 + wedge);
-                            }*/
-                           if (IsAMatch(sector, layer, wedge, ss2, ls2, cs2)) nmatches_ai_proj_s2_res++;
-                        }
-                        
-                    }
-                } else {
-                    // fill residual
-                    for (int hitRow = 0; hitRow < hitBank.getRows(); hitRow++) {
-                        if (hitBank.getInt("trackid", hitRow) == trackid) {
-                            H1_residual_without_atof->Fill(hitBank.get("residual", hitRow));
-                        }
-                    }
-                    H1_delta_phi_without_atof->Fill(delta_phi);
-                    H1_delta_vz_without_atof->Fill(electron.vz-0.1*ahdc_track.vz);
-                    H1_track_theta_without_atof->Fill(ahdc_track.theta);
-                } // end atof matching
-                { // look at the hit on the lower surface of the ATOF wedge: check if it exists in ATOF::hits
-                    int version_number = std::atoi(version.c_str());
-                    if (version_number >= 100 && version_number < 102) {
-                        // lower surface of the wedges
-                        int atof_s2_comp = trackBank.get("atof_s2_comp", ahdc_track.row);
-                        int ss2 = atof_s2_comp/10000;
-                        int ls2 = (atof_s2_comp % 10000)/100;
-                        int cs2 = (atof_s2_comp % 10000) % 100;
-                        // upper surface of the wedges
-                        int atof_s3_comp = trackBank.get("atof_s3_comp", ahdc_track.row);
-                        int ss3 = atof_s3_comp/10000;
-                        int ls3 = (atof_s3_comp % 10000)/100;
-                        int cs3 = (atof_s3_comp % 10000) % 100;
-                        for (int row = 0; row < atofHitBank.getRows(); row++) {
-                            int layer = atofHitBank.get("layer", row);
-                            int sector = atofHitBank.get("sector", row);
-                            int wedge = atofHitBank.get("component", row);
-                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
-                                nmatches_proj_based++;
+                            // take into account error, look at neighborhood (study case for S2 only)
+                            for (int row = 0; row < atofHitBank.getRows(); row++) {
+                                int layer = atofHitBank.get("layer", row);
+                                int sector = atofHitBank.get("sector", row);
+                                int comp = atofHitBank.get("component", row);
+                                if (IsAMatch(sector, layer, comp, ss2, ls2, cs2)) {
+                                    nmatches_proj_based_res++;
+                                    break; // we already found one, do not search for other
+                                }
                             }
                         }
-                        for (int row = 0; row < atofHitBank.getRows(); row++) {
-                            int layer = atofTdcBank.get("layer", row);
-                            int sector = atofTdcBank.get("sector", row);
-                            int wedge = atofTdcBank.get("component", row);
-                            if ((sector == ss2 && layer == ls2 && wedge == cs2) || (sector == ss3 && layer == ls3 && wedge == cs3)) {
-                                nmatches_proj_based_tdc++;
-                            }
-                        }
-                        // take into account error, look at neighborhood (study case for S2 only)
-                        for (int row = 0; row < atofHitBank.getRows(); row++) {
-                            int layer = atofHitBank.get("layer", row);
-                            int sector = atofHitBank.get("sector", row);
-                            int comp = atofHitBank.get("component", row);
-                            if (IsAMatch(sector, layer, comp, ss2, ls2, cs2)) {
-                                nmatches_proj_based_res++;
-                                break; // we already found one, do not search for other
-                            }
-                        }
-                    }
-                    if (version_number == 101) {
-                        double dx = trackBank.get("atof_s2_sigma_x", ahdc_track.row);
-                        double dy = trackBank.get("atof_s2_sigma_y", ahdc_track.row);
-                        double dz = trackBank.get("atof_s2_sigma_z", ahdc_track.row);
-                        double x = trackBank.get("atof_s2_x", ahdc_track.row);
-                        double y = trackBank.get("atof_s2_y", ahdc_track.row);
-                        //double z = trackBank.get("atof_s2_z", ahdc_track.row);
-                        
+                        if (version_number == 101) {
+                            double dx = trackBank.get("atof_s2_sigma_x", ahdc_track.row);
+                            double dy = trackBank.get("atof_s2_sigma_y", ahdc_track.row);
+                            double dz = trackBank.get("atof_s2_sigma_z", ahdc_track.row);
+                            double x = trackBank.get("atof_s2_x", ahdc_track.row);
+                            double y = trackBank.get("atof_s2_y", ahdc_track.row);
+                            //double z = trackBank.get("atof_s2_z", ahdc_track.row);
+                            
 
-                        double dphidx = -y/(x*x+y*y);
-                        double dphidy = x/(x*x+y*y);
+                            double dphidx = -y/(x*x+y*y);
+                            double dphidy = x/(x*x+y*y);
 
-                        double dphi2 = pow(dphidx,2)*pow(dx,2) + pow(dphidy,2)*pow(dy,2);
+                            double dphi2 = pow(dphidx,2)*pow(dx,2) + pow(dphidy,2)*pow(dy,2);
 
-                        H1_track_atof_s2_sigma_z->Fill(dz*0.1); // mm
-                        H1_track_atof_s2_sigma_phi->Fill(sqrt(dphi2)*180/M_PI); // deg
-                        //printf("%lf \n", dz);
+                            H1_track_atof_s2_sigma_z->Fill(dz*0.1); // mm
+                            H1_track_atof_s2_sigma_phi->Fill(sqrt(dphi2)*180/M_PI); // deg
+                            //printf("%lf \n", dz);
+                        }
                     }
-                }
-                H1_track_atof_region->Fill(trackBank.get("atof_region",ahdc_track.row));
-                //int version_number = std::atoi(version.c_str());
-                if (version_number >= 102)
-                    H1_atof_match_status->Fill(trackBank.get("atof_match", ahdc_track.row));
-                // // look at prepid
-                // for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
-                //     if (trackid == aiPrePIDBank.get("trackid", row)) {
-                //         aiPrePIDBank.show();
-                //         break;
-                //     }
-                // }
-            } // end cut on delta_phi caut
-        
+                    H1_track_atof_region->Fill(trackBank.get("atof_region",ahdc_track.row));
+                    //int version_number = std::atoi(version.c_str());
+                    if (version_number >= 102)
+                        H1_atof_match_status->Fill(trackBank.get("atof_match", ahdc_track.row));
+                    // // look at prepid
+                    // for (int row = 0; row < aiPrePIDBank.getRows(); row++) {
+                    //     if (trackid == aiPrePIDBank.get("trackid", row)) {
+                    //         aiPrePIDBank.show();
+                    //         break;
+                    //     }
+                    // }
+                } // end cut on delta_phi caut
+            
+            }
+            
         }
-        
-    }
+    } // end loop over file
 
     // save the output in a ROOT file
     TFile *f = new TFile(output.c_str(), "RECREATE");
@@ -1166,7 +1176,7 @@ TCanvas* display_elastics_cuts(TH2D* h, const char * name) {
 }
 
 TCanvas* fit_histogram(TH1D* h, const char * name) {
-    printf("> %s\n", name);
+    //printf("> %s\n", name);
     TCanvas* c1 = new TCanvas(name);
     c1->cd();
     //h->SetFillColor(kGray);
@@ -1224,16 +1234,6 @@ TCanvas* fit_histogram(TH1D* h, const char * name) {
     // gerr->AddPointError(mean, 0.5*(f1->Eval(x1) + f1->Eval(x2)), stdev, 0);
     // gerr->Draw("same lp");
     return c1;
-}
-void fill_histogram(std::vector<TH1D*> histos, std::vector<const char *> entries, hipo::bank & bank, std::vector<int> & rows) {
-    // we should have the same number of histograms as for entries
-    int nentries = histos.size();
-    if (nentries != (int) entries.size()) {return;}
-    for (int row : rows) {
-        for (int e = 0; e < nentries; e++) {
-            histos[e]->Fill(bank.get(entries[e], row));
-        }
-    }
 }
 
 void count_atof_matching(std::string filename, TFile * rootFile) {
@@ -1544,14 +1544,14 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
     TGraph* gr = new TGraph();
     // for each X bins, we plot the 1D histogram of Y var and we make a gaussian fit to extract the error
     for (int i = 0; i < nprojs; i++) {
-        TCanvas* canvas_temp = new TCanvas(TString::Format("c_py_%d", i).Data(), TString::Format("c_py_%d", i).Data());
+        TCanvas* canvas_temp = new TCanvas(TString::Format("c_py__%s_%d", h->GetName(), i).Data(), TString::Format("c_py_%d", i).Data());
         canvas_temp->cd();
-        TH1D* H1_proj = h->ProjectionY(TString::Format("_py_%d", i).Data(), i*nbins_per_projection, (i+1)*nbins_per_projection);
+        TH1D* H1_proj = h->ProjectionY(TString::Format("_py_%s_%d", h->GetName(), i).Data(), i*nbins_per_projection, (i+1)*nbins_per_projection);
         if (H1_proj->GetEntries() == 0) continue;
         //printf("> nentries: %lf\n", H1_proj->GetEntries());
         // H1_proj->Fit("gaus");
         if (!flag) {
-            H1_proj->Fit("gaus");
+            H1_proj->Fit("gaus", "Q");
         }
         else { // only fit the negative part of residual versus time
             //H1_proj->Fit("gaus", "R", "", h->GetYaxis()->GetXmin(), 0);
@@ -1561,7 +1561,7 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
                 H1_proj->SetBinContent(bin, H1_proj->GetBinContent(bin_for_zero-(bin-bin_for_zero)));
             }
             H1_proj->SetBinContent(bin_for_zero, H1_proj->GetBinContent(bin_for_zero-1));
-            H1_proj->Fit("gaus");
+            H1_proj->Fit("gaus", "Q");
         }
         if (dir != nullptr) {
             dir->cd();
@@ -1604,7 +1604,7 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
         f1_adc->SetParameter(2, 1);
         f1_adc->SetParameter(3, 1);
         //f1_adc->SetParLimits(2, 0, 1000);
-        gr->Fit("f1_adc", "R", "", 0, 1000);
+        gr->Fit("f1_adc", "RQ", "", 0, 1000);
         TCanvas* canvas_tmp = new TCanvas("c_f1_adc_0", "c_f1_adc_0");
         canvas_tmp->cd();
         gr->Draw("apl");
@@ -1635,7 +1635,7 @@ std::pair<TCanvas*, TGraph*> projectionY(TH2D* h, int nbins_per_projection, cons
         f1_time->SetParameter(1, 1);
         f1_time->SetParameter(2, 1);
         f1_time->SetParameter(3, 1);
-        gr->Fit("f1_time", "R", "", 0, 100);
+        gr->Fit("f1_time", "RQ", "", 0, 100);
         TCanvas* canvas_tmp = new TCanvas("c_f1_time_0", "c_f1_time_0");
         canvas_tmp->cd();
         gr->Draw("apl");

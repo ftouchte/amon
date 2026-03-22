@@ -21,8 +21,6 @@ TCanvas* superimpose_histograms(TH1D* h_all, TH1D* h_sel, const char * name);
 TCanvas* display_elastics_cuts(TH2D* h, const char * name);
 // Try to fit histograms with 2 gaussians
 TCanvas* fit_histogram(TH1D* h, const char * name);
-// Given a list of rows, fill the corresponding histograms and entries reading the bank
-void fill_histogram(std::vector<TH1D*> histos, std::vector<const char *> entries, hipo::bank & bank, std::vector<int> & rows);
 // Small study to count the number of (AHDC, ATOF) matching
 void count_atof_matching(std::string filename, TFile * rootFile);
 // special routine for simulation
