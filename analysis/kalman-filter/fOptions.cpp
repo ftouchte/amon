@@ -61,7 +61,7 @@ void fOptions::Show() {
     printf("| List of options\n");
     for (std::string opt: opts) {
         //printf("|   %s = %s\n", opt.c_str(), mopts[opt].c_str());
-        printf("|   %s = ", opt.c_str());
+        printf("|   %*s = ", max_length, opt.c_str());
         for (auto x : mopts[opt]) {
             printf("%s ", x.c_str());
         }
