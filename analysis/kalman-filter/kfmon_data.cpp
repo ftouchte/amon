@@ -230,6 +230,24 @@ int main(int argc, char const *argv[]) {
         wire2slc(i, sector, layer, component);
         H1_residual_per_wire.push_back(new TH1D(TString::Format("track_residual_l%2d_w%02d", layer, component).Data(), TString::Format("residual, layer %2d wire %02d; residual (mm); count", layer, component).Data(), 50, -3, 3));
     }
+    std::vector<TH2D*> H2_corr_residual_per_wire_vz;
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        H2_corr_residual_per_wire_vz.push_back(new TH2D(TString::Format("track_residual_l%2d_w%02d_vz", layer, component).Data(), TString::Format("residual, layer %2d wire %02d; vz (cm); residual (mm)", layer, component).Data(), 50, -25, 20, 50, -3, 3));
+    }
+    std::vector<TH1D*> H1_residual_LR_per_wire;
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        H1_residual_LR_per_wire.push_back(new TH1D(TString::Format("track_residual_LR_l%2d_w%02d", layer, component).Data(), TString::Format("residual_LR, layer %2d wire %02d; residual_LR (mm); count", layer, component).Data(), 50, -3, 3));
+    }
+    std::vector<TH2D*> H2_corr_residual_LR_per_wire_vz;
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        H2_corr_residual_LR_per_wire_vz.push_back(new TH2D(TString::Format("track_residual_LR_l%2d_w%02d_vz", layer, component).Data(), TString::Format("residual_LR, layer %2d wire %02d; vz (cm); residual_LR (mm)", layer, component).Data(), 50, -25, 20, 50, -3, 3));
+    }
     std::vector<TH2D*> H2_corr_residual_per_layer_vz;
         H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_all", "residual (all); vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
         H2_corr_residual_per_layer_vz.push_back(new TH2D("track_residual_layer_vz_11", "residual per layer 11; vz (cm); residual (mm)",  50, -25, 20, 50, -3, 3));
@@ -552,6 +570,11 @@ int main(int argc, char const *argv[]) {
                             double residual_LR = hitBank.get("timeOverThreshold", hitRow);
                             double residual_phi_LR = hitBank.get("time", hitRow)*180/M_PI;
                             H1_residual_per_wire[slc2wire(1,layer,component)]->Fill(residual);
+                            H2_corr_residual_per_wire_vz[slc2wire(1,layer,component)]->Fill(0.1*ahdc_track.vz, residual);
+                            H1_residual_LR_per_wire[slc2wire(1,layer,component)]->Fill(residual_LR);
+                            H2_corr_residual_LR_per_wire_vz[slc2wire(1,layer,component)]->Fill(0.1*ahdc_track.vz, residual_LR);
+                            
+                            
 
                             //all
                             H1_residual_per_layer[0]->Fill(residual);
@@ -976,13 +999,16 @@ int main(int argc, char const *argv[]) {
     // for (auto h: H2_corr_residual_phi_LR_per_layer_phi) {
     //     h->Write(h->GetName());
     // }
-    TDirectory *dir_residual_per_wire = all_dir->mkdir("residual_per_wire");
-    dir_residual_per_wire->cd();
-    for (int i = 0; i < 576; i++) {
-        int sector, layer, component;
-        wire2slc(i, sector, layer, component);
-        H1_residual_per_wire[i]->Write(TString::Format("l%2d_w%02d", layer, component).Data());
-    }
+    processLayer1DHistos(H1_residual_per_layer, all_dir, "H1_residual_per_layer", "residual");
+    processLayer2DHistos(H2_corr_residual_per_layer_vz, all_dir, "H2_corr_residual_per_layer_vz", 5);
+    processLayer1DHistos(H1_residual_LR_per_layer, all_dir, "H1_residual_LR_per_layer", "residual_LR");
+    processLayer2DHistos(H2_corr_residual_LR_per_layer_vz, all_dir, "H2_corr_residual_LR_per_layer_vz", 5);
+
+    processWire1DHistos(H1_residual_per_wire, all_dir, "H1_residual_per_wire", "residual");
+    processWire2DHistos(H2_corr_residual_per_wire_vz, all_dir, "H2_corr_residual_per_wire_vz", 5);
+    processWire1DHistos(H1_residual_LR_per_wire, all_dir, "H1_residual_LR_per_wire", "residual_LR");
+    processWire2DHistos(H2_corr_residual_LR_per_wire_vz, all_dir, "H2_corr_residual_LR_per_wire_vz", 5);
+
     all_dir->cd();
     H1_track_chi2[0]->Write("chi2");
     H2_corr_residual_ADC[0]->Write("corr_residual_ADC");
@@ -1813,4 +1839,186 @@ int layer2number(int digit) {
 	} else {
 		return -1; // not a layer
 	}
+}
+
+
+void processWire1DHistos(std::vector<TH1D*> histos, TDirectory* mother_dir, const char * name, const char * gr_title) {
+    TDirectory *dir = mother_dir->mkdir(name);
+    dir->cd();
+    TGraphErrors* gre = new TGraphErrors();
+    TGraph* gr = new TGraph();
+    for (int i = 0; i < 576; i++) {
+        // int sector, layer, component;
+        // wire2slc(i, sector, layer, component);
+        auto h = histos[i];
+        // make a gaussian fit
+        if (h && h->Integral() > 10) {
+            //h->Fit("gaus", "Q");
+            h->Fit("gaus", "RQ", "", h->GetMean() - 2*h->GetStdDev(), h->GetMean() + 2*h->GetStdDev());
+            TF1 *gaus = h->GetFunction("gaus");
+            double mean = gaus->GetParameter("Mean");
+            double sigma = gaus->GetParameter("Sigma");
+            gre->AddPointError(i,mean,0,sigma/h->Integral());
+            gr->AddPoint(i, sigma);
+        } else {
+            gre->AddPointError(i,0,0,0);
+            gr->AddPoint(i, 0);
+        }
+    }
+    TCanvas* c1 = new TCanvas(TString::Format("c_gr_wire_%s", gr_title).Data(),TString::Format("c_gr_%s", gr_title).Data());
+    gStyle->SetTitleSize(0.06, "t");   // titre global
+    gStyle->SetLabelSize(0.05, "xy");  // labels axes
+    gStyle->SetTitleSize(0.05, "xy");  // titres axes
+    gStyle->SetTitleOffset(1.0, "x");
+    gStyle->SetTitleOffset(1.2, "y");
+    c1->Divide(1,2);
+    // mean
+    c1->cd(1);
+    gre->SetTitle(TString::Format("%s mean versus wire; wire number; residual mean (mm)", gr_title).Data());
+    gre->SetMarkerStyle(20);
+    //gr->SetLineColor(kRed);
+    gre->GetXaxis()->SetLimits(0, 576);
+    gre->Draw("AP");
+    // TH2D* gre_bis = (TH2D*) gre->Clone(TString::Format("%s_bis", gre->GetName()).Data());
+    // gre_bis->SetLineColor(kBlue);
+    // gre_bis->Draw("same l");
+    TLegend* leg = new TLegend(0.7, 0.7, 0.9, 0.9);
+    leg->AddEntry(gre, "mean and error", "lep");
+    leg->Draw();
+    c1->cd(2);
+
+    // width
+    gr->GetXaxis()->SetLimits(0, 576);
+    gr->SetTitle(TString::Format("%s width versus wire; wire number; residual width (mm)", gr_title).Data());
+    gr->SetMarkerStyle(20);
+    gr->Draw("AP");
+
+    c1->Write(TString::Format("summary_%s", name).Data());
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        auto h = histos[i];
+        // write histo
+        h->Write(TString::Format("l%2d_w%02d", layer, component).Data());
+    }
+}
+
+void processWire2DHistos(std::vector<TH2D*> histos, TDirectory* mother_dir, const char * name, int nbinsX) {
+    TDirectory *dir = mother_dir->mkdir(name);
+    dir->cd();
+    for (int i = 0; i < 576; i++) {
+        int sector, layer, component;
+        wire2slc(i, sector, layer, component);
+        auto h = histos[i];
+        // make a gaussian fit
+        auto c1 = fitProjectionY(h, nbinsX, h->GetName());
+        c1->Write(TString::Format("l%2d_w%02d", layer, component).Data());
+    }
+}
+
+TCanvas* fitProjectionY(TH2D* h, int nbinsX, const char * name) {
+    TCanvas* c1 = new TCanvas(name);
+    c1->cd();
+    h->Draw("colz");
+    int bin = 0;
+    int counter = 0;
+    TGraphErrors* gr = new TGraphErrors();
+    while (bin < h->GetXaxis()->GetNbins()) {
+        // projection 1D
+        TCanvas* c_temp = new TCanvas(TString::Format("c_py__%s_%d", h->GetName(), counter).Data(), TString::Format("c_py_%d", counter).Data());
+        c_temp->cd();
+        TH1D* h_proj = h->ProjectionY(TString::Format("_py_%s_%d", h->GetName(), counter).Data(), bin, bin+nbinsX);
+        double x_bin_inf = h->GetXaxis()->GetBinCenter(bin);
+        double x_bin_sup = h->GetXaxis()->GetBinCenter(bin+nbinsX);
+        if (h_proj && h_proj->Integral() > 10) {
+            //h_proj->Fit("gaus", "Q");
+            h_proj->Fit("gaus", "RQ", "", h_proj->GetMean() - 2*h_proj->GetStdDev(), h_proj->GetMean() + 2*h_proj->GetStdDev());
+            TF1 *gaus = h_proj->GetFunction("gaus");
+            double mean = gaus->GetParameter("Mean");
+            double sigma = gaus->GetParameter("Sigma");
+            gr->AddPointError(0.5*(x_bin_sup+x_bin_inf), mean, 0, sigma);
+        } else {
+            gr->AddPointError(0.5*(x_bin_sup+x_bin_inf), 0, 0, 0);
+        }
+        // increment index
+        bin += nbinsX;
+        counter++;
+    }
+    c1->cd();
+    gr->SetMarkerColor(kBlack);
+    gr->SetMarkerStyle(21);
+    gr->SetLineWidth(2);
+    gr->SetLineColor(kRed);
+    gr->Draw("same p");
+    return c1;
+}
+
+void processLayer1DHistos(std::vector<TH1D*> histos, TDirectory* mother_dir, const char * name, const char * gr_title) {
+    TDirectory *dir = mother_dir->mkdir(name);
+    dir->cd();
+    TGraphErrors* gre = new TGraphErrors();
+    TGraph* gr = new TGraph();
+    for (int i = 0; i < 9; i++) {
+        // int sector, layer, component;
+        // wire2slc(i, sector, layer, component);
+        auto h = histos[i];
+        // make a gaussian fit
+        if (h && h->Integral() > 10) {
+            //h->Fit("gaus", "Q");
+            h->Fit("gaus", "RQ", "", h->GetMean() - 2*h->GetStdDev(), h->GetMean() + 2*h->GetStdDev());
+            TF1 *gaus = h->GetFunction("gaus");
+            double mean = gaus->GetParameter("Mean");
+            double sigma = gaus->GetParameter("Sigma");
+            gre->AddPointError(i,mean,0,sigma/h->Integral());
+            gr->AddPoint(i, sigma);
+        } else {
+            gre->AddPointError(i,0,0,0);
+            gr->AddPoint(i, 0);
+        }
+    }
+    TCanvas* c1 = new TCanvas(TString::Format("c_gr_layer_%s", gr_title).Data(),TString::Format("c_gr_%s", gr_title).Data());
+    gStyle->SetTitleSize(0.06, "t");   // titre global
+    gStyle->SetLabelSize(0.05, "xy");  // labels axes
+    gStyle->SetTitleSize(0.05, "xy");  // titres axes
+    gStyle->SetTitleOffset(1.0, "x");
+    gStyle->SetTitleOffset(1.2, "y");
+    c1->Divide(1,2);
+    // mean
+    c1->cd(1);
+    gre->SetTitle(TString::Format("%s mean versus layer; layer number; residual mean (mm)", gr_title).Data());
+    gre->SetMarkerStyle(20);
+    //gr->SetLineColor(kRed);
+    gre->GetXaxis()->SetLimits(0, 9);
+    gre->Draw("AP");
+    // TH2D* gre_bis = (TH2D*) gre->Clone(TString::Format("%s_bis", gre->GetName()).Data());
+    // gre_bis->SetLineColor(kBlue);
+    // gre_bis->Draw("same l");
+    TLegend* leg = new TLegend(0.7, 0.7, 0.9, 0.9);
+    leg->AddEntry(gre, "mean and error", "lep");
+    leg->Draw();
+    c1->cd(2);
+
+    // width
+    gr->GetXaxis()->SetLimits(0, 9);
+    gr->SetTitle(TString::Format("%s width versus layer; layer number; residual width (mm)", gr_title).Data());
+    gr->SetMarkerStyle(20);
+    gr->Draw("AP");
+
+    c1->Write(TString::Format("summary_%s", name).Data());
+    for (int i = 0; i < 9; i++) {
+        auto h = histos[i];
+        // write histo
+        h->Write(TString::Format("l%2d", i).Data());
+    }
+}
+
+void processLayer2DHistos(std::vector<TH2D*> histos, TDirectory* mother_dir, const char * name, int nbinsX) {
+    TDirectory *dir = mother_dir->mkdir(name);
+    dir->cd();
+    for (int i = 0; i < 9; i++) {
+        auto h = histos[i];
+        // make a gaussian fit
+        auto c1 = fitProjectionY(h, nbinsX, h->GetName());
+        c1->Write(TString::Format("l%2d", i).Data());
+    }
 }
