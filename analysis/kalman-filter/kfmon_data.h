@@ -47,6 +47,12 @@ void writeHistoVector(std::vector<T*> & histos, TDirectory* dir, const char * ti
     c1->Write(title);
 }
 
+void processWire1DHistos(std::vector<TH1D*> histos, TDirectory* mother_dir, const char * name, const char * gr_title);
+void processWire2DHistos(std::vector<TH2D*> histos, TDirectory* mother_dir, const char * name, int nbinsX);
+TCanvas* fitProjectionY(TH2D* h, int nbinsX, const char * name);
+void processLayer1DHistos(std::vector<TH1D*> histos, TDirectory* mother_dir, const char * name, const char * gr_title);
+void processLayer2DHistos(std::vector<TH2D*> histos, TDirectory* mother_dir, const char * name, int nbinsX);
+
 /*
 class Histograms {
 
