@@ -5,11 +5,12 @@ package io.github.ftouchte;
  * 
  */
 public class ParticleRow {
-    int row = -1; // row in the HIPO bank
-    double px, py, pz; // GeV
-    double p, theta, phi; // GeV, radian, radian
+    private int row = -1; // row in the HIPO bank
+    private double px, py, pz; // GeV
+    private double p, theta, phi; // GeV, radian, radian
+    private double pT;
 
-    double vx, vy, vz; // cm
+    private double vx, vy, vz; // cm
     
     /**
      * If no {@link Units#Units} is specified, the unit is assumed to be GeV (energies) and cm (distances)
@@ -22,6 +23,7 @@ public class ParticleRow {
         py = _py;
         pz = _pz;
         p = Math.sqrt(px*px + py*py + pz*pz);
+        pT = Math.sqrt(px*px + py*py);
         theta = Math.acos(pz/p);
         phi = Math.atan2(py, px);
     }
@@ -38,6 +40,20 @@ public class ParticleRow {
      */
     public double p(double unit) {
         return p/unit;
+    }
+
+    /** Return the amplitude of the transverse momentum vector */
+    public double pT() {
+        return pT;
+    }
+
+    /**
+     * 
+     * @param unit should be a {@link Units#Units}
+     * @return return the of the transverse momentum accordingly to the given unit
+     */
+    public double pT(double unit) {
+        return pT/unit;
     }
 
     /** Return the theta angle (spherical coordinate) of the momentum vector */

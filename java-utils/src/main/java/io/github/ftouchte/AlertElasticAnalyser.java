@@ -28,6 +28,13 @@ public class AlertElasticAnalyser {
     ParticleRow electron;
     ParticleRow ahdc_track;
 
+    /**
+     * Check if this event containts an elastic couple : electron + track
+     * 
+     * If true, one can retrive the rows of the electron and of the track using {@link #getElectron()} and {@link #getAhdcTrack()}
+     * 
+     * @param event
+     */
     public boolean IsElastic(DataEvent event) {
         if (!event.hasBank("REC::Particle") && !event.hasBank("AHDC::kftrack")) {
             return false;
@@ -82,6 +89,58 @@ public class AlertElasticAnalyser {
                         }
                     }
                     
+                }
+            }
+        }
+        
+        if (electron != null && ahdc_track != null) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Check if this event containts an elastic electron. 
+     * 
+     * If true, one can retrive the rows of the electron {@link #getElectron()}. The theoretical kinematics of the track can be retrieved using {@link #getAhdcTrack()}
+     * 
+     * @param event
+     */
+    public boolean hasElasticElectron(DataEvent event) {
+        if (!event.hasBank("REC::Particle") && !event.hasBank("AHDC::kftrack")) {
+            return false;
+        }
+        
+        DataBank recBank = event.getBank("REC::Particle");
+        //DataBank trackBank = event.getBank("AHDC::kftrack");
+
+        electron = null;
+        ahdc_track = null;
+
+        
+        for (int row = 0; row < recBank.rows(); row++) {
+            // Select trigger electrons
+            if (recBank.getInt("pid", row) == 11 && recBank.getShort("status", row) < 0) {
+                // compute kinematic variables
+                double px = recBank.getFloat("px", row);
+                double py = recBank.getFloat("py", row);
+                double pz = recBank.getFloat("pz", row);
+                ParticleRow electron_candidate = new ParticleRow(px * Units.GeV, py * Units.GeV, pz * Units.GeV);
+                // physics kinematics
+                double scattered_beam_energy = Math.sqrt(Math.pow(electron_candidate.p(Units.GeV),2) + Math.pow(electron_mass,2));
+                double nu = beam_energy - scattered_beam_energy;
+                double Q2 = 4*beam_energy*scattered_beam_energy*Math.pow(Math.sin(electron_candidate.theta(Units.rad)/2),2);
+                double W2 = Math.pow(deuteron_mass,2) + 2*deuteron_mass*nu - Q2;
+                // W2 cut to retrieve the target mass
+                if (W2 > W2_min && W2 < W2_max) {
+                    electron = electron_candidate;
+                    // compute theoretical ahdc track
+                    double px1 = -scattered_beam_energy*Math.sin(electron.theta(Units.rad))*Math.cos(electron.phi(Units.rad));
+                    double py1 = -scattered_beam_energy*Math.sin(electron.theta(Units.rad))*Math.sin(electron.phi(Units.rad));
+                    double pz1 = beam_energy - scattered_beam_energy*Math.cos(electron.theta(Units.rad));
+                    ahdc_track = new ParticleRow(px1, py1, pz1);
+                    return true;           
                 }
             }
         }
