@@ -13,7 +13,11 @@ import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.jnp.hipo4.io.HipoWriterSorted;
 
-
+/**
+ * Filter elastic events from file.
+ * 
+ * Please refer to {@link AlertElasticAnalyser#AlertElasticAnalyser}
+ */
 public class ElasticEventFilter {
     public static void main(String[] args) {
 
