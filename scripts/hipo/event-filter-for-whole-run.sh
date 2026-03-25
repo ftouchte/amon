@@ -3,8 +3,8 @@
 path=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/v120
 outdir=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/elastic-filtered/v120
 
-#for file in $path/rec*
-for file in v120/rec_clas_022712.evio.0000[0-3].hipo
+for file in $path/rec*
+#for file in v120/rec_clas_022712.evio.0000[0-3].hipo
 do
     echo -e "\033[1;32m > Filter elastics for : \033[0m $file"
     filename=$(basename "$file") # remove the path
