@@ -1,14 +1,19 @@
 package io.github.ftouchte;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
+import org.jlab.groot.data.H1F;
+import org.jlab.groot.math.F1D;
+import org.jlab.groot.ui.TGCanvas;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataEvent;
@@ -17,18 +22,21 @@ import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.alert.ALERTEngine;
 
-import org.jlab.groot.data.H1F;
-import org.jlab.groot.data.H2F;
-import org.jlab.groot.ui.PaveText;
-import org.jlab.groot.ui.TGCanvas;
-import org.jlab.groot.graphics.EmbeddedCanvas;
-import org.jlab.groot.math.F1D;
-
 
 /**
  * This code is used in parallel of coatjava{branch: ahdc/alignment}
  */
 public class AhdcAlignmentAnalyser {
+
+    static class PairAlphaResidual {
+        public Double alpha;
+        public Double residual;
+        PairAlphaResidual(Double _alpha, Double _residual) {
+            alpha = _alpha;
+            residual = _residual;
+        }
+    }
+
     public static void main(String[] args) {
 
         /// Load options
@@ -40,6 +48,7 @@ public class AhdcAlignmentAnalyser {
         ArrayList<String> inFiles = options.GetValues("-i");
         if (inFiles.size() == 0) {
             System.out.println("Please provide inputs files using the option: -i");
+            return;
         }
 
         /// Check that the output dir exists or create a new one
@@ -123,14 +132,70 @@ public class AhdcAlignmentAnalyser {
         //     wire.rotateZ(Math.toRadians(-0.21));
         // }
         
+        /// List<List> 
+        /// Each line matches an iteration
+        /// each column contains the result for all layer (we have 8 columns)
+        /// a result is a pair (rotation angle, residual) for a given layer
+        //ArrayList<ArrayList<PairAlphaResidual>> layer_results = new ArrayList<>();
+        Map<Integer, ArrayList<PairAlphaResidual>> map_layer_results = new HashMap<>();
         
 
+        
 
+        // --- No memories
+        double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double[] layer_residuals = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double[] layer_angles_sup = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+        double[] layer_residuals_sup = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        double[] layer_angles_inf = {-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0};
+        double[] layer_residuals_inf = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+        // // --- We already have an estimates of the angles inf and sup
+        // double[] layer_angles = {-1.49, 3.82, 3.24, -1.54, -1.96, 3.73, 3.30, -1.61}; // attempt 1
+        // // double[] layer_angles = {-1.49, 3.82, 3.24, -1.45, -2.01, 3.73, 3.30, -1.61}; // attempt 2
+        // double[] layer_residuals = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        // double[] layer_angles_sup = new double[8];
+        // double[] layer_residuals_sup = new double[8];
+        // double[] layer_angles_inf = new double[8];
+        // double[] layer_residuals_inf = new double[8];
+        // for (int i = 0; i < 8; i++) {
+        //     layer_angles_sup[i] = layer_angles[i] + 0.1*Math.abs(layer_angles[i]);
+        //     layer_angles_inf[i] = layer_angles[i] - 0.1*Math.abs(layer_angles[i]);
+        //     layer_residuals_sup[i] = 1.0; // positif
+        //     layer_residuals_inf[i] = -1.0; // negatif
+        // }
+
+        //    layer 11 --> will be rotated by 0.72 deg 
+        //     layer 21 --> will be rotated by 1.52 deg 
+        //     layer 22 --> will be rotated by 0.97 deg 
+        //     layer 31 --> will be rotated by 0.80 deg 
+        //     layer 32 --> will be rotated by 0.35 deg 
+        //     layer 41 --> will be rotated by 1.36 deg 
+        //     layer 42 --> will be rotated by 0.96 deg 
+        //     layer 51 --> will be rotated by 0.67 deg 
+
+        /// rotate AHDC detector
+        System.out.println(" Initial rotation angles : AHDC detector");
+        for (int num = 0; num < 8; num++) {
+            // rotate AHDCdet
+            int layer = number2layer(num+1);
+            int sl = layer / 10;
+            int l = layer % 10;
+            for (int i = 0; i < AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getNumComponents(); i++) {
+                AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(i+1); // numbering starts at 1
+                wire.rotateZ(Math.toRadians(layer_angles[num]));
+            }
+            //System.out.println("   layer " + layer + " --> will be rotated by " + layer_angles[num] + " deg");
+            System.out.printf("   layer " + layer + " --> will be rotated by %.2f deg \n", layer_angles[num]);
+        }
 
         /// Loop over criteria
         int nbIterations = 0;
-        while (nbIterations < 1) {
+        while (nbIterations < 35) {
             nbIterations++;
+            System.out.println("\033[1;32m\\#######################################\033[0m");
+            System.out.println("\033[1;32m\\# Start iteration : " + nbIterations + "\033[0m");
+            System.out.println("\033[1;32m\\#######################################\033[0m");
         //     /// --- Initialize histogram
             //H1F h1_residual_LR = new H1F("residual_LR", "residual LR", 100, -3, 3);
             //H1F h1_residual_LR_before = new H1F("residual_LR_before", "residual LR", 100, -3, 3);
@@ -177,8 +242,8 @@ public class AhdcAlignmentAnalyser {
                 while (reader.hasNext()) { // just check if we have a next event but do not load it
                     /// --- show progress
                     nevents++;
-                    if (nevents % 10000 == 0) System.out.println("***** Event " + nevents );
-                    //if (nevents > 10) break;
+                    if (nevents % 5000 == 0) System.out.println("***** Event " + nevents );
+                    if (nevents > 20000) break;
 
                     /// load event
                     reader.nextEvent(inEvent);
@@ -260,13 +325,16 @@ public class AhdcAlignmentAnalyser {
                 //double mean = h.getBinContent(h.getMaximumBin());
                 double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
                 double sigma = h.getRMS();
-                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c])", peak-2*sigma, peak+2*sigma);
+                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
+                //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
                 func.setParameter(0, h.getMax());
                 func.setParameter(1, h.getMean());
                 func.setParameter(2, h.getRMS());
+                func.setParameter(3, h.getMin());
                 func.setParLimits(0, 0, 1.5*h.getMax());
                 func.setParLimits(1, -3, 3);
                 func.setParLimits(2, 0, 3);
+                func.setParLimits(3, 0, 1.5*h.getMin());
                 func.setLineColor(2);
                 func.setLineWidth(2);
                 h.fit(func);
@@ -274,21 +342,35 @@ public class AhdcAlignmentAnalyser {
                 double mean = func.getParameter(1);
                 double width = func.getParameter(2);
 
-                // update the rotatio angle of this layer
-                if (layer_num > 0) {
-                    // estimate rotation angle
-                    double angle = 0; // deg
-                    // rotate AHDCdet
-                    int layer = number2layer(layer_num);
-                    int sl = layer / 10;
-                    int l = layer % 10;
-                    for (int i = 0; i < AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getNumComponents(); i++) {
-                        AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(i+1); // numbering starts at 1
-                        wire.rotateZ(Math.toRadians(angle));
-                    }
+                // store residual for the current rotation angle 
+                if (layer_num > 0) {                      
+                    layer_residuals[layer_num-1] = mean;
                 }
                 layer_num++;
             }
+
+            // /// Fill layer results
+            // ArrayList<PairAlphaResidual> list = new ArrayList<>();
+            // //Map<Integer, PairAlphaResidual> map = new HashMap<>();
+            // for (int i = 0; i < 8; i++) {
+            //     //map.put(i+1, new PairAlphaResidual(layer_angles[i], layer_residuals[i]));
+            //     list.add(new PairAlphaResidual(layer_angles[i], layer_residuals[i]));
+            // }
+            // map_layer_results.put(nbIterations, list);
+
+            /// Undo AHDC rotation before applying new rotation angles to prevent accumulation
+            undoLayerRotations(AHDCdet, layer_angles);
+
+            // /// Estimate new rotation angle
+            // computeNewLayerAngles(map_layer_results, layer_angles, nbIterations);
+
+            computeNewLayerAngles(nbIterations, layer_angles, layer_residuals, layer_angles_sup, layer_residuals_sup, layer_angles_inf, layer_residuals_inf);
+            //computeNewLayerAnglesWithMemory(nbIterations, layer_angles, layer_residuals, layer_angles_sup, layer_residuals_sup, layer_angles_inf, layer_residuals_inf);
+
+            /// rotate AHDC detector
+            System.out.println(" Niter "  + nbIterations + " : rotate AHDC detector");
+            doLayerRotations(AHDCdet, layer_angles);
+            
 
             /// --- Save histos
             save9Histo1D(h1_residual_LR_per_layers, outDir, "residual_LR", nbIterations);
@@ -300,13 +382,13 @@ public class AhdcAlignmentAnalyser {
 
             /// --- Geometry update
 
-        } // end loop over criteria
+        } // end loop over criteria / nbIterations
 
 
     }
 
     static void save9Histo1D(ArrayList<H1F> histos, String outDir, String name, int nIter) {
-        TGCanvas c = new TGCanvas("canvas_" + name, name, 1500, 1200);
+        TGCanvas c = new TGCanvas("canvas-" + name + "-" + nIter, name, 1500, 1200);
         c.divide(3, 3);
         int i = 0;
         for (H1F h : histos) {
@@ -320,6 +402,7 @@ public class AhdcAlignmentAnalyser {
             i++;
         }
         c.save(outDir + "/" + name + "-iter-" + nIter + ".pdf");
+        //c.save(outDir + "/" + name + "-iter-" + nIter + ".png");
     }
 
     /**
@@ -389,6 +472,159 @@ public class AhdcAlignmentAnalyser {
             return 51;
         } else {
             return 0; // not a layer, can encode all layers
+        }
+    }
+
+    /**
+     * 
+     * @param alpha_layers a row represents the rotation angle applied for the next iteration
+     * @param layer_num layer num between 1 and 8
+     * @return
+     */
+    static void computeNewLayerAngles(Map<Integer, ArrayList<PairAlphaResidual>> map, double[] layer_angles, int nIter) {
+        for (int i = 0; i < 8; i++) {
+            if (nIter >= 2) {
+                PairAlphaResidual res1 = map.get(nIter).get(i);
+                PairAlphaResidual res2 = map.get(nIter-1).get(i);
+                // // alpha for residual = 0
+                // double slope = (res2.alpha - res1.alpha)/(res2.residual - res1.residual);
+                // double angle = slope*(0-res1.residual) + res1.alpha;
+                if (res1.residual*res2.residual < 0) {
+                    double angle = (res1.alpha + res2.alpha)/2;
+                    layer_angles[i] = angle;
+                } else {
+                    if (res1.residual < 0) {
+                    layer_angles[i] = layer_angles[i] + 1;
+                    } else {
+                        layer_angles[i] = layer_angles[i] - 1;
+                    }
+                }
+                
+            } else { // nIter = 1
+                PairAlphaResidual res1 = map.get(nIter).get(i);
+                if (res1.residual < 0) {
+                    layer_angles[i] = layer_angles[i] + 1;
+                } else {
+                    layer_angles[i] = layer_angles[i] - 1;
+                }
+            }
+            
+        }
+    }
+
+    /**
+     * Here angles_inf and angles_sup are not known, so the iterations 1 and 2 are made to give an estimate
+     * @param nIter
+     * @param angles
+     * @param residuals
+     * @param angles_sup
+     * @param residuals_sup
+     * @param angles_inf
+     * @param residuals_inf
+     */
+    static void computeNewLayerAngles(int nIter, double[] angles, double[] residuals, double[] angles_sup, double[] residuals_sup, double[] angles_inf, double[] residuals_inf) {
+        for (int i = 0; i < 8; i++) {
+            if (nIter == 1) {
+                if (residuals[i] > 0) {
+                    residuals_sup[i] = residuals[i];
+                    angles_sup[i] = angles[i];
+                    angles[i] = angles[i] - 1;
+                } 
+                else if (residuals[i] < 0) {
+                    residuals_inf[i] = residuals[i];
+                    angles_inf[i] = angles[i];
+                    angles[i] = angles[i] + 1;
+                }
+            }
+            else if (nIter == 2) {
+                if (Math.abs(residuals_sup[i]) > 1e-5) { // extrapolate with the sup
+                    double slope = (residuals[i]-residuals_sup[i])/(angles[i]-angles_sup[i]);
+                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
+                    angles[i] = alpha;
+                    angles_inf[i] = alpha - 3;
+                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
+                    angles_sup[i] = alpha + 3;
+                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
+                    
+                }
+                else if (Math.abs(residuals_inf[i]) > 1e-5) { // extrapolate with the inf
+                    double slope = (residuals[i]-residuals_inf[i])/(angles[i]-angles_inf[i]);
+                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
+                    angles[i] = alpha;
+                    angles_inf[i] = alpha - 2;
+                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
+                    angles_sup[i] = alpha + 2.5;
+                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
+                }
+            } else { // now proceed by dichotomie
+                if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
+                    double tmp = angles[i];
+                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                    angles_inf[i] = tmp;
+                    residuals_inf[i] = residuals[i];
+                }
+                else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
+                    double tmp = angles[i];
+                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                    angles_sup[i] = tmp;
+                    residuals_sup[i] = residuals[i];
+                }
+            }
+        }
+    }
+
+    /**
+     * Here the angles_sup and angles_inf are well defined
+     * @param nIter
+     * @param angles
+     * @param residuals
+     * @param angles_sup
+     * @param residuals_sup
+     * @param angles_inf
+     * @param residuals_inf
+     */
+    static void computeNewLayerAnglesWithMemory(int nIter, double[] angles, double[] residuals, double[] angles_sup, double[] residuals_sup, double[] angles_inf, double[] residuals_inf) {
+        for (int i = 0; i < 8; i++) {
+            if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
+                double tmp = angles[i];
+                angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                angles_inf[i] = tmp;
+                residuals_inf[i] = residuals[i];
+            }
+            else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
+                double tmp = angles[i];
+                angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                angles_sup[i] = tmp;
+                residuals_sup[i] = residuals[i];
+            }
+        }
+    }
+
+    static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
+        for (int num = 0; num < 8; num++) {
+            // rotate AHDCdet
+            int layer = number2layer(num+1);
+            int sl = layer / 10;
+            int l = layer % 10;
+            for (int i = 0; i < AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getNumComponents(); i++) {
+                AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(i+1); // numbering starts at 1
+                wire.rotateZ(Math.toRadians(-layer_angles[num]));
+            }
+        }
+    }
+
+    static void doLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
+        for (int num = 0; num < 8; num++) {
+            // rotate AHDCdet
+            int layer = number2layer(num+1);
+            int sl = layer / 10;
+            int l = layer % 10;
+            for (int i = 0; i < AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getNumComponents(); i++) {
+                AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(i+1); // numbering starts at 1
+                wire.rotateZ(Math.toRadians(layer_angles[num]));
+            }
+            //System.out.println("   layer " + layer + " --> will be rotated by " + layer_angles[num] + " deg");
+            System.out.printf("   layer " + layer + " --> will be rotated by %.2f deg \n", layer_angles[num]);
         }
     }
 
