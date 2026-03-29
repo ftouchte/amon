@@ -1,5 +1,7 @@
 package io.github.ftouchte;
 
+import java.util.concurrent.*;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,49 +101,6 @@ public class AhdcAlignmentAnalyser {
         /// --- Define initial geometry parameters
         AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
 
-        // /// Verify that we can perform rotation here
-        // AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(1).getLayer(1).getComponent(1);
-        // System.out.println("> Before rotation");
-        // wire.getLine().show();
-        // System.out.println("> After rotation");
-        // wire.rotateZ(Math.toRadians(180));
-        // wire.getLine().show();
-        //if ((superlayerId+1) % 2 == 0) wire.rotateZ(Math.toRadians(1));
-        // if      (superlayerId+1 == 1 && layerId+1 == 1) {
-        //     wire.rotateZ(Math.toRadians(0));
-        // } 
-        // else if (superlayerId+1 == 2 && layerId+1 == 1) {
-        //     wire.rotateZ(Math.toRadians(2.55));
-        // }
-        // else if (superlayerId+1 == 2 && layerId+1 == 2) {
-        //     wire.rotateZ(Math.toRadians(2.11));
-        // }
-        // else if (superlayerId+1 == 3 && layerId+1 == 1) {
-        //     wire.rotateZ(Math.toRadians(0));
-        // }
-        // else if (superlayerId+1 == 3 && layerId+1 == 2) {
-        //     wire.rotateZ(Math.toRadians(-0.32));
-        // }
-        // else if (superlayerId+1 == 4 && layerId+1 == 1) {
-        //     wire.rotateZ(Math.toRadians(2.37));
-        // }
-        // else if (superlayerId+1 == 4 && layerId+1 == 2) {
-        //     wire.rotateZ(Math.toRadians(2.13));
-        // }
-        // else if (superlayerId+1 == 5 && layerId+1 == 1) {
-        //     wire.rotateZ(Math.toRadians(-0.21));
-        // }
-        
-        /// List<List> 
-        /// Each line matches an iteration
-        /// each column contains the result for all layer (we have 8 columns)
-        /// a result is a pair (rotation angle, residual) for a given layer
-        //ArrayList<ArrayList<PairAlphaResidual>> layer_results = new ArrayList<>();
-        Map<Integer, ArrayList<PairAlphaResidual>> map_layer_results = new HashMap<>();
-        
-
-        
-
         // --- No memories
         double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double[] layer_residuals = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -189,7 +148,7 @@ public class AhdcAlignmentAnalyser {
             System.out.printf("   layer " + layer + " --> will be rotated by %.2f deg \n", layer_angles[num]);
         }
 
-        /// Loop over criteria
+        /// --- Loop over criteria
         int nbIterations = 0;
         while (nbIterations < 35) {
             nbIterations++;
@@ -347,22 +306,10 @@ public class AhdcAlignmentAnalyser {
                     layer_residuals[layer_num-1] = mean;
                 }
                 layer_num++;
-            }
-
-            // /// Fill layer results
-            // ArrayList<PairAlphaResidual> list = new ArrayList<>();
-            // //Map<Integer, PairAlphaResidual> map = new HashMap<>();
-            // for (int i = 0; i < 8; i++) {
-            //     //map.put(i+1, new PairAlphaResidual(layer_angles[i], layer_residuals[i]));
-            //     list.add(new PairAlphaResidual(layer_angles[i], layer_residuals[i]));
-            // }
-            // map_layer_results.put(nbIterations, list);
+            } // end histogram analysis
 
             /// Undo AHDC rotation before applying new rotation angles to prevent accumulation
             undoLayerRotations(AHDCdet, layer_angles);
-
-            // /// Estimate new rotation angle
-            // computeNewLayerAngles(map_layer_results, layer_angles, nbIterations);
 
             computeNewLayerAngles(nbIterations, layer_angles, layer_residuals, layer_angles_sup, layer_residuals_sup, layer_angles_inf, layer_residuals_inf);
             //computeNewLayerAnglesWithMemory(nbIterations, layer_angles, layer_residuals, layer_angles_sup, layer_residuals_sup, layer_angles_inf, layer_residuals_inf);
@@ -472,43 +419,6 @@ public class AhdcAlignmentAnalyser {
             return 51;
         } else {
             return 0; // not a layer, can encode all layers
-        }
-    }
-
-    /**
-     * 
-     * @param alpha_layers a row represents the rotation angle applied for the next iteration
-     * @param layer_num layer num between 1 and 8
-     * @return
-     */
-    static void computeNewLayerAngles(Map<Integer, ArrayList<PairAlphaResidual>> map, double[] layer_angles, int nIter) {
-        for (int i = 0; i < 8; i++) {
-            if (nIter >= 2) {
-                PairAlphaResidual res1 = map.get(nIter).get(i);
-                PairAlphaResidual res2 = map.get(nIter-1).get(i);
-                // // alpha for residual = 0
-                // double slope = (res2.alpha - res1.alpha)/(res2.residual - res1.residual);
-                // double angle = slope*(0-res1.residual) + res1.alpha;
-                if (res1.residual*res2.residual < 0) {
-                    double angle = (res1.alpha + res2.alpha)/2;
-                    layer_angles[i] = angle;
-                } else {
-                    if (res1.residual < 0) {
-                    layer_angles[i] = layer_angles[i] + 1;
-                    } else {
-                        layer_angles[i] = layer_angles[i] - 1;
-                    }
-                }
-                
-            } else { // nIter = 1
-                PairAlphaResidual res1 = map.get(nIter).get(i);
-                if (res1.residual < 0) {
-                    layer_angles[i] = layer_angles[i] + 1;
-                } else {
-                    layer_angles[i] = layer_angles[i] - 1;
-                }
-            }
-            
         }
     }
 
