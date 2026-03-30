@@ -14,12 +14,18 @@ import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
+import org.jlab.groot.data.DataLine;
+import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.math.F1D;
+import org.jlab.groot.math.Func1D;
+import org.jlab.groot.ui.LatexText;
+import org.jlab.groot.ui.PaveText;
 import org.jlab.groot.ui.TGCanvas;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataEvent;
+import org.jlab.jnp.groot.graphics.Legend;
 import org.jlab.jnp.hipo4.data.Event;
 import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
@@ -53,8 +59,10 @@ public class AhdcAlignmentAnalyser {
             // h1 residual LR
             for (int i = 0; i < 9; i++) {
                 H1F h = new H1F("residual-LR-layer-" + number2layer(i) + "itr-" + niter, "residual LR (layer " + number2layer(i) + ")", 100, -3, 3);
-                h.setTitleX("residual LR (mm)");
+                h.setTitleX("layer " + i + ", residual LR (mm)");
+                if (i == 0) h.setTitleX("all layers, residual LR (mm)");
                 h.setTitleY("count");
+                //h.setOptStat(1111);
                 h1_residual_LR_per_layers.add(h);
             }
             // h1 residual
@@ -62,6 +70,7 @@ public class AhdcAlignmentAnalyser {
                 H1F h = new H1F("residual-layer-" + number2layer(i) + "itr-" + niter, "residual (layer " + number2layer(i) + ")", 100, -3, 3);
                 h.setTitleX("residual (mm)");
                 h.setTitleY("count");
+                //h.setOptStat(1111);
                 h1_residual_per_layers.add(h);
             }
         }
@@ -113,9 +122,9 @@ public class AhdcAlignmentAnalyser {
     }
     
     /** Number of threads running simultaneously */
-    static int nThreads = 4;
+    static int nThreads = 10; // 4
     /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 100;
+    static int queue_capacity = 100; // 150
 
     public static void main(String[] args) {
 
@@ -145,19 +154,41 @@ public class AhdcAlignmentAnalyser {
         System.out.println(" Initial rotation angles : AHDC detector");
         doLayerRotations(AHDCdet, results.layer_angles);
 
+        /// --- Global observables
+        GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+        g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
+        g0.setTitleX("iterations");
+        g0.setTitleY("cost");
+
         /// --- Loop over criteria
         int niter = 0;
-        while (niter < 4) {
+        double value = 1e10;
+        //while (niter < 12) {
+        while (value > 2*1e-3) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet);         
+            run(niter, results, inFiles, outDir, AHDCdet);
+
+            // running criteria
+            value = 0;
+            int N = 0;
+            for (int i = 0; i < results.layer_residuals.length; i++) {
+                value += Math.pow(results.layer_residuals[i], 2);
+                N++;
+            }
+            value = Math.sqrt(value) / N;
+            g0.addPoint(niter, value, 0, 0);
+            System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+            
 
         } // end loop over criteria / nb iterations
-
+        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+        c0.draw(g0);
+        c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
     }
 
@@ -188,7 +219,7 @@ public class AhdcAlignmentAnalyser {
 
                     nevents++;
                     if (nevents % 1000 == 0) {
-                        System.out.println("\033[1;32m >" + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
+                        System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
                     }
                 
                     if (event == EVT_POISON) break;
@@ -255,6 +286,8 @@ public class AhdcAlignmentAnalyser {
         pool.shutdown();
 
         /// --- Analyse histograms
+        TGCanvas c = new TGCanvas("canvas-residual-LR-iter-" + niter,"canvas-residual-LR-iter-" + niter , 1500, 1200);
+        c.divide(3, 3);
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
             //double mean = h.getBinContent(h.getMaximumBin());
@@ -280,8 +313,22 @@ public class AhdcAlignmentAnalyser {
             // store residual for the current rotation angle 
             if (i > 0) {                      
                 results.layer_residuals[i-1] = mean;
+                // Add results in the title for partical reason (the groot's version is too old)
+                h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.layer_angles[i-1]));
             }
+            if (i == 0) {
+                h.setTitle(String.format("mean : %.5f", mean));
+            }
+
+            // Draw histograms
+            c.cd(i);
+            c.draw(h);
+            
         }
+        c.save(outDir + "residual_LR_iter_" + niter + ".pdf");
+
+        /// --- Save histos
+        //save9Histo1D(global_histos.h1_residual_LR_per_layers, outDir, "residual_LR", niter);
 
         /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
         undoLayerRotations(AHDCdet, results.layer_angles);
@@ -292,8 +339,7 @@ public class AhdcAlignmentAnalyser {
         /// --- Rotate AHDC detector
         doLayerRotations(AHDCdet, results.layer_angles);
 
-        /// --- Save histos
-        save9Histo1D(global_histos.h1_residual_LR_per_layers, outDir, "residual_LR", niter);
+        
 
     }
 
@@ -386,7 +432,7 @@ public class AhdcAlignmentAnalyser {
         int i = 0;
         for (H1F h : histos) {
             c.cd(i);
-            h.setOptStat(1111);
+            //h.setOptStat(1111);
             c.draw(h);
             
             // draw legend
@@ -566,6 +612,7 @@ public class AhdcAlignmentAnalyser {
     }
 
     static void doLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
+        System.out.println("\033[1;32m > Rotate AHDC detector \033[0m");
         for (int num = 0; num < 8; num++) {
             // rotate AHDCdet
             int layer = number2layer(num+1);
