@@ -28,10 +28,10 @@ Example
 
 ```shell
 mvn install:install-file \
-  -Dfile=/home/touchte-codjo/Desktop/coatjava/coatjava/lib/clas/coat-libs-13.7.0-SNAPSHOT.jar \
+  -Dfile=/w/hallb-scshelf2102/clas12/users/touchte/coatjava/coatjava/lib/clas/coat-libs-13.7.1-SNAPSHOT.jar \
   -DgroupId=org.jlab.coat \
   -DartifactId=coat-libs \
-  -Dversion=13.7.0 \
+  -Dversion=13.7.1 \
   -Dpackaging=jar
 ```
 

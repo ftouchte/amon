@@ -10,5 +10,11 @@ int main(int argc, const char * argv[]) {
     assert(OPT.IsOption("-i"));
     assert(OPT.IsOption("-o"));
     assert(OPT.IsOption("-v"));
-    printf("| Test GetValue(\"%s\") = %s\n", "-i", OPT.GetValue("-i").c_str());
+    // look at -i
+    std::vector<std::string> vec = OPT.GetValues("-i");
+    printf("| Test GetValue(\"-i\") = ");
+    for (auto x : vec) {
+        printf("%s ", x.c_str());
+    }
+    printf("\n");
 }

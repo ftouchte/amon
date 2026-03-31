@@ -1,0 +1,39 @@
+io-services:
+  reader:
+    class: org.jlab.io.clara.HipoToHipoReader
+    name: HipoToHipoReader
+  writer:
+    class: org.jlab.io.clara.HipoToHipoWriter
+    name: HipoToHipoWriter
+services:
+  - class: org.jlab.clas.swimtools.MagFieldsEngine
+    name: MAGFIELDS
+#ALERT subsystems
+  - class: org.jlab.service.atof.ATOFEngine
+    name: ATOF
+  - class: org.jlab.service.ahdc.AHDCEngine
+    name: AHDC
+  - class: org.jlab.service.alert.ALERTEngine
+    name: ALERT
+
+configuration:
+  global:
+    #variation: rgd_fall2023_mc
+    variation: rge_spring2024
+    dcMinistagger: "NOTONREFWIRE"
+    dcFeedthroughs: "OFF"
+      #timestamp: 02/20/2026-12:00:00
+# uncomment to use bank filtering based on schema, schema path should be updated
+# to point to the correct coatjava folder
+  io-services:
+    writer:
+      schema_dir: "/w/hallb-scshelf2102/clas12/users/touchte/coatjava-kf-fit/coatjava/etc/bankdefs/hipo4/singles/mon/"
+  services:
+# should match the field maps used in the gemc simulation
+    MAGFIELDS:
+      magfieldSolenoidMap: Symm_solenoid_r601_phi1_z1201_13June2018.dat
+      magfieldTorusMap: Symm_torus_r2501_phi16_z251_24Apr2018.dat
+    AHDC:
+      Mode: "AI_Track_Finding"
+mime-types:
+  - binary/data-hipo
