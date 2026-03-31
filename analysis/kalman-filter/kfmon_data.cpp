@@ -741,8 +741,13 @@ int main(int argc, char const *argv[]) {
                                 sector = atofHitBank.get("sector", hitRow);
                                 wedge = atofHitBank.get("component", hitRow);
                                 if (sector >= 0 && layer >= 0) {
-                                    H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*atofHitBank.get("z", hitRow));
-                                    H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*atofHitBank.get("z", hitRow));
+                                    double x = atofHitBank.get("x", hitRow); // mm
+                                    double y = atofHitBank.get("y", hitRow); // mm
+                                    double r = sqrt(x*x+y*y); // mm
+                                    double z = atofHitBank.get("z", hitRow); // mm
+                                    double vz = z - r*cos(ahdc_track.theta*M_PI/180);
+                                    H1_diff_atof_wedge_vz->Fill(electron.vz-0.1*vz); // cm
+                                    H2_corr_atof_wedge_vz->Fill(electron.vz, 0.1*vz); // cm
                                 }
                             }
                         }
@@ -764,9 +769,13 @@ int main(int argc, char const *argv[]) {
                                             IsBarCounted = true;
                                         }
                                         local_ncomp_extended++;
-                                        double vz = 0.1*atofHitBank.getFloat("z", hitRow); // cm
-                                        H2_corr_atof_bar_vz->Fill(electron.vz, vz);
-                                        H1_diff_atof_bar_vz->Fill(electron.vz-vz);
+                                        double x = atofHitBank.get("x", hitRow); // mm
+                                        double y = atofHitBank.get("y", hitRow); // mm
+                                        double r = sqrt(x*x+y*y); // mm
+                                        double z = atofHitBank.get("z", hitRow); // mm
+                                        double vz = z - r*cos(ahdc_track.theta*M_PI/180);
+                                        H2_corr_atof_bar_vz->Fill(electron.vz, 0.1*vz); // cm
+                                        H1_diff_atof_bar_vz->Fill(electron.vz-0.1*vz); // cm
                                     }
                                 }
                             }
