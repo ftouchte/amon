@@ -331,7 +331,6 @@ public class AhdcAlignmentAnalyser {
 
         // /// --- Rotate AHDC detector
         // doLayerRotations(AHDCdet, results.layer_angles);
-
         
 
     }
@@ -564,33 +563,6 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
-    // /**
-    //  * Here the angles_sup and angles_inf are well defined
-    //  * @param nIter
-    //  * @param angles
-    //  * @param residuals
-    //  * @param angles_sup
-    //  * @param residuals_sup
-    //  * @param angles_inf
-    //  * @param residuals_inf
-    //  */
-    // static void computeNewLayerAnglesWithMemory(int nIter, double[] angles, double[] residuals, double[] angles_sup, double[] residuals_sup, double[] angles_inf, double[] residuals_inf) {
-    //     for (int i = 0; i < 8; i++) {
-    //         if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
-    //             double tmp = angles[i];
-    //             angles[i] = (angles_inf[i] + angles_sup[i])/2;
-    //             angles_inf[i] = tmp;
-    //             residuals_inf[i] = residuals[i];
-    //         }
-    //         else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
-    //             double tmp = angles[i];
-    //             angles[i] = (angles_inf[i] + angles_sup[i])/2;
-    //             angles_sup[i] = tmp;
-    //             residuals_sup[i] = residuals[i];
-    //         }
-    //     }
-    // }
-
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
             // rotate AHDCdet
@@ -620,6 +592,84 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
+    static void layer_alignment(String[] args) {
+
+        /// --- Load inputs from options
+        fOptions options = new fOptions("-i", "-o");
+        options.LoadOptions(args);
+        options.Show();
+
+        /// --- Verify input files are not empty
+        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
+        if (inFiles.size() == 0) {
+            System.out.println("Please provide inputs files using the option: -i");
+            return;
+        }
+
+        /// --- Check that the output dir exists or create a new one
+        String outDir = options.GetValue("-o");
+        check_output_dir(outDir);
+
+        /// --- Define initial geometry parameters
+        AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
+
+        // --- Results over iterations
+        ResultsOverIterations results = new ResultsOverIterations();
+
+        /// --- rotate AHDC detector
+        System.out.println(" Initial rotation angles : AHDC detector");
+        doLayerRotations(AHDCdet, results.layer_angles);
+
+        /// --- Global observables
+        GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+        g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
+        g0.setTitleX("iterations");
+        g0.setTitleY("cost");
+
+        /// --- Loop over criteria
+        int niter = 0;
+        double value = 1e10;
+        //while (niter < 12) {
+        while (value > 2*1e-3 && niter < 25) {
+            niter++;
+            // run iteration
+            System.out.println("\033[1;32m ################################ \033[0m");
+            System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
+            System.out.println("\033[1;32m ################################ \033[0m");
+
+            run(niter, results, inFiles, outDir, AHDCdet, +75);
+
+            // running criteria
+            value = 0;
+            int N = 0;
+            for (int i = 0; i < results.layer_residuals.length; i++) {
+                value += Math.pow(results.layer_residuals[i], 2);
+                N++;
+            }
+            value = Math.sqrt(value) / N;
+            g0.addPoint(niter, value, 0, 0);
+            System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+
+            /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
+            undoLayerRotations(AHDCdet, results.layer_angles);
+
+            /// --- Update rotation angles
+            computeNewLayerAngles(niter, results);
+
+            /// --- Rotate AHDC detector
+            doLayerRotations(AHDCdet, results.layer_angles);
+            
+
+        } // end loop over criteria / nb iterations
+        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+        c0.draw(g0);
+        c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+    }
+
+    /**
+     * Routine to scan ahdc position with respect to CLAS
+     */
     static void scan_ahdc_position(String[] args) {
 
         /// --- Load inputs from options
@@ -757,7 +807,8 @@ public class AhdcAlignmentAnalyser {
 
 
     public static void main(String[] args) {
-        scan_ahdc_position(args);
+        //scan_ahdc_position(args);
+        layer_alignment(args);
     }
 
 
