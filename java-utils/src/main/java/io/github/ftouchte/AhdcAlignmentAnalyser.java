@@ -1,37 +1,32 @@
 package io.github.ftouchte;
 
-import java.util.concurrent.*;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
-import org.jlab.groot.data.DataLine;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.math.F1D;
-import org.jlab.groot.math.Func1D;
-import org.jlab.groot.ui.LatexText;
-import org.jlab.groot.ui.PaveText;
 import org.jlab.groot.ui.TGCanvas;
 import org.jlab.io.base.DataBank;
 import org.jlab.io.base.DataEvent;
 import org.jlab.io.hipo.HipoDataEvent;
-import org.jlab.jnp.groot.graphics.Legend;
 import org.jlab.jnp.hipo4.data.Event;
 import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.alert.ALERTEngine;
-
-import io.github.ftouchte.AhdcAlignmentAnalyser.Histos;
 
 
 /**
@@ -126,73 +121,73 @@ public class AhdcAlignmentAnalyser {
     /** Maximum capacity of the queue conataining events */
     static int queue_capacity = 100; // 150
 
-    public static void main(String[] args) {
+    // public static void main(String[] args) {
 
-        /// --- Load inputs from options
-        fOptions options = new fOptions("-i", "-o");
-        options.LoadOptions(args);
-        options.Show();
+    //     /// --- Load inputs from options
+    //     fOptions options = new fOptions("-i", "-o");
+    //     options.LoadOptions(args);
+    //     options.Show();
 
-        /// --- Verify input files are not empty
-        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
-        if (inFiles.size() == 0) {
-            System.out.println("Please provide inputs files using the option: -i");
-            return;
-        }
+    //     /// --- Verify input files are not empty
+    //     ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
+    //     if (inFiles.size() == 0) {
+    //         System.out.println("Please provide inputs files using the option: -i");
+    //         return;
+    //     }
 
-        /// --- Check that the output dir exists or create a new one
-        String outDir = options.GetValue("-o");
-        check_output_dir(outDir);
+    //     /// --- Check that the output dir exists or create a new one
+    //     String outDir = options.GetValue("-o");
+    //     check_output_dir(outDir);
 
-        /// --- Define initial geometry parameters
-        AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
+    //     /// --- Define initial geometry parameters
+    //     AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
 
-        // --- Results over iterations
-        ResultsOverIterations results = new ResultsOverIterations();
+    //     // --- Results over iterations
+    //     ResultsOverIterations results = new ResultsOverIterations();
 
-        /// --- rotate AHDC detector
-        System.out.println(" Initial rotation angles : AHDC detector");
-        doLayerRotations(AHDCdet, results.layer_angles);
+    //     /// --- rotate AHDC detector
+    //     System.out.println(" Initial rotation angles : AHDC detector");
+    //     doLayerRotations(AHDCdet, results.layer_angles);
 
-        /// --- Global observables
-        GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
-        g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
-        g0.setTitleX("iterations");
-        g0.setTitleY("cost");
+    //     /// --- Global observables
+    //     GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+    //     g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
+    //     g0.setTitleX("iterations");
+    //     g0.setTitleY("cost");
 
-        /// --- Loop over criteria
-        int niter = 0;
-        double value = 1e10;
-        //while (niter < 12) {
-        while (value > 2*1e-3) {
-            niter++;
-            // run iteration
-            System.out.println("\033[1;32m ################################ \033[0m");
-            System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
-            System.out.println("\033[1;32m ################################ \033[0m");
+    //     /// --- Loop over criteria
+    //     int niter = 0;
+    //     double value = 1e10;
+    //     //while (niter < 12) {
+    //     while (value > 2*1e-3) {
+    //         niter++;
+    //         // run iteration
+    //         System.out.println("\033[1;32m ################################ \033[0m");
+    //         System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
+    //         System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet);
+    //         run(niter, results, inFiles, outDir, AHDCdet, +70);
 
-            // running criteria
-            value = 0;
-            int N = 0;
-            for (int i = 0; i < results.layer_residuals.length; i++) {
-                value += Math.pow(results.layer_residuals[i], 2);
-                N++;
-            }
-            value = Math.sqrt(value) / N;
-            g0.addPoint(niter, value, 0, 0);
-            System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+    //         // running criteria
+    //         value = 0;
+    //         int N = 0;
+    //         for (int i = 0; i < results.layer_residuals.length; i++) {
+    //             value += Math.pow(results.layer_residuals[i], 2);
+    //             N++;
+    //         }
+    //         value = Math.sqrt(value) / N;
+    //         g0.addPoint(niter, value, 0, 0);
+    //         System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
             
 
-        } // end loop over criteria / nb iterations
-        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
-        c0.draw(g0);
-        c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+    //     } // end loop over criteria / nb iterations
+    //     TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+    //     c0.draw(g0);
+    //     c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
-    }
+    // }
 
-    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet) {
+    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment) {
         
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -212,6 +207,7 @@ public class AhdcAlignmentAnalyser {
                 AlertElasticAnalyser analyser = new AlertElasticAnalyser();
                 ALERTEngine alertEngine = new ALERTEngine();
                 alertEngine.init();
+                alertEngine.set_clas_alignement(clas_alignment);
                 int nevents = 0;
 
                 while (true) {
@@ -325,19 +321,16 @@ public class AhdcAlignmentAnalyser {
             c.draw(h);
             
         }
-        c.save(outDir + "residual_LR_iter_" + niter + ".pdf");
+        c.save(outDir + "/residual_LR_iter_" + niter + ".pdf");
 
-        /// --- Save histos
-        //save9Histo1D(global_histos.h1_residual_LR_per_layers, outDir, "residual_LR", niter);
+        // /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
+        // undoLayerRotations(AHDCdet, results.layer_angles);
 
-        /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
-        undoLayerRotations(AHDCdet, results.layer_angles);
+        // /// --- Update rotation angles
+        // computeNewLayerAngles(niter, results);
 
-        /// --- Update rotation angles
-        computeNewLayerAngles(niter, results);
-
-        /// --- Rotate AHDC detector
-        doLayerRotations(AHDCdet, results.layer_angles);
+        // /// --- Rotate AHDC detector
+        // doLayerRotations(AHDCdet, results.layer_angles);
 
         
 
@@ -625,6 +618,146 @@ public class AhdcAlignmentAnalyser {
             //System.out.println("   layer " + layer + " --> will be rotated by " + layer_angles[num] + " deg");
             System.out.printf("   layer " + layer + " --> will be rotated by %.2f deg \n", layer_angles[num]);
         }
+    }
+
+    static void scan_ahdc_position(String[] args) {
+
+        /// --- Load inputs from options
+        fOptions options = new fOptions("-i", "-o");
+        options.LoadOptions(args);
+        options.Show();
+
+        /// --- Verify input files are not empty
+        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
+        if (inFiles.size() == 0) {
+            System.out.println("Please provide inputs files using the option: -i");
+            return;
+        }
+
+        /// --- Check that the output dir exists or create a new one
+        String outDir0 = options.GetValue("-o");
+        check_output_dir(outDir0);
+
+        /// --- Obsevables
+        GraphErrors g_mean = new GraphErrors("mean-angle-over-position");
+        g_mean.setTitle("Mean angle over clas alignment");
+        g_mean.setTitleX("clas alignment");
+        g_mean.setTitleY("mean angle");
+        GraphErrors g_dev = new GraphErrors("angle-deviation-over-position");
+        g_dev.setTitle("Angle deviation over clas alignment");
+        g_dev.setTitleX("clas alignment");
+        g_dev.setTitleY("angle deviation");
+        GraphErrors g_mean_vs_dev = new GraphErrors("mean-angle-vs-deviation");
+        g_mean_vs_dev.setTitle("Mean vs deviation");
+        g_mean_vs_dev.setTitleX("mean angle");
+        g_mean_vs_dev.setTitleY("angle deviation");
+
+        /// --- Loop over CLAS position with respect to CLAS
+        /// Scan from 30 to 100 mm
+        for (int step = 52; step < 100; step++) {
+
+            String outDir = outDir0 + "/" + step;
+            check_output_dir(outDir);
+
+            double clas_alignment = 1.0*step; // mm
+
+            System.out.println("\033[1;33m >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> \033[0m");
+            System.out.println("\033[1;33m # CLAS alignment : " + clas_alignment + "\033[0m");
+            System.out.println("\033[1;33m <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\033[0m");
+
+            // --- Results over iterations
+            ResultsOverIterations results = new ResultsOverIterations();
+
+            /// --- Define initial geometry parameters
+            AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
+
+            /// --- rotate AHDC detector
+            System.out.println(" Initial rotation angles : AHDC detector");
+            doLayerRotations(AHDCdet, results.layer_angles);
+
+            /// --- Global observables
+            GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+            g0.setTitle("Convergence, clas_alignment : " + clas_alignment);
+            g0.setTitleX("iterations");
+            g0.setTitleY("convergence criteria");
+                
+            /// --- Loop over criteria
+            int niter = 0;
+            double value = 1e10;
+            //while (niter < 12) {
+            while (niter < 25) {
+                niter++;
+                // run iteration
+                System.out.println("\033[1;32m ########### Start iteration : " + niter + "\033[0m clas_alignment : " + clas_alignment);
+
+                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment);
+
+                // running criteria
+                value = 0;
+                int N = 0;
+                for (int i = 0; i < results.layer_residuals.length; i++) {
+                    value += Math.pow(results.layer_residuals[i], 2);
+                    N++;
+                }
+                value = Math.sqrt(value) / N;
+                g0.addPoint(niter, value, 0, 0);
+                System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+
+                // look at the distribution of angles
+                if (value < 2*1e-3 || niter >= 25) {
+                    double sum = 0;
+                    double sum2 = 0;
+                    int npts = 0;
+                    for (int i = 0; i < results.layer_angles.length; i++) {
+                        npts++;
+                        sum += results.layer_angles[i];
+                        sum2 += Math.pow(results.layer_angles[i], 2);
+                    }
+                    double mean = sum/npts;
+                    double var = (sum2/npts) - Math.pow(mean, 2);
+                    double deviation = Math.sqrt(var);
+                    g_mean.addPoint(clas_alignment, mean, 0, 0);
+                    g_dev.addPoint(clas_alignment, deviation, 0, 0);
+                    g_mean_vs_dev.addPoint(mean, deviation, 0, 0);
+
+                    System.out.println("\033[1;33m ************ angle mean : " + mean + " , deviation : " + deviation + "\033[0m , clas_alignment : " + clas_alignment);
+                    break;
+                }
+                
+                
+
+                /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
+                undoLayerRotations(AHDCdet, results.layer_angles);
+
+                /// --- Update rotation angles
+                computeNewLayerAngles(niter, results);
+
+                /// --- Rotate AHDC detector
+                doLayerRotations(AHDCdet, results.layer_angles);
+                
+
+            } // end loop over criteria / nb iterations
+            TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+            c0.draw(g0);
+            c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+        } // end loop over steps      
+        TGCanvas c0 = new TGCanvas("summary-mean-angle", "summary-mean-angle", 1200, 900);
+        c0.draw(g_mean);
+        c0.save(outDir0 + "/summary-mean-angle.pdf");
+        TGCanvas c1 = new TGCanvas("summary-angle-deviation", "summary-mean-angle", 1200, 900);
+        c1.draw(g_dev);
+        c0.save(outDir0 + "/summary-angle-deviation.pdf");
+        TGCanvas c2 = new TGCanvas("summary-mean-vs-dev", "summary-mean-angle", 1200, 900);
+        c2.draw(g_mean_vs_dev);
+        c2.save(outDir0 + "/summary-mean-vs-dev.pdf");
+
+    } // end scan ahdc position
+
+
+
+    public static void main(String[] args) {
+        scan_ahdc_position(args);
     }
 
 
