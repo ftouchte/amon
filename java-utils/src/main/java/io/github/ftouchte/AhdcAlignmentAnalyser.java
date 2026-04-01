@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -18,6 +19,7 @@ import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
+import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.groot.math.F1D;
 import org.jlab.groot.ui.TGCanvas;
 import org.jlab.io.base.DataBank;
@@ -34,24 +36,56 @@ import org.jlab.service.alert.ALERTEngine;
  */
 public class AhdcAlignmentAnalyser {
 
-    static class PairAlphaResidual {
-        public Double alpha;
-        public Double residual;
-        PairAlphaResidual(Double _alpha, Double _residual) {
-            alpha = _alpha;
-            residual = _residual;
+    static class AhdcWireId {
+        /** Number between 0 and 575 */
+        int num;
+        /** Always 1 */
+        int sector;
+        /** Can be 11, 21, 22, 31, 32, 41, 42, 51 */
+        int layer;
+        /** component id on a given layer, numeraotation sarting at 1 */
+        int component;
+        
+        /**
+         * Ahdc wire id defined with a num ranging from 0 to 576 (excluded)
+         * @param _num
+         */
+        AhdcWireId(int _num) {
+            num = _num;
+            int[] res = wire2slc(_num);
+            sector = res[0];
+            layer = res[1];
+            component = res[2];
+        }
+
+        /**
+         * Ahdc wire id defined with sector, layer, component identifiers
+         * @param _sector
+         * @param _layer
+         * @param _component
+         */
+        AhdcWireId(int _sector, int _layer, int _component) {
+            sector = _sector;
+            layer = _layer;
+            component = _layer;
+            num = slc2wire(_sector, _layer, _component);
         }
     }
 
+    /**
+     * Use: add entries and complete the constructor and the merge method.
+     */
     static class Histos {
 
         /** 1D residuals LR per layers */
         ArrayList<H1F> h1_residual_LR_per_layers = new ArrayList<>();
         /** 1D residuals per layers */
         ArrayList<H1F> h1_residual_per_layers = new ArrayList<>();
+        /** 1D residuals LR per wire */
+        ArrayList<H1F> h1_residual_LR_per_wires = new ArrayList<>();
 
         Histos(int niter) {
-            // h1 residual LR
+            // h1 residual LR per layers
             for (int i = 0; i < 9; i++) {
                 H1F h = new H1F("residual-LR-layer-" + number2layer(i) + "itr-" + niter, "residual LR (layer " + number2layer(i) + ")", 100, -3, 3);
                 h.setTitleX("layer " + i + ", residual LR (mm)");
@@ -68,6 +102,15 @@ public class AhdcAlignmentAnalyser {
                 //h.setOptStat(1111);
                 h1_residual_per_layers.add(h);
             }
+            // h1 residual LR per wires
+            for (int i = 0; i < 576; i++) {
+                H1F h = new H1F("residual-LR-wire-" + i + "itr-" + niter, "residual-LR-wire-" + i + "itr-" + niter, 100, -3, 3);
+                AhdcWireId id = new AhdcWireId(i);
+                h.setTitleX("wire " + i + ", L" + id.layer + "C" + id.component + ", residual LR (mm)");
+                h.setTitleY("count");
+                //h.setOptStat(1111);
+                h1_residual_LR_per_wires.add(h);
+            }
         }
 
         void merge(Histos histos) {
@@ -78,18 +121,44 @@ public class AhdcAlignmentAnalyser {
                 // h1 residual
                 this.h1_residual_per_layers.get(i).add(histos.h1_residual_per_layers.get(i));
             }
+            // Per wires
+            for (int i = 0; i < 576; i++) {
+                this.h1_residual_LR_per_wires.get(i).add(histos.h1_residual_LR_per_wires.get(i));
+            }
+
         }
     }
 
     static class ResultsOverIterations {
-        // angles
+        // angles, layer
         double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double[] layer_angles_sup = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
         double[] layer_angles_inf = {-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0};
-        // residuals
+        // residuals, layer
         double[] layer_residuals = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double[] layer_residuals_sup = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
         double[] layer_residuals_inf = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+        // angles, wire
+        double[] wire_angles = new double[576];
+        double[] wire_angles_sup = new double[576];
+        double[] wire_angles_inf = new double[576];
+        //java.util.Arrays.
+        // residuals, wire
+        double[] wire_residuals = new double[576];
+        double[] wire_residuals_sup = new double[576];
+        double[] wire_residuals_inf = new double[576];
+
+        // ResultsOverIterations() {
+        //     // initialisation
+        //     java.util.Arrays.fill(wire_angles, 0.0);
+        //     java.util.Arrays.fill(wire_angles_sup, 3.0);
+        //     java.util.Arrays.fill(wire_angles_inf, -3.0);
+        //     java.util.Arrays.fill(wire_residuals, 0.0);
+        //     java.util.Arrays.fill(wire_residuals_sup, 3.0);
+        //     java.util.Arrays.fill(wire_residuals_inf, -3.0);
+        // }
+
 
         // // --- We already have an estimates of the angles inf and sup
         // double[] layer_angles = {-1.49, 3.82, 3.24, -1.54, -1.96, 3.73, 3.30, -1.61}; // attempt 1
@@ -281,8 +350,8 @@ public class AhdcAlignmentAnalyser {
         /// --- Stop parallelizer
         pool.shutdown();
 
-        /// --- Analyse histograms
-        TGCanvas c = new TGCanvas("canvas-residual-LR-iter-" + niter,"canvas-residual-LR-iter-" + niter , 1500, 1200);
+        /// --- Analyse histograms per layer
+        EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
@@ -322,6 +391,67 @@ public class AhdcAlignmentAnalyser {
             
         }
         c.save(outDir + "/residual_LR_iter_" + niter + ".pdf");
+        System.out.println("residual_LR_iter_" + niter + ".pdf created");
+
+        /// --- Analyse histograms per wire : (4x3)x48
+        //ArrayList<TGCanvas> canvas = new ArrayList<>(); // 48 canvas
+        ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
+        for (int i = 0; i < 48; i++) {
+            EmbeddedCanvas c0 = new EmbeddedCanvas(1500, 1600);
+            c0.divide(3, 4);
+            canvas.add(c0);
+        }
+        // create a new dir
+        String wireOutDir = outDir + "/wire-by-wire-iter-" + niter;
+        check_output_dir(wireOutDir);
+        GraphErrors g_wire = new GraphErrors();
+        for (int i = 0; i < global_histos.h1_residual_LR_per_wires.size(); i++) {
+            H1F h = global_histos.h1_residual_LR_per_wires.get(i);
+            //double mean = h.getBinContent(h.getMaximumBin());
+            double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
+            double sigma = h.getRMS();
+            F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
+            //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
+            func.setParameter(0, h.getMax());
+            func.setParameter(1, h.getMean());
+            func.setParameter(2, h.getRMS());
+            func.setParameter(3, h.getMin());
+            func.setParLimits(0, 0, 1.5*h.getMax());
+            func.setParLimits(1, -3, 3);
+            func.setParLimits(2, 0, 3);
+            func.setParLimits(3, 0, 1.5*h.getMin());
+            func.setLineColor(2);
+            func.setLineWidth(2);
+            h.fit(func);
+            // Retrieve fit results
+            double mean = func.getParameter(1);
+            double width = func.getParameter(2);
+
+            // store residual for the current rotation angle
+            results.wire_residuals[i] = mean;
+            h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
+            g_wire.addPoint(i, mean, 0, 0);
+
+            // draw historgrams
+            int canvas_num = i / 12; // between 0 and 47
+            int canvas_frame = i % 12; // bbetween 0 and 11
+            canvas.get(canvas_num).cd(canvas_frame);
+            canvas.get(canvas_num).draw(h);
+        }
+
+        // save histograms
+        for (int i = 0; i < 48; i++) {
+            canvas.get(i).setVisible(false);
+            canvas.get(i).save(wireOutDir + String.format("/resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+            System.out.println(String.format("resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+        }
+        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
+        g_wire.setTitleX("wire");
+        g_wire.setTitleY("mean residual LR");
+        g_wire.setTitle("Mean residual LR versus wire");
+        c1.draw(g_wire);
+        c1.save(wireOutDir + "/summary-residual-wire-iter-" + niter + ".pdf");
+
 
         // /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
         // undoLayerRotations(AHDCdet, results.layer_angles);
@@ -355,12 +485,16 @@ public class AhdcAlignmentAnalyser {
                         int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
                         double residual = hitBank.getDouble("residual", j); // mm
                         double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm
+                        int component = hitBank.getInt("wire", j);
+                        AhdcWireId wireId = new AhdcWireId(1, layer, component);
 
-                        // Fill histograms
+                        // Fill histograms per layers
                         histos.h1_residual_LR_per_layers.get(layer2number(layer)).fill(residual_LR);
                         histos.h1_residual_per_layers.get(layer2number(layer)).fill(residual);
                         histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
                         histos.h1_residual_per_layers.get(0).fill(residual);
+                        // Fill histos per wires
+                        histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
                     }
                 }
                 // double px = trackBank.getFloat("px", i);
@@ -504,6 +638,90 @@ public class AhdcAlignmentAnalyser {
         } else {
             return 0; // not a layer, can encode all layers
         }
+    }
+
+    /**
+     * @brief Convert (sector, layer, component) to a unique wire id (number betwwen 0 and 575)
+     * 
+     * @param sector (not used)
+     * @param layer 
+     * @param component 
+     * @return unique wire id
+     */
+    static int slc2wire(int sector, int layer, int component) {
+        if (layer == 11) {
+            return component - 1;
+        } 
+        else if (layer == 21) {
+            return 47 + component - 1;
+        } 
+        else if (layer == 22) {
+            return 47 + 56 + component - 1;
+        } 
+        else if (layer == 31) {
+            return 47 + 56 + 56 + component - 1;
+        } 
+        else if (layer == 32) {
+            return 47 + 56 + 56 + 72 + component - 1;
+        } 
+        else if (layer == 41) {
+            return 47 + 56 + 56 + 72 + 72 + component - 1;
+        } 
+        else if (layer == 42) {
+            return 47 + 56 + 56 + 72 + 72 + 87 + component - 1;
+        } 
+        else if (layer == 51) {
+            return 47 + 56 + 56 + 72 + 72 + 87 + 87 + component - 1;
+        } else {
+            return -1; // not a ahdc wire
+        }
+    }
+
+    /**
+     * @brief Convert wire number (number from 0 to 575) to (sector,layer,component) ids
+     * 
+     * This is the invert operation of  @link slc2wire(int, int, int) @endlink 
+     * 
+     * @param wire wire number between 0 and  576 (excluded)
+     * @return a triplet (sector, layer, component) in int[]
+     */
+    static int[] wire2slc(int wire) {
+        int sector = -1;
+        int layer = -1;
+        int component = -1;
+        if (wire < 47) {
+            layer = 11;
+            component = wire + 1;
+        }
+        else if ((47 <= wire) && (wire < 47 + 56)) {
+            layer = 21;
+            component = wire - 47 + 1;
+        }
+        else if ((47 + 56 <= wire) && (wire < 47 + 56 + 56)) {
+            layer = 22;
+            component = wire - 47 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 <= wire) && (wire < 47 + 56 + 56 + 72)) {
+            layer = 31;
+            component = wire - 47 - 56 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72)) {
+            layer = 32;
+            component = wire - 47 - 56 - 56 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87)) {
+            layer = 41;
+            component = wire - 47 - 56 - 56 - 72 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87)) {
+            layer = 42;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 + 1;
+        }
+        else { // ((47 + 56 + 56 + 72 + 72 + 87 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87 + 99)) {
+            layer = 51;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 - 87 + 1;
+        }
+        return new int[] {sector, layer, component};
     }
 
     static void computeNewLayerAngles(int niter, ResultsOverIterations results) {
@@ -804,11 +1022,87 @@ public class AhdcAlignmentAnalyser {
 
     } // end scan ahdc position
 
+        static void wire_alignment(String[] args) {
+
+        /// --- Load inputs from options
+        fOptions options = new fOptions("-i", "-o");
+        options.LoadOptions(args);
+        options.Show();
+
+        /// --- Verify input files are not empty
+        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
+        if (inFiles.size() == 0) {
+            System.out.println("Please provide inputs files using the option: -i");
+            return;
+        }
+
+        /// --- Check that the output dir exists or create a new one
+        String outDir = options.GetValue("-o");
+        check_output_dir(outDir);
+
+        /// --- Define initial geometry parameters
+        AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
+
+        // --- Results over iterations
+        ResultsOverIterations results = new ResultsOverIterations();
+
+        /// --- rotate AHDC detector
+        System.out.println(" Initial rotation angles : AHDC detector");
+        doLayerRotations(AHDCdet, results.layer_angles);
+
+        /// --- Global observables
+        GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+        g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
+        g0.setTitleX("iterations");
+        g0.setTitleY("cost");
+
+        /// --- Loop over criteria
+        int niter = 0;
+        double value = 1e10;
+        //while (niter < 12) {
+        while (value > 2*1e-3 && niter < 1) {
+            niter++;
+            // run iteration
+            System.out.println("\033[1;32m ################################ \033[0m");
+            System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
+            System.out.println("\033[1;32m ################################ \033[0m");
+
+            run(niter, results, inFiles, outDir, AHDCdet, +75);
+
+            // running criteria
+            value = 0;
+            int N = 0;
+            for (int i = 0; i < results.layer_residuals.length; i++) {
+                value += Math.pow(results.layer_residuals[i], 2);
+                N++;
+            }
+            value = Math.sqrt(value) / N;
+            g0.addPoint(niter, value, 0, 0);
+            System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+
+            /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
+            undoLayerRotations(AHDCdet, results.layer_angles);
+
+            /// --- Update rotation angles
+            computeNewLayerAngles(niter, results);
+
+            /// --- Rotate AHDC detector
+            doLayerRotations(AHDCdet, results.layer_angles);
+            
+
+        } // end loop over criteria / nb iterations
+        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+        c0.draw(g0);
+        c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+    }
+
 
 
     public static void main(String[] args) {
         //scan_ahdc_position(args);
-        layer_alignment(args);
+        //layer_alignment(args);
+        wire_alignment(args);
     }
 
 
