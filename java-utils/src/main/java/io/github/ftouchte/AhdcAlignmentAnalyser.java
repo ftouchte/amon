@@ -250,13 +250,13 @@ public class AhdcAlignmentAnalyser {
             
 
     //     } // end loop over criteria / nb iterations
-    //     TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+    //     EmbeddedCanvas c0 = new EmbeddedCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
     //     c0.draw(g0);
     //     c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
     // }
 
-    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment) {
+    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment, boolean flag_run_wire_alignment) {
         
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -351,8 +351,12 @@ public class AhdcAlignmentAnalyser {
         pool.shutdown();
 
         /// --- Analyse histograms per layer
+        check_output_dir(outDir + "/layers/");
+        String layerOutDir = outDir + "/layers/iter-" + niter;
+        check_output_dir(layerOutDir);
         EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
+        GraphErrors g_layer = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
             //double mean = h.getBinContent(h.getMaximumBin());
@@ -364,10 +368,10 @@ public class AhdcAlignmentAnalyser {
             func.setParameter(1, h.getMean());
             func.setParameter(2, h.getRMS());
             func.setParameter(3, h.getMin());
-            func.setParLimits(0, 0, 1.5*h.getMax());
+            func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
             func.setParLimits(1, -3, 3);
             func.setParLimits(2, 0, 3);
-            func.setParLimits(3, 0, 1.5*h.getMin());
+            func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
             func.setLineColor(2);
             func.setLineWidth(2);
             h.fit(func);
@@ -385,16 +389,28 @@ public class AhdcAlignmentAnalyser {
                 h.setTitle(String.format("mean : %.5f", mean));
             }
 
+            g_layer.addPoint(i, mean, 0, 0);
+
             // Draw histograms
             c.cd(i);
             c.draw(h);
             
         }
-        c.save(outDir + "/residual_LR_iter_" + niter + ".pdf");
+        c.save(layerOutDir + "/residual_LR_iter_" + niter + ".pdf");
         System.out.println("residual_LR_iter_" + niter + ".pdf created");
 
+        EmbeddedCanvas c_layer = new EmbeddedCanvas(1200, 900);
+        g_layer.setTitleX("layer");
+        g_layer.setTitleY("mean residual LR");
+        g_layer.setTitle("Mean residual LR versus layer");
+        c_layer.draw(g_layer);
+        c_layer.save(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
+        System.out.println(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
+
+
+        if (!flag_run_wire_alignment) return;
         /// --- Analyse histograms per wire : (4x3)x48
-        //ArrayList<TGCanvas> canvas = new ArrayList<>(); // 48 canvas
+        //ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
         ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
         for (int i = 0; i < 48; i++) {
             EmbeddedCanvas c0 = new EmbeddedCanvas(1500, 1600);
@@ -402,7 +418,8 @@ public class AhdcAlignmentAnalyser {
             canvas.add(c0);
         }
         // create a new dir
-        String wireOutDir = outDir + "/wire-by-wire-iter-" + niter;
+        check_output_dir(outDir + "/wires/");
+        String wireOutDir = outDir + "/wires/iter-" + niter;
         check_output_dir(wireOutDir);
         GraphErrors g_wire = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_wires.size(); i++) {
@@ -410,27 +427,36 @@ public class AhdcAlignmentAnalyser {
             //double mean = h.getBinContent(h.getMaximumBin());
             double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
             double sigma = h.getRMS();
-            F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
-            //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
-            func.setParameter(0, h.getMax());
-            func.setParameter(1, h.getMean());
-            func.setParameter(2, h.getRMS());
-            func.setParameter(3, h.getMin());
-            func.setParLimits(0, 0, 1.5*h.getMax());
-            func.setParLimits(1, -3, 3);
-            func.setParLimits(2, 0, 3);
-            func.setParLimits(3, 0, 1.5*h.getMin());
-            func.setLineColor(2);
-            func.setLineWidth(2);
-            h.fit(func);
-            // Retrieve fit results
-            double mean = func.getParameter(1);
-            double width = func.getParameter(2);
+            if (h.getIntegral() > 100) {
+                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
+                //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
+                func.setParameter(0, h.getMax());
+                func.setParameter(1, h.getMean());
+                func.setParameter(2, h.getRMS());
+                func.setParameter(3, h.getMin());
+                func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
+                func.setParLimits(1, -3, 3);
+                func.setParLimits(2, 0, 3);
+                func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
+                func.setLineColor(2);
+                func.setLineWidth(2);
+                h.fit(func);
+                // Retrieve fit results
+                double mean = func.getParameter(1);
+                double width = func.getParameter(2);
 
-            // store residual for the current rotation angle
-            results.wire_residuals[i] = mean;
-            h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
-            g_wire.addPoint(i, mean, 0, 0);
+                // store residual for the current rotation angle
+                results.wire_residuals[i] = mean;
+                h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
+                g_wire.addPoint(i, mean, 0, 0);
+            } else {
+                double mean = 0; // set at zero to prevent weird fit // double mean = h.getMean();
+                results.wire_residuals[i] = mean;
+                g_wire.addPoint(i, mean, 0, 0);
+                //h.setTitle("Not enough entry, fit not performed");
+                h.setTitle(String.format("(No fit) iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
+            }
+            
 
             // draw historgrams
             int canvas_num = i / 12; // between 0 and 47
@@ -441,16 +467,17 @@ public class AhdcAlignmentAnalyser {
 
         // save histograms
         for (int i = 0; i < 48; i++) {
-            canvas.get(i).setVisible(false);
             canvas.get(i).save(wireOutDir + String.format("/resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
             System.out.println(String.format("resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
         }
-        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
+
+        EmbeddedCanvas c_wire = new EmbeddedCanvas(1200, 900);
         g_wire.setTitleX("wire");
         g_wire.setTitleY("mean residual LR");
         g_wire.setTitle("Mean residual LR versus wire");
-        c1.draw(g_wire);
-        c1.save(wireOutDir + "/summary-residual-wire-iter-" + niter + ".pdf");
+        c_wire.draw(g_wire);
+        c_wire.save(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
+        System.out.println(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
 
 
         // /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
@@ -553,7 +580,7 @@ public class AhdcAlignmentAnalyser {
     }
 
     static void save9Histo1D(ArrayList<H1F> histos, String outDir, String name, int nIter) {
-        TGCanvas c = new TGCanvas("canvas-" + name + "-" + nIter, name, 1500, 1200);
+        EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
         int i = 0;
         for (H1F h : histos) {
@@ -731,7 +758,7 @@ public class AhdcAlignmentAnalyser {
         double[] residuals = results.layer_residuals;
         double[] residuals_sup = results.layer_residuals_sup;
         double[] residuals_inf = results.layer_residuals_inf;
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < angles.length; i++) {
             if (niter == 1) {
                 if (residuals[i] > 0) {
                     residuals_sup[i] = residuals[i];
@@ -746,22 +773,83 @@ public class AhdcAlignmentAnalyser {
             }
             else if (niter == 2) {
                 if (Math.abs(residuals_sup[i]) > 1e-5) { // extrapolate with the sup
-                    double slope = (residuals[i]-residuals_sup[i])/(angles[i]-angles_sup[i]);
+                    double slope = (angles[i]-angles_sup[i])/(residuals[i]-residuals_sup[i]);
                     double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
                     angles[i] = alpha;
-                    angles_inf[i] = alpha - 3;
+                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
                     residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 3;
+                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
                     residuals_sup[i] = 1; // artificial, just need to know that is it positif
                     
                 }
                 else if (Math.abs(residuals_inf[i]) > 1e-5) { // extrapolate with the inf
-                    double slope = (residuals[i]-residuals_inf[i])/(angles[i]-angles_inf[i]);
+                    double slope = (angles[i]-angles_inf[i])/(residuals[i]-residuals_inf[i]);
                     double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
                     angles[i] = alpha;
-                    angles_inf[i] = alpha - 2;
+                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
                     residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 2.5;
+                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
+                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
+                }
+            } else { // now proceed by dichotomie
+                if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
+                    double tmp = angles[i];
+                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                    angles_inf[i] = tmp;
+                    residuals_inf[i] = residuals[i];
+                }
+                else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
+                    double tmp = angles[i];
+                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
+                    angles_sup[i] = tmp;
+                    residuals_sup[i] = residuals[i];
+                }
+            }
+        }
+    }
+
+    /** Same logic as {@link #computeNewLayerAngles(int, ResultsOverIterations)} but for wires */
+    static void computeNewWireAngles(int niter, ResultsOverIterations results) {
+        double[] angles = results.wire_angles;
+        double[] angles_sup = results.wire_angles_sup;
+        double[] angles_inf = results.wire_angles_inf;
+        double[] residuals = results.wire_residuals;
+        double[] residuals_sup = results.wire_residuals_sup;
+        double[] residuals_inf = results.wire_residuals_inf;
+        for (int i = 0; i < angles.length; i++) {
+            if (Math.abs(residuals[i]) < 1e-9) { //is alrealdy because because we cannot perform fit due to low statistic on a given wire
+                continue;
+            }
+            if (niter == 1) {
+                if (residuals[i] > 0) {
+                    residuals_sup[i] = residuals[i];
+                    angles_sup[i] = angles[i];
+                    angles[i] = angles[i] - 1;
+                } 
+                else if (residuals[i] < 0) {
+                    residuals_inf[i] = residuals[i];
+                    angles_inf[i] = angles[i];
+                    angles[i] = angles[i] + 1;
+                }
+            }
+            else if (niter == 2) {
+                if (Math.abs(residuals_sup[i]) > 1e-5) { // extrapolate with the sup
+                    double slope = (angles[i]-angles_sup[i])/(residuals[i]-residuals_sup[i]);
+                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
+                    angles[i] = alpha;
+                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
+                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
+                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
+                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
+                    
+                }
+                else if (Math.abs(residuals_inf[i]) > 1e-5) { // extrapolate with the inf
+                    double slope = (angles[i]-angles_inf[i])/(residuals[i]-residuals_inf[i]);
+                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
+                    angles[i] = alpha;
+                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
+                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
+                    angles_sup[i] = alpha + 0.11*Math.abs(alpha); // I make it no symmetric for the dichotomie
                     residuals_sup[i] = 1; // artificial, just need to know that is it positif
                 }
             } else { // now proceed by dichotomie
@@ -810,6 +898,33 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
+    /** Same logic as {@link #undoLayerRotations(AlertDCDetector, double[])} but for wires */
+    static void undoWireRotations(AlertDCDetector AHDCdet, double[] wire_angles) {
+        for (int num = 0; num < 576; num++) {
+            AhdcWireId id = new AhdcWireId(num);
+            // rotate AHDCdet
+            int sl = id.layer / 10;
+            int l = id.layer % 10;
+            int w = id.component;
+            AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(w); // numbering starts at 1
+            wire.rotateZ(Math.toRadians(-wire_angles[num]));
+        }
+    }
+
+    /** Same logic as {@link {@link #doLayerRotations(AlertDCDetector, double[])}} but for wires */
+    static void doWireRotations(AlertDCDetector AHDCdet, double[] wire_angles) {
+        for (int num = 0; num < 576; num++) {
+            AhdcWireId id = new AhdcWireId(num);
+            // rotate AHDCdet
+            int sl = id.layer / 10;
+            int l = id.layer % 10;
+            int w = id.component;
+            AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(w); // numbering starts at 1
+            wire.rotateZ(Math.toRadians(wire_angles[num]));
+            System.out.println(String.format("   wire  %d (L%dC%02d) --> will be rotated by %.2f deg", id.num, id.layer, id.component, wire_angles[num]));
+        }
+    }
+
     static void layer_alignment(String[] args) {
 
         /// --- Load inputs from options
@@ -855,7 +970,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75);
+            run(niter, results, inFiles, outDir, AHDCdet, +75, false);
 
             // running criteria
             value = 0;
@@ -879,9 +994,10 @@ public class AhdcAlignmentAnalyser {
             
 
         } // end loop over criteria / nb iterations
-        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+        EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
         c0.draw(g0);
         c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+        System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
     }
 
@@ -958,7 +1074,7 @@ public class AhdcAlignmentAnalyser {
                 // run iteration
                 System.out.println("\033[1;32m ########### Start iteration : " + niter + "\033[0m clas_alignment : " + clas_alignment);
 
-                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment);
+                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment, false);
 
                 // running criteria
                 value = 0;
@@ -1005,24 +1121,28 @@ public class AhdcAlignmentAnalyser {
                 
 
             } // end loop over criteria / nb iterations
-            TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+            EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
             c0.draw(g0);
             c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+            System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
         } // end loop over steps      
-        TGCanvas c0 = new TGCanvas("summary-mean-angle", "summary-mean-angle", 1200, 900);
+        EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
         c0.draw(g_mean);
         c0.save(outDir0 + "/summary-mean-angle.pdf");
-        TGCanvas c1 = new TGCanvas("summary-angle-deviation", "summary-mean-angle", 1200, 900);
+        System.out.println(outDir0 + "/summary-mean-angle.pdf");
+        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
         c1.draw(g_dev);
         c0.save(outDir0 + "/summary-angle-deviation.pdf");
-        TGCanvas c2 = new TGCanvas("summary-mean-vs-dev", "summary-mean-angle", 1200, 900);
+        System.out.println(outDir0 + "/summary-angle-deviation.pdf");
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1200, 900);
         c2.draw(g_mean_vs_dev);
         c2.save(outDir0 + "/summary-mean-vs-dev.pdf");
+        System.out.println(outDir0 + "/summary-mean-vs-dev.pdf");
 
     } // end scan ahdc position
 
-        static void wire_alignment(String[] args) {
+    static void wire_alignment(String[] args) {
 
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o");
@@ -1043,12 +1163,15 @@ public class AhdcAlignmentAnalyser {
         /// --- Define initial geometry parameters
         AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
 
+        /// --- Start with a well know layer alignment
+        doLayerRotations(AHDCdet, new double[] {0.756, 1.517, 0.984, 0.807, 0.382, 1.305, 0.975, 0.679});
+
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
 
         /// --- rotate AHDC detector
-        System.out.println(" Initial rotation angles : AHDC detector");
-        doLayerRotations(AHDCdet, results.layer_angles);
+        // System.out.println(" Initial rotation angles : AHDC detector");
+        // doWireRotations(AHDCdet, results.wire_angles);
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1060,20 +1183,20 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 2*1e-3 && niter < 1) {
+        while (value > 2*1e-3 && niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75);
+            run(niter, results, inFiles, outDir, AHDCdet, +75, true);
 
             // running criteria
             value = 0;
             int N = 0;
-            for (int i = 0; i < results.layer_residuals.length; i++) {
-                value += Math.pow(results.layer_residuals[i], 2);
+            for (int i = 0; i < results.wire_residuals.length; i++) {
+                value += Math.pow(results.wire_residuals[i], 2);
                 N++;
             }
             value = Math.sqrt(value) / N;
@@ -1081,19 +1204,20 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
 
             /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
-            undoLayerRotations(AHDCdet, results.layer_angles);
+            undoWireRotations(AHDCdet, results.wire_angles);
 
             /// --- Update rotation angles
-            computeNewLayerAngles(niter, results);
+            computeNewWireAngles(niter, results);
 
             /// --- Rotate AHDC detector
-            doLayerRotations(AHDCdet, results.layer_angles);
+            doWireRotations(AHDCdet, results.wire_angles);
             
 
         } // end loop over criteria / nb iterations
-        TGCanvas c0 = new TGCanvas("canvas-sum-squared-resisual-LR-over-iteration-" + niter,"canvas-sum-squared-resisual-LR-over-iteration-" + niter , 1200, 900);
+        EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
         c0.draw(g0);
         c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+        System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
 
     }
 
