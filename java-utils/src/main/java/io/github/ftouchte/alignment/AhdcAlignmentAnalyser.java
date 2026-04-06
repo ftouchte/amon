@@ -172,7 +172,7 @@ public class AhdcAlignmentAnalyser {
             //double mean = h.getBinContent(h.getMaximumBin());
             double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
             double sigma = h.getRMS();
-            F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
+            F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.6*sigma, peak+1.6*sigma);
             //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
             func.setParameter(0, h.getMax());
             func.setParameter(1, h.getMean());
@@ -298,8 +298,8 @@ public class AhdcAlignmentAnalyser {
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine
-            alertEngine.processDataEventProjOnly(event, AHDCdet);
-            //alertEngine.processDataEvent(event, AHDCdet);
+            //alertEngine.processDataEventProjOnly(event, AHDCdet);
+            alertEngine.processDataEvent(event, AHDCdet);
 
             // Data analysis
             DataBank trackBank = event.getBank("AHDC::kftrack");
@@ -377,6 +377,19 @@ public class AhdcAlignmentAnalyser {
                 }
                 
             }
+        }
+    }
+
+    /**
+     * New method to update rotation angles
+     * @param results
+     */
+    static void computeNewLayerAngles(ResultsOverIterations results) {
+        double[] angles = results.layer_angles;
+        double[] residuals = results.layer_residuals;
+        for (int i = 0; i < angles.length; i++) {
+            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            angles[i] = angles[i] - Math.toDegrees(alphaRad);
         }
     }
 
@@ -595,7 +608,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 2*1e-3 && niter < 8) {
+        while (value > 1*1e-3 && niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -619,7 +632,8 @@ public class AhdcAlignmentAnalyser {
             undoLayerRotations(AHDCdet, results.layer_angles);
 
             /// --- Update rotation angles
-            computeNewLayerAngles(niter, results);
+            //computeNewLayerAngles(niter, results);
+            computeNewLayerAngles(results);
 
             /// --- Rotate AHDC detector
             doLayerRotations(AHDCdet, results.layer_angles);
