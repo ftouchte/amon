@@ -1,0 +1,198 @@
+package io.github.ftouchte.alignment;
+
+/**
+ * Utility class for AHDC wire identifiers
+ */
+public class AhdcWireId {
+
+    /** Number between 0 and 575 */
+    int num;
+
+    /** Always 1 */
+    int sector;
+
+    /** Can be 11, 21, 22, 31, 32, 41, 42, 51 */
+    int layer;
+    
+    /** component id on a given layer, numerotation starting at 1 */
+    int component;
+    
+    /**
+     * Ahdc wire id defined with a num ranging from 0 to 575
+     * @param _num
+     */
+    public AhdcWireId(int _num) {
+        num = _num;
+        int[] res = wire2slc(_num);
+        sector = res[0];
+        layer = res[1];
+        component = res[2];
+    }
+
+    /**
+     * Ahdc wire id defined with sector, layer, component identifiers
+     * @param _sector
+     * @param _layer
+     * @param _component
+     */
+    public AhdcWireId(int _sector, int _layer, int _component) {
+        sector = _sector;
+        layer = _layer;
+        component = _layer;
+        num = slc2wire(_sector, _layer, _component);
+    }
+
+    /**
+     * @brief Convert wire number (number from 0 to 575) to (sector,layer,component) ids
+     * 
+     * This is the invert operation of  @link slc2wire(int, int, int) @endlink 
+     * 
+     * @param wire wire number between 0 and  576 (excluded)
+     * @return a triplet (sector, layer, component) in int[]
+     */
+    public static int[] wire2slc(int wire) {
+        int sector = -1;
+        int layer = -1;
+        int component = -1;
+        if (wire < 47) {
+            layer = 11;
+            component = wire + 1;
+        }
+        else if ((47 <= wire) && (wire < 47 + 56)) {
+            layer = 21;
+            component = wire - 47 + 1;
+        }
+        else if ((47 + 56 <= wire) && (wire < 47 + 56 + 56)) {
+            layer = 22;
+            component = wire - 47 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 <= wire) && (wire < 47 + 56 + 56 + 72)) {
+            layer = 31;
+            component = wire - 47 - 56 - 56 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72)) {
+            layer = 32;
+            component = wire - 47 - 56 - 56 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87)) {
+            layer = 41;
+            component = wire - 47 - 56 - 56 - 72 - 72 + 1;
+        }
+        else if ((47 + 56 + 56 + 72 + 72 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87)) {
+            layer = 42;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 + 1;
+        }
+        else { // ((47 + 56 + 56 + 72 + 72 + 87 + 87 <= wire) && (wire < 47 + 56 + 56 + 72 + 72 + 87 + 87 + 99)) {
+            layer = 51;
+            component = wire - 47 - 56 - 56 - 72 - 72 - 87 - 87 + 1;
+        }
+        return new int[] {sector, layer, component};
+    }
+
+    /**
+     * @brief Convert (sector, layer, component) to a unique wire id (number betwwen 0 and 575)
+     * 
+     * @param sector (not used)
+     * @param layer 
+     * @param component 
+     * @return unique wire id
+     */
+    public static int slc2wire(int sector, int layer, int component) {
+        if (layer == 11) {
+            return component - 1;
+        } 
+        else if (layer == 21) {
+            return 47 + component - 1;
+        } 
+        else if (layer == 22) {
+            return 47 + 56 + component - 1;
+        } 
+        else if (layer == 31) {
+            return 47 + 56 + 56 + component - 1;
+        } 
+        else if (layer == 32) {
+            return 47 + 56 + 56 + 72 + component - 1;
+        } 
+        else if (layer == 41) {
+            return 47 + 56 + 56 + 72 + 72 + component - 1;
+        } 
+        else if (layer == 42) {
+            return 47 + 56 + 56 + 72 + 72 + 87 + component - 1;
+        } 
+        else if (layer == 51) {
+            return 47 + 56 + 56 + 72 + 72 + 87 + 87 + component - 1;
+        } else {
+            return -1; // not a ahdc wire
+        }
+    }
+
+    /**
+     * @brief Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
+     * 
+     * @param digit 
+     * @return layer number
+     */
+    public static int layer2number(int digit) {
+        if      (digit == 11) {
+            return 1;
+        } 
+        else if (digit == 21) {
+            return 2;
+        } 
+        else if (digit == 22) {
+            return 3;
+        } 
+        else if (digit == 31) {
+            return 4;
+        } 
+        else if (digit == 32) {
+            return 5;
+        } 
+        else if (digit == 41) {
+            return 6;
+        } 
+        else if (digit == 42) {
+            return 7;
+        } 
+        else if (digit == 51) {
+            return 8;
+        } else {
+            return 0; // not a layer, can encode all layers
+        }
+    }
+
+    /**
+     * @brief Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
+     * 
+     * @param digit 
+     * @return layer number
+     */
+    public static int number2layer(int num) {
+        if      (num == 1) {
+            return 11;
+        } 
+        else if (num == 2) {
+            return 21;
+        } 
+        else if (num == 3) {
+            return 22;
+        } 
+        else if (num == 4) {
+            return 31;
+        } 
+        else if (num == 5) {
+            return 32;
+        } 
+        else if (num == 6) {
+            return 41;
+        } 
+        else if (num == 7) {
+            return 42;
+        } 
+        else if (num == 8) {
+            return 51;
+        } else {
+            return 0; // not a layer, can encode all layers
+        }
+    }
+}
