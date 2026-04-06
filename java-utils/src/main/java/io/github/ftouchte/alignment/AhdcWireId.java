@@ -43,7 +43,7 @@ public class AhdcWireId {
     }
 
     /**
-     * @brief Convert wire number (number from 0 to 575) to (sector,layer,component) ids
+     * Convert wire number (number from 0 to 575) to (sector,layer,component) ids
      * 
      * This is the invert operation of  @link slc2wire(int, int, int) @endlink 
      * 
@@ -90,7 +90,7 @@ public class AhdcWireId {
     }
 
     /**
-     * @brief Convert (sector, layer, component) to a unique wire id (number betwwen 0 and 575)
+     * Convert (sector, layer, component) to a unique wire id (number betwwen 0 and 575)
      * 
      * @param sector (not used)
      * @param layer 
@@ -127,7 +127,7 @@ public class AhdcWireId {
     }
 
     /**
-     * @brief Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
+     * Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
      * 
      * @param digit 
      * @return layer number
@@ -162,10 +162,10 @@ public class AhdcWireId {
     }
 
     /**
-     * @brief Convert the digit-layer (11,21,...,51) to layer number between 1 and 8
+     * Convert layer number (from 1 to 8) to the superlayer-layer id (11,21,...,51)
      * 
-     * @param digit 
-     * @return layer number
+     * @param digit between 1 and 8
+     * @return layer number between (11,21,...,51)
      */
     public static int number2layer(int num) {
         if      (num == 1) {
@@ -194,5 +194,48 @@ public class AhdcWireId {
         } else {
             return 0; // not a layer, can encode all layers
         }
+    }
+
+    /**
+     * 
+     * @param _layer (number 11, 21, 22, ..., 51)
+     * @return the radius of the _layer
+     */
+    public static double layer2Radius(int _layer) {
+        if (_layer == 11) {
+            return 32.0;
+        }
+        else if (_layer == 21) {
+            return 38.0;
+        }
+        else if (_layer == 22) {
+            return 42.0;
+        }
+        else if (_layer == 31) {
+            return 48.0;
+        }
+        else if (_layer == 32) {
+            return 52.0;
+        }
+        else if (_layer == 41) {
+            return 58.0;
+        }
+        else if (_layer == 42) {
+            return 62.0;
+        }
+        else if (_layer == 51) {
+            return 68.0;
+        } else {
+            return 0.0;
+        }
+    }
+
+    /**
+     * 
+     * @param _layer_num between 1 and 8
+     * @return the radius of the _layer. See {@link #layer2Radius(int)}
+     */
+    public static double layerNum2Radius(int _layer_num) {
+        return layer2Radius(number2layer(_layer_num));
     }
 }

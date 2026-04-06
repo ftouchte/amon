@@ -27,7 +27,7 @@ public class Histos {
         // h1 residual LR per layers
         for (int i = 0; i < 9; i++) {
             H1F h = new H1F("residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual LR (layer " + AhdcWireId.number2layer(i) + ")", 100, -3, 3);
-            h.setTitleX("layer " + i + ", residual LR (mm)");
+            h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", residual LR (mm)");
             if (i == 0) h.setTitleX("all layers, residual LR (mm)");
             h.setTitleY("count");
             //h.setOptStat(1111);
