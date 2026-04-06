@@ -1,4 +1,4 @@
-package io.github.ftouchte;
+package io.github.ftouchte.utils;
 
 /**
  * 
@@ -18,7 +18,7 @@ public class ParticleRow {
      * @param _py momentum py component
      * @param _pz momentum pz component
      */
-    ParticleRow(double _px, double _py, double _pz) {
+    public ParticleRow(double _px, double _py, double _pz) {
         px = _px;
         py = _py;
         pz = _pz;

@@ -1,4 +1,4 @@
-package io.github.ftouchte;
+package io.github.ftouchte.alignment;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,6 +29,9 @@ import org.jlab.jnp.hipo4.data.Event;
 import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.alert.ALERTEngine;
+
+import io.github.ftouchte.filtering.AlertElasticAnalyser;
+import io.github.ftouchte.utils.fOptions;
 
 
 /**
@@ -498,8 +501,8 @@ public class AhdcAlignmentAnalyser {
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine
-            //alertEngine.processDataEventProjOnly(event, AHDCdet);
-            alertEngine.processDataEvent(event, AHDCdet);
+            alertEngine.processDataEventProjOnly(event, AHDCdet);
+            //alertEngine.processDataEvent(event, AHDCdet);
 
             // Data analysis
             DataBank trackBank = event.getBank("AHDC::kftrack");

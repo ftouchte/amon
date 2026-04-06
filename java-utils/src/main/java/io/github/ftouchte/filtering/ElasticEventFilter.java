@@ -1,4 +1,4 @@
-package io.github.ftouchte;
+package io.github.ftouchte.filtering;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

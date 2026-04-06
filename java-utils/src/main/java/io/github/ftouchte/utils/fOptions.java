@@ -1,4 +1,4 @@
-package io.github.ftouchte;
+package io.github.ftouchte.utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,7 +22,7 @@ public class fOptions {
      * 
      * @param _opts list of options
      */
-    fOptions(String... _opts) {
+    public fOptions(String... _opts) {
         for (String x : _opts) {
             opts.add(x);
             mopts.put(x, new ArrayList<>());
@@ -34,7 +34,7 @@ public class fOptions {
      * 
      * @param args
      */
-    void LoadOptions(String[] args) {
+    public void LoadOptions(String[] args) {
         String opt = "default";
         mopts.put(opt, new ArrayList<>());
         for (String x : args) {
@@ -54,7 +54,7 @@ public class fOptions {
      * @return true str is an option defined at the construction of the object
      * @return false otherwise
      */
-    boolean IsOption(String str) {
+    public boolean IsOption(String str) {
         for (String x : opts) {
             if (x.equals(str)) {
                 return true;
@@ -69,7 +69,7 @@ public class fOptions {
      * @param str 
      * @return list of arguments for this option
      */
-    ArrayList<String> GetValues(String str) {
+    public ArrayList<String> GetValues(String str) {
         if (IsOption(str)) {
             return new ArrayList<>(mopts.get(str));
         }
@@ -85,7 +85,7 @@ public class fOptions {
      * @param str
      * @return first argument for this option
      */
-    String GetValue(String str) {
+    public String GetValue(String str) {
         if (IsOption(str)) {
             if (mopts.get(str).size() > 0) {
                 return mopts.get(str).get(0);
@@ -102,7 +102,7 @@ public class fOptions {
      * @brief Display the value for each option
      * 
      */
-    void Show() {
+    public void Show() {
         int max_length = 0;
         for (String x : opts) {
             if (x.length() > max_length) {
