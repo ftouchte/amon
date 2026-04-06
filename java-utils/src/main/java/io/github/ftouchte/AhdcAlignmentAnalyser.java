@@ -283,7 +283,7 @@ public class AhdcAlignmentAnalyser {
                     DataEvent event = queue.take();
 
                     nevents++;
-                    if (nevents % 1000 == 0) {
+                    if (nevents % 100 == 0) {
                         System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
                     }
                 
@@ -498,7 +498,8 @@ public class AhdcAlignmentAnalyser {
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine
-            alertEngine.processDataEventProjOnly(event, AHDCdet);
+            //alertEngine.processDataEventProjOnly(event, AHDCdet);
+            alertEngine.processDataEvent(event, AHDCdet);
 
             // Data analysis
             DataBank trackBank = event.getBank("AHDC::kftrack");
@@ -963,7 +964,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 2*1e-3 && niter < 25) {
+        while (value > 2*1e-3 && niter < 8) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1225,8 +1226,8 @@ public class AhdcAlignmentAnalyser {
 
     public static void main(String[] args) {
         //scan_ahdc_position(args);
-        //layer_alignment(args);
-        wire_alignment(args);
+        layer_alignment(args);
+        //wire_alignment(args);
     }
 
 
