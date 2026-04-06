@@ -1,4 +1,4 @@
-package io.github.ftouchte;
+package io.github.ftouchte.utils;
 
 /**
  * The default unit for the energy is GeV

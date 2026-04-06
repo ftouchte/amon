@@ -1,6 +1,10 @@
-package io.github.ftouchte;
+package io.github.ftouchte.filtering;
 
 import org.jlab.io.base.DataEvent;
+
+import io.github.ftouchte.utils.ParticleRow;
+import io.github.ftouchte.utils.Units;
+
 import org.jlab.io.base.DataBank;
 import java.util.ArrayList;
 
