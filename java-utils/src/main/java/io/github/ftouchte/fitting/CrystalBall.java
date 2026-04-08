@@ -40,9 +40,6 @@ public class CrystalBall {
     /** standard deviation of the Gaussian part */
     double sigma;
 
-    /** integral */
-    double integral;
-
     double A, B, C, D, N;
 
     /**
@@ -53,12 +50,11 @@ public class CrystalBall {
      * @param _mu mu of the Gaussian part
      * @param _sigma standard deviation of the Gaussian part
      */
-    public CrystalBall(double _alpha, double _npower, double _mu, double _sigma, double _integral) {
+    public CrystalBall(double _alpha, double _npower, double _mu, double _sigma) {
         alpha = _alpha;
         npower = _npower;
         mu = _mu;
         sigma = _sigma;
-        integral = _integral;
 
         A = Math.pow(npower/Math.abs(alpha), npower)*Math.exp(-0.5*Math.pow(alpha,2));
         B = npower/Math.abs(alpha) - Math.abs(alpha);
@@ -70,24 +66,46 @@ public class CrystalBall {
     }
 
     /**
-     * This the normalized Cristal Ball distribution. 
-     * 
-     * Same as {@link #CrystalBall(double, double, double, double, double)} with integral equals 1
-     * 
+     * Evaluation of the PDF. Do not take into account an external factor as the {@link #amplitude}.
      */
-    public CrystalBall(double _alpha, double _npower, double _mu, double _sigma) {
-        this(_alpha, _npower, _mu, _sigma, 1.0);
+    public double normalisedEval(double x) {
+        return N*eval(x);
     }
 
     /**
-     * Evaluation of the PDF
+     * Evaluation without the normalisation constant
      */
     public double eval(double x) {
         double z = (x - mu)/sigma;
         if (z > -alpha) {
-            return integral*N*Math.exp(-0.5*Math.pow(z,2));
+            return Math.exp(-0.5*Math.pow(z,2));
         } else {
-            return integral*N*A*Math.pow(B-z, -npower);
+            return A*Math.pow(B-z, -npower);
+        }
+    }
+
+    public double evalFit(double x) {
+        return amplitude*eval(x);
+    }
+
+
+    /**
+     * Not normalised evaluation. Prevent to create new objetc each time.
+     * @param x
+     * @param alpha
+     * @param npower
+     * @param mu
+     * @param sigma
+     * @return
+     */
+    public static double eval(double x, double alpha, double npower, double mu, double sigma) {
+        double A = Math.pow(npower/Math.abs(alpha), npower)*Math.exp(-0.5*Math.pow(alpha,2));
+        double B = npower/Math.abs(alpha) - Math.abs(alpha);
+        double z = (x - mu)/sigma;
+        if (z > -alpha) {
+            return Math.exp(-0.5*Math.pow(z,2));
+        } else {
+            return A*Math.pow(B-z, -npower);
         }
     }
 
@@ -97,9 +115,9 @@ public class CrystalBall {
         System.out.println("Cristal Ball distribution");
         System.out.println("   alpha     :  " + alpha);
         System.out.println("   npower    :  " + npower);
-        System.out.println("   mu      :  " + mu);
+        System.out.println("   mu        :  " + mu);
         System.out.println("   sigma     :  " + sigma);
-        System.out.println("   integral  :  " + integral);
+        System.out.println("   (fit) amplitude  :  " + amplitude);
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     }
 
@@ -127,12 +145,13 @@ public class CrystalBall {
                 double _amplitude = params[4];
 
                 // --- model values
-                CrystalBall func = new CrystalBall(_alpha, _npower, _mu, _sigma);
+                
+                //CrystalBall func = new CrystalBall(_alpha, _npower, _mu, _sigma);
                 
                 double[] yDataModelled = new double[xData.length];
 
                 for (int i = 0; i < yDataModelled.length; i++) {
-                    yDataModelled[i] = _amplitude*func.eval(xData[i]);
+                    yDataModelled[i] = _amplitude*CrystalBall.eval(xData[i], _alpha, _npower, _mu, _sigma);
                 }
 
                 // --- jacobian
@@ -142,15 +161,18 @@ public class CrystalBall {
                     double[] params_plus = params.clone();
                     double[] params_minus = params.clone();
                     
-                    double eps = 1e-5* (Math.abs(params[j]) + 1.0);
+                    double eps = 1e-6* (Math.abs(params[j]) + 1.0);
                     params_plus[j]  += eps;
                     params_minus[j] -= eps;
 
-                    CrystalBall func_plus = new CrystalBall(params_plus[0], params_plus[1], params_plus[2], params_plus[3], params_plus[4]);
-                    CrystalBall func_minus = new CrystalBall(params_minus[0], params_minus[1], params_minus[2], params_minus[3], params_minus[4]);
+                    // CrystalBall func_plus = new CrystalBall(params_plus[0], params_plus[1], params_plus[2], params_plus[3]);
+                    // CrystalBall func_minus = new CrystalBall(params_minus[0], params_minus[1], params_minus[2], params_minus[3]);
 
                     for (int i = 0; i < yDataModelled.length; i++) { // rows
-                        jacobian[i][j] = _amplitude*(func_plus.eval(xData[i]) - func_minus.eval(xData[i]))/(2*eps);
+                        //jacobian[i][j] = (params_plus[4]*func_plus.eval(xData[i]) - params_minus[4]*func_minus.eval(xData[i]))/(2*eps);
+                        double eval_plus = params_plus[4]*CrystalBall.eval(xData[i], params_plus[0], params_plus[1], params_plus[2], params_plus[3]);
+                        double eval_minus = params_minus[4]*CrystalBall.eval(xData[i], params_minus[0], params_minus[1], params_minus[2], params_minus[3]);
+                        jacobian[i][j] = (eval_plus-eval_minus)/(2*eps);
                     }
                 }
 
@@ -182,7 +204,7 @@ public class CrystalBall {
         double npower = fittedParams[1];
         double mu = fittedParams[2];
         double sigma = fittedParams[3];
-        double integral = fittedParams[4];
+        double amplitude = fittedParams[4];
 
         // System.out.println("Cristal Ball fit");
         // System.out.println("   alpha     :  " + alpha);
@@ -191,7 +213,9 @@ public class CrystalBall {
         // System.out.println("   sigma     :  " + sigma);
         // System.out.println("   integral  :  " + integral);
 
-        return new CrystalBall(alpha, npower, mu, sigma, integral);
+        CrystalBall cb = new CrystalBall(alpha, npower, mu, sigma);
+        cb.setFitAmplitude(amplitude);
+        return cb;
 
     }
 
@@ -212,13 +236,13 @@ public class CrystalBall {
         gr.setLineColor(2);
         gr.setMarkerSize(0);
 
-        CrystalBall func = CrystalBall.fit(xData, yData, initialParams);
+        CrystalBall cb = CrystalBall.fit(xData, yData, initialParams);
 
         for (int i = 0; i < xData.length; i++) {
-            gr.addPoint(xData[i], func.eval(xData[i]), 0, 0);
+            gr.addPoint(xData[i], cb.evalFit(xData[i]), 0, 0);
         }
 
-        return new Pair<>(func, gr);
+        return new Pair<>(cb, gr);
     }
 
     public static Pair<CrystalBall, GraphErrors> fit(H1F h, double[] initialParams, double xmin, double xmax) {
@@ -255,13 +279,13 @@ public class CrystalBall {
         gr.setLineColor(2);
         gr.setMarkerSize(0);
 
-        CrystalBall func = CrystalBall.fit(xData, yData, initialParams);
+        CrystalBall cb = CrystalBall.fit(xData, yData, initialParams);
 
         for (int i = 0; i < xData.length; i++) {
-            gr.addPoint(xData[i], func.eval(xData[i]), 0, 0);
+            gr.addPoint(xData[i], cb.evalFit(xData[i]), 0, 0);
         }
-
-        return new Pair<>(func, gr);
+        
+        return new Pair<>(cb, gr);
     }
 
     public double getMu() {
@@ -280,8 +304,15 @@ public class CrystalBall {
         return alpha;
     }
 
-    public double getIntegral() {
-        return integral;
+    /** amplitude parameter from. Use use {@link #evalFit(double)} */
+    double amplitude = 1;
+
+    public double getFitAmplitude() {
+        return amplitude;
+    }
+
+    public void setFitAmplitude(double _amplitude) {
+        amplitude = _amplitude;
     }
 
 
@@ -316,9 +347,9 @@ public class CrystalBall {
         CrystalBall C3 = new CrystalBall(1, 2, 0, 1);
         for (int i = 0; i < Npts; i++) {
             double x = xmin + i*(xmax-xmin)/(Npts-1);
-            double y1 = C1.eval(x);
-            double y2 = C2.eval(x);
-            double y3 = C3.eval(x);
+            double y1 = C1.normalisedEval(x);
+            double y2 = C2.normalisedEval(x);
+            double y3 = C3.normalisedEval(x);
             gr1.addPoint(x, y1, 0, 0);
             gr2.addPoint(x, y2, 0, 0);
             gr3.addPoint(x, y3, 0, 0);
@@ -356,7 +387,7 @@ public class CrystalBall {
 
         for (int i = 0; i < yData.length; i++) {
             gr1bis.addPoint(xData[i], yData[i], 0, 0);
-            gr1bis_fitted.addPoint(xData[i], C1_fitted.eval(xData[i]), 0, 0);
+            gr1bis_fitted.addPoint(xData[i], C1_fitted.evalFit(xData[i]), 0, 0);
         }
 
         canvas2.draw(gr1, "L");
@@ -420,7 +451,7 @@ public class CrystalBall {
 
             for (int i = 0; i < yData.length; i++) {
                 gr1bis.addPoint(xData[i], yData[i], 0, 0);
-                gr1bis_fitted.addPoint(xData[i], C1_fitted.eval(xData[i]), 0, 0);
+                gr1bis_fitted.addPoint(xData[i], C1_fitted.evalFit(xData[i]), 0, 0);
             }
 
             canvas2 = new EmbeddedCanvas(1200, 900);
