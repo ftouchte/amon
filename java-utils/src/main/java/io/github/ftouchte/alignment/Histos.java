@@ -10,6 +10,7 @@ import org.jlab.groot.data.H1F;
  * @note add new histos (H1F or H2F) and complete the constructor and the merge methods.
  */
 public class Histos {
+
     /** 1D residuals LR per layers */
     ArrayList<H1F> h1_residual_LR_per_layers = new ArrayList<>();
 
@@ -26,7 +27,7 @@ public class Histos {
     public Histos(int niter) {
         // h1 residual LR per layers
         for (int i = 0; i < 9; i++) {
-            H1F h = new H1F("residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual LR (layer " + AhdcWireId.number2layer(i) + ")", 100, -3, 3);
+            H1F h = new H1F("residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual LR (layer " + AhdcWireId.number2layer(i) + ")", 100, -1.5, 1.5);
             h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", residual LR (mm)");
             if (i == 0) h.setTitleX("all layers, residual LR (mm)");
             h.setTitleY("count");

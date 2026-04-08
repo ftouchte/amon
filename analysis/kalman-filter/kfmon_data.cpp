@@ -95,10 +95,10 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_nu_sel = new TH1D("nu_sel", "#nu = E - E'; #nu (GeV); count", 50, 0, 2.24);
     TH1D* H1_vz = new TH1D("vz_electron", "vz; vz (cm); count", 50, -60, 40);
     // ahdc track
-    TH1D* H1_delta_phi_nosym = new TH1D("delta_phi_nosym", "#Delta #phi; #Delta #phi (deg); count", 100, -360, 360); 
-    TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi; #Delta #phi (deg); count", 100, -360, 360); 
-    TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi; #Delta #phi (deg); count", 100, -90, 90); 
-    TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi; #Delta #phi (deg); count", 100, -90, 90);
+    TH1D* H1_delta_phi_nosym = new TH1D("delta_phi_nosym", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -360, 360); 
+    TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -360, 360); 
+    TH1D* H1_delta_phi_sym = new TH1D("delta_phi_sym", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -90, 90); 
+    TH1D* H1_delta_phi_sym_sel = new TH1D("delta_phi_sym_sel", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -90, 90);
     TH2D* H2_corr_pTe_Sadc = new TH2D("corr_pTe_Sadc", "#Sigma ADC vs pT; pT (MeV); #Sigma ADC", 50, 190, 400, 50, 0, 15000);
     TH2D* H2_corr_p_Sadc = new TH2D("corr_p_Sadc", "#Sigma ADC vs p; p (MeV); #Sigma ADC", 50, 80, 600, 50, 0, 15000);
     TH2D* H2_corr_p_dEdx = new TH2D("corr_p_dEdx", "dEdx vs p; p (MeV); dEdx (MeV/mm)", 50, 80, 600, 50, 0, 180);

@@ -20,12 +20,15 @@ fi
 folder=$1
 ncpu=$2
 
-coatjava_dir="/w/hallb-scshelf2102/clas12/users/touchte/coatjava-proj-only/"
+#coatjava_dir="/w/hallb-scshelf2102/clas12/users/touchte/coatjava-proj-only/"
+coatjava_dir="/w/hallb-scshelf2102/clas12/users/touchte/coatjava-kf-fit/"
 #coatjava_dir=""
 #coatjava_dir="/w/hallb-scshelf2102/clas12/users/touchte/coatjava/"
 #coatjava_dir="/w/hallb-scshelf2102/clas12/users/touchte/clas12Tags/geometry_source/coatjava_src/"
 #yaml_file="../ahdc_config.yaml"
-yaml_file="../alert_clas12_config.yaml"
+yaml_file="/lustre24/expphy/volatile/clas12/touchte/kalman-filter/v120/config.yaml"
+#yaml_file="/lustre24/expphy/volatile/clas12/touchte/kalman-filter/v119/config.yaml"
+#yaml_file="../alert_clas12_config.yaml"
 
 if [[ ! "$ncpu" =~ ^[0-9]+$ ]]; then
 	echo "> $ncpu is not a number, it should correspond to the number of cpu"
@@ -47,7 +50,8 @@ fi
 # Start job
 #----------------------
 cd $folder
-if [ ! -f "./$yaml_file" ]; then
+#if [ ! -f "./$yaml_file" ]; then
+if [ ! -f "$yaml_file" ]; then
 	echo "> $yaml_file : file does not exist in this repository, it should be the yaml file"
 	exit 1
 fi

@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.apache.commons.math3.util.Pair;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
@@ -30,6 +31,7 @@ import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.alert.ALERTEngine;
 
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
+import io.github.ftouchte.fitting.CrystalBall;
 import io.github.ftouchte.utils.fOptions;
 
 
@@ -48,7 +50,7 @@ public class AhdcAlignmentAnalyser {
     /** Number of threads running simultaneously */
     static int nThreads = 10; // 4
     /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 100; // 150
+    static int queue_capacity = 200; // 150
 
     /** Frequency of event loggin */
     static int frequency_of_event_loggin = 100;
@@ -169,25 +171,34 @@ public class AhdcAlignmentAnalyser {
         GraphErrors g_layer = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
-            //double mean = h.getBinContent(h.getMaximumBin());
+            // System.out.println("Layer : " + i + ", mean : " + h.getMean() + ", rms : " + h.getRMS() + ", integral : " + h.getIntegral() + "\n" +  h);
             double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
             double sigma = h.getRMS();
-            F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.6*sigma, peak+1.6*sigma);
-            //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
-            func.setParameter(0, h.getMax());
-            func.setParameter(1, h.getMean());
-            func.setParameter(2, h.getRMS());
-            func.setParameter(3, h.getMin());
-            func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
-            func.setParLimits(1, -3, 3);
-            func.setParLimits(2, 0, 3);
-            func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
-            func.setLineColor(2);
-            func.setLineWidth(2);
-            h.fit(func);
-            // Retrieve fit results
-            double mean = func.getParameter(1);
-            double width = func.getParameter(2);
+            double amp = h.getMax();
+            Pair<CrystalBall, GraphErrors> fitResult = CrystalBall.fit(h, new double[] {1.5, 3, peak, sigma, amp}, peak-1.4*sigma, peak+1.4*sigma);
+            CrystalBall func = fitResult.getFirst();
+            GraphErrors gr = fitResult.getSecond();
+            double mean = func.getMu();
+
+            // //double mean = h.getBinContent(h.getMaximumBin());
+            // double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
+            // double sigma = h.getRMS();
+            // F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.4*sigma, peak+1.4*sigma);
+            // //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
+            // func.setParameter(0, h.getMax());
+            // func.setParameter(1, h.getMean());
+            // func.setParameter(2, h.getRMS());
+            // func.setParameter(3, h.getMin());
+            // func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
+            // func.setParLimits(1, -3, 3);
+            // func.setParLimits(2, 0, 3);
+            // func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
+            // func.setLineColor(2);
+            // func.setLineWidth(2);
+            // h.fit(func);
+            // // Retrieve fit results
+            // double mean = func.getParameter(1);
+            // double width = func.getParameter(2);
 
             // store residual for the current rotation angle 
             if (i > 0) {                      
@@ -204,6 +215,7 @@ public class AhdcAlignmentAnalyser {
             // Draw histograms
             c.cd(i);
             c.draw(h);
+            c.draw(gr, "same L");
             
         }
         c.save(layerOutDir + "/residual_LR_iter_" + niter + ".pdf");
@@ -387,9 +399,15 @@ public class AhdcAlignmentAnalyser {
     static void computeNewLayerAngles(ResultsOverIterations results) {
         double[] angles = results.layer_angles;
         double[] residuals = results.layer_residuals;
+        double r_max = 0;
+        for (int i = 0; i < residuals.length; i++) {
+            if (Math.abs(residuals[i]) > r_max)
+                r_max = Math.abs(residuals[i]);
+        }
         for (int i = 0; i < angles.length; i++) {
             double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
-            angles[i] = angles[i] - Math.toDegrees(alphaRad);
+            //angles[i] = angles[i] - Math.toDegrees(alphaRad)*Math.pow(residuals[i]/r_max, 2.0)*0.5;
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
 
@@ -608,7 +626,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 25) {
+        while (value > 1*1e-3 && niter < 5) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
