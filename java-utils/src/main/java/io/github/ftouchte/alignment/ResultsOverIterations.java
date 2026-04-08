@@ -6,7 +6,8 @@ package io.github.ftouchte.alignment;
  */
 public class ResultsOverIterations {
     // angles, layer
-    public double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    public double[] layer_angles = {0.991, 1.245, 0.708, 1.086, 0.638, 1.066, 0.667, 0.951}; // from the alignment without fit
+    //public double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     public double[] layer_angles_sup = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
     public double[] layer_angles_inf = {-3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0, -3.0};
     // residuals, layer
