@@ -3,6 +3,7 @@ package io.github.ftouchte.alignment;
 import java.util.ArrayList;
 
 import org.jlab.groot.data.H1F;
+import org.jlab.groot.data.H2F;
 
 /**
  * Contains the list of all histos used during the analysis.
@@ -13,6 +14,9 @@ public class Histos {
 
     /** 1D residuals LR per layers */
     ArrayList<H1F> h1_residual_LR_per_layers = new ArrayList<>();
+
+    /** 2D residuals LR per layers versus vz*/
+    ArrayList<H2F> h2_corr_vz_residual_LR_per_layers = new ArrayList<>();
 
     /** 1D residuals per layers */
     ArrayList<H1F> h1_residual_per_layers = new ArrayList<>();
@@ -51,6 +55,15 @@ public class Histos {
             //h.setOptStat(1111);
             h1_residual_LR_per_wires.add(h);
         }
+
+        /// --- histograms 2D
+        for (int i = 0; i < 9; i++) {
+            H2F h = new H2F("corr-vz-residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, 60, -16, 16, 60, -1.5, 1.5);
+            h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", vz (cm)");
+            if (i == 0) h.setTitleX("all layers, vz(cm)");
+            if (i % 3 == 0) h.setTitleY("residual LR (mm)");
+            h2_corr_vz_residual_LR_per_layers.add(h);
+        }
     }
 
     /** 
@@ -65,6 +78,8 @@ public class Histos {
             this.h1_residual_LR_per_layers.get(i).add(histos.h1_residual_LR_per_layers.get(i));
             // h1 residual
             this.h1_residual_per_layers.get(i).add(histos.h1_residual_per_layers.get(i));
+            // h2 corr vz with residual LR
+            this.h2_corr_vz_residual_LR_per_layers.get(i).add(histos.h2_corr_vz_residual_LR_per_layers.get(i));
         }
         // Per wires
         for (int i = 0; i < 576; i++) {

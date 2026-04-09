@@ -12,14 +12,20 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.apache.commons.math3.fitting.PolynomialCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoints;
 import org.apache.commons.math3.util.Pair;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
+import org.jlab.groot.base.PadMargins;
+import org.jlab.groot.base.TStyle;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
+import org.jlab.groot.data.H2F;
 import org.jlab.groot.graphics.EmbeddedCanvas;
 import org.jlab.groot.math.F1D;
 import org.jlab.io.base.DataBank;
@@ -164,6 +170,18 @@ public class AhdcAlignmentAnalyser {
         pool.shutdown();
 
         /// --- Analyse histograms per layer
+        analyse_layer_histograms(global_histos, outDir, niter, results);
+        analyse_layer_2D_histograms(global_histos, outDir, niter, results);
+
+        /// --- Analyse histograms per wire
+        if (flag_run_wire_alignment) 
+            analyse_wire_histograms(global_histos, outDir, niter, results);
+
+        
+       
+    }
+
+    static void analyse_layer_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
         check_output_dir(outDir + "/layers/");
         String layerOutDir = outDir + "/layers/iter-" + niter;
         check_output_dir(layerOutDir);
@@ -173,7 +191,6 @@ public class AhdcAlignmentAnalyser {
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
 
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
-            System.out.println(h.toString());
 
             /// --- initialize fit parameters
             float[] data = h.getData();
@@ -221,6 +238,7 @@ public class AhdcAlignmentAnalyser {
                 cbSide = -1.0;
             }
 
+            // perform fit
             CrystallBallFitter cbFitter = new CrystallBallFitter();
             cbFitter.setAlphaParameter(alpha0, 0.7*Math.abs(alpha0), + 1.3*Math.abs(alpha0));
             cbFitter.setNpowerParameter(5, 3, 100); // 3 is a standard value
@@ -236,26 +254,6 @@ public class AhdcAlignmentAnalyser {
             cb.print();
             GraphErrors gr = fitResult.getSecond();
             double mean = cb.getMu();
-
-            // //double mean = h.getBinContent(h.getMaximumBin());
-            // double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
-            // double sigma = h.getRMS();
-            // F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.4*sigma, peak+1.4*sigma);
-            // //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
-            // func.setParameter(0, h.getMax());
-            // func.setParameter(1, h.getMean());
-            // func.setParameter(2, h.getRMS());
-            // func.setParameter(3, h.getMin());
-            // func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
-            // func.setParLimits(1, -3, 3);
-            // func.setParLimits(2, 0, 3);
-            // func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
-            // func.setLineColor(2);
-            // func.setLineWidth(2);
-            // h.fit(func);
-            // // Retrieve fit results
-            // double mean = func.getParameter(1);
-            // double width = func.getParameter(2);
 
             // store residual for the current rotation angle 
             if (i > 0) {                      
@@ -286,11 +284,10 @@ public class AhdcAlignmentAnalyser {
         c_layer.save(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
         System.out.println(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
 
+    }
 
-        
-        /// --- Analyse histograms per wire : (4x3)x48
-        if (!flag_run_wire_alignment) return;
-
+    static void analyse_wire_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
+        // (4x3)x48 = 576
         ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
         for (int i = 0; i < 48; i++) {
             EmbeddedCanvas c0 = new EmbeddedCanvas(1500, 1600);
@@ -358,8 +355,95 @@ public class AhdcAlignmentAnalyser {
         c_wire.draw(g_wire);
         c_wire.save(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
         System.out.println(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
-       
     }
+
+    static void analyse_layer_2D_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
+        // same outdir as for 1D histograms
+        check_output_dir(outDir + "/layers/");
+        String layerOutDir = outDir + "/layers/iter-" + niter;
+        check_output_dir(layerOutDir);
+
+        EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
+        c.divide(3, 3);
+
+        for (int i = 0; i < global_histos.h2_corr_vz_residual_LR_per_layers.size(); i++) {
+            H2F h2_initial = global_histos.h2_corr_vz_residual_LR_per_layers.get(i);
+            H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
+            
+            GraphErrors gr = new GraphErrors();
+            gr.setMarkerSize(4);
+            gr.setLineColor(1); // black
+
+            GraphErrors gr_bis = new GraphErrors();
+            gr_bis.setMarkerSize(4);
+            gr_bis.setLineColor(1); // black
+
+
+            for (int bin = 0; bin < h2.getXAxis().getNBins(); bin++) {
+                
+                H1F h = h2.sliceX(bin);
+                
+                /// --- do a gaussian fit for simplicity
+                double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
+                double sigma = h.getRMS();
+                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.4*sigma, peak+1.4*sigma);
+                //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
+                func.setParameter(0, h.getMax());
+                func.setParameter(1, h.getMean());
+                func.setParameter(2, h.getRMS());
+                func.setParameter(3, h.getMin());
+                func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
+                func.setParLimits(1, -3, 3);
+                func.setParLimits(2, 0, 3);
+                func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
+                func.setLineColor(2);
+                func.setLineWidth(2);
+                h.fit(func);
+                // Retrieve fit results
+                double mean = func.getParameter(1);
+                double width = func.getParameter(2);
+
+                // store results
+                if (width < 0.5){
+                    gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
+                    gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
+                }
+            } // end loop over bin
+
+            // now fit the graph with a strait line
+            WeightedObservedPoints observedPoints = new WeightedObservedPoints();
+            for (int pt = 1; pt < gr_bis.getDataSize(0)-1; pt++) { // the 2 end points are excluded
+                observedPoints.add(gr_bis.getDataX(pt), gr_bis.getDataY(pt));
+            }
+            //observedPoints.add(i, niter);
+            PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(2);
+            double[] params = polFitter.fit(observedPoints.toList());
+
+            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -16, 16);
+            func.setLineColor(2);
+            func.setLineWidth(4);
+            
+            // draw
+            c.cd(i);
+            c.getPad(i).setPalette("kBird");
+            c.getPad(i).getAxisFrame().setDrawAxisZ(false);
+            h2_initial.setTitle(String.format("slope : %f, constant : %f", params[1], params[0]));
+            c.draw(h2_initial);
+            //c.draw(gr, "same P");
+            c.draw(func, "same L");
+            c.draw(gr_bis, "same P");
+            c.getPad(i).getAxisY().setRange(-0.5, 0.5);
+            c.getPad(i).getAxisFrame().setDrawAxisZ(false); // again
+
+            
+
+        
+        } // end loop over h2
+
+        c.save(layerOutDir + "/corr_vz_residual_LR_iter_" + niter + ".pdf");
+        System.out.println("corr_vz_residual_LR_iter_" + niter + ".pdf created");
+    }
+
 
     static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine) {
         if (analyser.hasElasticElectron(event)) {
@@ -377,6 +461,7 @@ public class AhdcAlignmentAnalyser {
             // Loop over tracks
             for (int i = 0; i < trackBank.rows(); i++) {
                 int trackid = trackBank.getInt("trackid", i);
+                double vz = trackBank.getFloat("z", i)*0.1; // convert mm to cm
                 for (int j = 0; j < hitBank.rows(); j++) {
                     if (trackid == hitBank.getInt("trackid", j)) {
                         int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
@@ -388,8 +473,11 @@ public class AhdcAlignmentAnalyser {
                         // Fill histograms per layers
                         histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
                         histos.h1_residual_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual);
+                        histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz, residual_LR);
                         histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
                         histos.h1_residual_per_layers.get(0).fill(residual);
+                        histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz, residual_LR);
+
                         // Fill histos per wires
                         histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
                     }
