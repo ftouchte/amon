@@ -26,7 +26,7 @@ public class AlertElasticAnalyser {
     double delta_phi = 20;
     double W2_min = 3.5 * Units.GeV; // GeV
     double W2_max = 3.8 * Units.GeV; // GeV
-    int nhits_min = 6;
+    int nhits_min = 7;
 
     // Particles
     ParticleRow electron;

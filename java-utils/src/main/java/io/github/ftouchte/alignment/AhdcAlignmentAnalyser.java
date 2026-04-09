@@ -32,6 +32,7 @@ import org.jlab.service.alert.ALERTEngine;
 
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.fitting.CrystalBall;
+import io.github.ftouchte.fitting.CrystallBallFitter;
 import io.github.ftouchte.utils.fOptions;
 
 
@@ -48,9 +49,9 @@ public class AhdcAlignmentAnalyser {
     
     
     /** Number of threads running simultaneously */
-    static int nThreads = 10; // 4
+    static int nThreads = 40; // 4
     /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 200; // 150
+    static int queue_capacity = 7000; // 150
 
     /** Frequency of event loggin */
     static int frequency_of_event_loggin = 100;
@@ -170,15 +171,71 @@ public class AhdcAlignmentAnalyser {
         c.divide(3, 3);
         GraphErrors g_layer = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
+
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
-            // System.out.println("Layer : " + i + ", mean : " + h.getMean() + ", rms : " + h.getRMS() + ", integral : " + h.getIntegral() + "\n" +  h);
-            double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
-            double sigma = h.getRMS();
+            System.out.println(h.toString());
+
+            /// --- initialize fit parameters
+            float[] data = h.getData();
             double amp = h.getMax();
-            Pair<CrystalBall, GraphErrors> fitResult = CrystalBall.fit(h, new double[] {1.5, 3, peak, sigma, amp}, peak-1.4*sigma, peak+1.4*sigma);
-            CrystalBall func = fitResult.getFirst();
+            int binMax = h.getMaximumBin();
+            int binHalfLeft = -1;
+            int binHalfRight = -1;
+            int binTenthLeft = -1;
+            int binTenthRight = -1;
+            for (int bin = 0; bin < data.length-1; bin++) {
+                if (bin < binMax) {
+                    if (data[bin] < 0.5*amp && data[bin+1] > 0.5*amp) {
+                        binHalfLeft = bin;
+                    }
+                    if (data[bin] < 0.1*amp && data[bin+1] > 0.1*amp) {
+                        binTenthLeft = bin;
+                    }
+                } else {
+                    if (data[bin] > 0.5*amp && data[bin+1] < 0.5*amp) {
+                        binHalfRight = bin;
+                    }
+                    if (data[bin] > 0.1*amp && data[bin+1] < 0.1*amp) {
+                        binTenthRight = bin;
+                    }
+                }
+            }
+            double x1 = h.getxAxis().getBinCenter(binHalfLeft); // value at half amplitude
+            double x2 = h.getxAxis().getBinCenter(binHalfRight); // value at half amplitude
+            double xpeak = h.getxAxis().getBinCenter(h.getMaximumBin());
+            double x01 = h.getxAxis().getBinCenter(binTenthLeft); // value at 0.1* amplitude
+            double x02 = h.getxAxis().getBinCenter(binTenthRight); // value at 0.1* amplitude
+
+            double sigma = (x2-x1)/2;
+            double xmin = xpeak - 1.4*sigma;
+            double xmax = xpeak + 1.4*sigma;
+            
+            double alpha0 = 0;
+            double leftWidth  = xpeak - x01;
+            double rightWidth = x02 - xpeak;
+            double cbSide = +1.0; // per defaulf, queue à gauche
+            if (leftWidth > rightWidth) { // right asymmetry
+                alpha0 = leftWidth/sigma;
+            } else {
+                alpha0 = rightWidth/sigma;
+                cbSide = -1.0;
+            }
+
+            CrystallBallFitter cbFitter = new CrystallBallFitter();
+            cbFitter.setAlphaParameter(alpha0, 0.7*Math.abs(alpha0), + 1.3*Math.abs(alpha0));
+            cbFitter.setNpowerParameter(5, 3, 100); // 3 is a standard value
+            cbFitter.setMuParameter(xpeak, xmin, xmax);
+            cbFitter.setSigmaParameter(sigma, 0.6*sigma, 1.1*sigma);
+            cbFitter.setAmplitudeParameter(amp, 0.8*amp, 1.2*amp);
+            cbFitter.setQueueSide(cbSide);
+
+            
+            Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
+            CrystalBall cb = fitResult.getFirst();
+            System.out.println("* layer + " + i);
+            cb.print();
             GraphErrors gr = fitResult.getSecond();
-            double mean = func.getMu();
+            double mean = cb.getMu();
 
             // //double mean = h.getBinContent(h.getMaximumBin());
             // double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
@@ -626,7 +683,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 5) {
+        while (value > 1*1e-3 && niter < 50) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
