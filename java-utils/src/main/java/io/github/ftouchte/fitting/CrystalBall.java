@@ -3,7 +3,6 @@ package io.github.ftouchte.fitting;
 import org.apache.commons.math3.special.Erf;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.graphics.EmbeddedCanvas;
-import org.jlab.jnp.groot.graphics.Legend;
 
 
 
