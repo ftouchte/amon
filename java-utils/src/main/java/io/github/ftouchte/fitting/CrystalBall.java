@@ -3,6 +3,7 @@ package io.github.ftouchte.fitting;
 import org.apache.commons.math3.special.Erf;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.graphics.EmbeddedCanvas;
+import org.jlab.jnp.groot.graphics.Legend;
 
 
 
@@ -27,14 +28,39 @@ public class CrystalBall {
 
     double A, B, C, D, N;
 
-    double side = +1.0; // per default
+    // public class QueueSide {
+    //     static double left = +1.0;
+    //     static double right = -1.0;
+    // }
 
-    public class QueueSide {
-        static double left = +1.0;
-        static double right = -1.0;
+    /**
+     * The queue of the crystal ball can be located to the left or to the right.
+     * 
+     * LEFT (standard) : z = (x-µ)/σ <= -α
+     * RIGHT :           z = (x-µ)/σ >= α   , α is always positif
+     * 
+     * To make a unique condition on -α, we can write: RIGHT for -(x-µ)/σ <= -α,
+     * so that z = +(x-µ)/σ for LEFT and  z = -(x-µ)/σ for RIGHT
+     */
+    public enum QueueSide {
+
+        LEFT(+1), // standard
+        RIGHT(-1);
+
+        private final int sign;
+
+        QueueSide(int sign) {
+            this.sign = sign;
+        }
+
+        public int getSign() {
+            return sign;
+        }
     }
 
-    public void setQueueSide(double _side) {
+    QueueSide side = QueueSide.LEFT; // per default
+
+    public void setQueueSide(QueueSide _side) {
         this.side = _side;
     }
 
@@ -72,21 +98,21 @@ public class CrystalBall {
      * Evaluation without the normalisation constant
      */
     public double eval(double x) {
-        double z = side*(x - mu)/sigma;
+        double z = side.getSign()*(x - mu)/sigma;
         if (z > -alpha) {
             return Math.exp(-0.5*Math.pow(z,2));
-        } else {
+        } else { // z <= -alpha, queue side
             return A*Math.pow(B-z, -npower);
         }
     }
 
     public double evalFit(double x) {
-        return side*amplitude*eval(x);
+        return amplitude*eval(x);
     }
 
 
     /**
-     * Not normalised evaluation. Prevent to create new objetc each time.
+     * Not normalised evaluation. Prevent to create new objetc each time. The queue side is set to the LEFT.
      * @param x
      * @param alpha
      * @param npower
@@ -103,13 +129,23 @@ public class CrystalBall {
         // } else {
         //     return A*Math.pow(B-z, -npower);
         // }
-        return CrystalBall.eval(x, alpha, npower, mu, sigma, +1.0);
+        return CrystalBall.eval(x, alpha, npower, mu, sigma, QueueSide.LEFT);
     }
 
-    public static double eval(double x, double alpha, double npower, double mu, double sigma, double side) {
+    /**
+     * 
+     * @param x
+     * @param alpha
+     * @param npower
+     * @param mu
+     * @param sigma
+     * @param side queue side, see {@link QueueSide}
+     * @return
+     */
+    public static double eval(double x, double alpha, double npower, double mu, double sigma, QueueSide side) {
         double A = Math.pow(npower/Math.abs(alpha), npower)*Math.exp(-0.5*Math.pow(alpha,2));
         double B = npower/Math.abs(alpha) - Math.abs(alpha);
-        double z = side*(x - mu)/sigma;
+        double z = side.getSign()*(x - mu)/sigma;
         if (z > -alpha) {
             return Math.exp(-0.5*Math.pow(z,2));
         } else {
@@ -125,6 +161,7 @@ public class CrystalBall {
         System.out.println("   npower    :  " + npower);
         System.out.println("   mu        :  " + mu);
         System.out.println("   sigma     :  " + sigma);
+        System.out.printf ("   side      :  %+d\n", side.getSign());
         System.out.println("   (fit) amplitude  :  " + amplitude);
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     }
@@ -164,9 +201,7 @@ public class CrystalBall {
      */
     public static void main(String[] args) {
 
-        //////////////////////
-        // ---- basic plot
-        //////////////////////
+        // basic plot
         EmbeddedCanvas canvas = new EmbeddedCanvas(1200, 900);
         GraphErrors gr1 = new GraphErrors();
         GraphErrors gr2 = new GraphErrors();
@@ -186,6 +221,7 @@ public class CrystalBall {
         CrystalBall C1 = new CrystalBall(10, 2, 0, 1);
         CrystalBall C2 = new CrystalBall(1, 3, 0, 1);
         CrystalBall C3 = new CrystalBall(1, 2, 0, 1);
+        C3.setQueueSide(CrystalBall.QueueSide.RIGHT);
         for (int i = 0; i < Npts; i++) {
             double x = xmin + i*(xmax-xmin)/(Npts-1);
             double y1 = C1.normalisedEval(x);
@@ -199,6 +235,9 @@ public class CrystalBall {
         canvas.draw(gr2, "same L");
         canvas.draw(gr3, "same L");
         canvas.save("/lustre24/expphy/volatile/clas12/touchte/alignment/crytal-ball-pdf.pdf");
-        
+
+        C1.print();
+        C2.print();
+        C3.print();
     }
 }
