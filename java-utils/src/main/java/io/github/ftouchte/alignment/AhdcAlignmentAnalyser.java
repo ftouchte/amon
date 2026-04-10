@@ -556,123 +556,25 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
-    static void computeNewLayerAngles(int niter, ResultsOverIterations results) {
-        double[] angles = results.layer_angles;
-        double[] angles_sup = results.layer_angles_sup;
-        double[] angles_inf = results.layer_angles_inf;
-        double[] residuals = results.layer_residuals;
-        double[] residuals_sup = results.layer_residuals_sup;
-        double[] residuals_inf = results.layer_residuals_inf;
+    /**
+     * New method to update rotation angles
+     * @param results
+     */
+    static void computeNewWireAngles(ResultsOverIterations results) {
+        double[] angles = results.wire_angles;
+        double[] residuals = results.wire_residuals;
+        double r_max = 0;
+        for (int i = 0; i < residuals.length; i++) {
+            if (Math.abs(residuals[i]) > r_max)
+                r_max = Math.abs(residuals[i]);
+        }
         for (int i = 0; i < angles.length; i++) {
-            if (niter == 1) {
-                if (residuals[i] > 0) {
-                    residuals_sup[i] = residuals[i];
-                    angles_sup[i] = angles[i];
-                    angles[i] = angles[i] - 1;
-                } 
-                else if (residuals[i] < 0) {
-                    residuals_inf[i] = residuals[i];
-                    angles_inf[i] = angles[i];
-                    angles[i] = angles[i] + 1;
-                }
-            }
-            else if (niter == 2) {
-                if (Math.abs(residuals_sup[i]) > 1e-5) { // extrapolate with the sup
-                    double slope = (angles[i]-angles_sup[i])/(residuals[i]-residuals_sup[i]);
-                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
-                    angles[i] = alpha;
-                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
-                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
-                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
-                    
-                }
-                else if (Math.abs(residuals_inf[i]) > 1e-5) { // extrapolate with the inf
-                    double slope = (angles[i]-angles_inf[i])/(residuals[i]-residuals_inf[i]);
-                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
-                    angles[i] = alpha;
-                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
-                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
-                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
-                }
-            } else { // now proceed by dichotomie
-                if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
-                    double tmp = angles[i];
-                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
-                    angles_inf[i] = tmp;
-                    residuals_inf[i] = residuals[i];
-                }
-                else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
-                    double tmp = angles[i];
-                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
-                    angles_sup[i] = tmp;
-                    residuals_sup[i] = residuals[i];
-                }
-            }
+            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            //angles[i] = angles[i] - Math.toDegrees(alphaRad)*Math.pow(residuals[i]/r_max, 2.0)*0.5;
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
 
-    /** Same logic as {@link #computeNewLayerAngles(int, ResultsOverIterations)} but for wires */
-    static void computeNewWireAngles(int niter, ResultsOverIterations results) {
-        double[] angles = results.wire_angles;
-        double[] angles_sup = results.wire_angles_sup;
-        double[] angles_inf = results.wire_angles_inf;
-        double[] residuals = results.wire_residuals;
-        double[] residuals_sup = results.wire_residuals_sup;
-        double[] residuals_inf = results.wire_residuals_inf;
-        for (int i = 0; i < angles.length; i++) {
-            if (Math.abs(residuals[i]) < 1e-9) { //is alrealdy because because we cannot perform fit due to low statistic on a given wire
-                continue;
-            }
-            if (niter == 1) {
-                if (residuals[i] > 0) {
-                    residuals_sup[i] = residuals[i];
-                    angles_sup[i] = angles[i];
-                    angles[i] = angles[i] - 1;
-                } 
-                else if (residuals[i] < 0) {
-                    residuals_inf[i] = residuals[i];
-                    angles_inf[i] = angles[i];
-                    angles[i] = angles[i] + 1;
-                }
-            }
-            else if (niter == 2) {
-                if (Math.abs(residuals_sup[i]) > 1e-5) { // extrapolate with the sup
-                    double slope = (angles[i]-angles_sup[i])/(residuals[i]-residuals_sup[i]);
-                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
-                    angles[i] = alpha;
-                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
-                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 0.11*Math.abs(alpha);
-                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
-                    
-                }
-                else if (Math.abs(residuals_inf[i]) > 1e-5) { // extrapolate with the inf
-                    double slope = (angles[i]-angles_inf[i])/(residuals[i]-residuals_inf[i]);
-                    double alpha = slope*(0-residuals[i]) + angles[i]; // here is alpha for residual = 0
-                    angles[i] = alpha;
-                    angles_inf[i] = alpha - 0.09*Math.abs(alpha);
-                    residuals_inf[i] = -1; // artificial, just need to know that is it negatif
-                    angles_sup[i] = alpha + 0.11*Math.abs(alpha); // I make it no symmetric for the dichotomie
-                    residuals_sup[i] = 1; // artificial, just need to know that is it positif
-                }
-            } else { // now proceed by dichotomie
-                if (residuals[i]*residuals_sup[i] < 0) { // residaul_sup is assumed to be positif
-                    double tmp = angles[i];
-                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
-                    angles_inf[i] = tmp;
-                    residuals_inf[i] = residuals[i];
-                }
-                else if (residuals[i]*residuals_inf[i] < 0) { // residaul_sup is assumed to be negatif
-                    double tmp = angles[i];
-                    angles[i] = (angles_inf[i] + angles_sup[i])/2;
-                    angles_sup[i] = tmp;
-                    residuals_sup[i] = residuals[i];
-                }
-            }
-        }
-    }
 
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
@@ -920,7 +822,7 @@ public class AhdcAlignmentAnalyser {
                 undoLayerRotations(AHDCdet, results.layer_angles);
 
                 /// --- Update rotation angles
-                computeNewLayerAngles(niter, results);
+                computeNewLayerAngles(results);
 
                 /// --- Rotate AHDC detector
                 doLayerRotations(AHDCdet, results.layer_angles);
@@ -1016,7 +918,7 @@ public class AhdcAlignmentAnalyser {
             undoWireRotations(AHDCdet, results.wire_angles);
 
             /// --- Update rotation angles
-            computeNewWireAngles(niter, results);
+            computeNewWireAngles(results);
 
             /// --- Rotate AHDC detector
             doWireRotations(AHDCdet, results.wire_angles);
