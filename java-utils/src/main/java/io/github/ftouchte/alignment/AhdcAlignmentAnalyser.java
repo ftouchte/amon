@@ -558,7 +558,8 @@ public class AhdcAlignmentAnalyser {
         double[] angles = results.wire_angles;
         double[] residuals = results.wire_residuals;
         for (int i = 0; i < angles.length; i++) {
-            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            AhdcWireId wireId = new AhdcWireId(i);
+            double alphaRad = residuals[i]/AhdcWireId.layer2Radius(wireId.layer);
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
