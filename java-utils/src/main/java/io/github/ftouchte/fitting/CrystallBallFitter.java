@@ -56,12 +56,12 @@ public class CrystallBallFitter {
         return (alphaParameter == null || npowerParameter == null || muParameter == null || sigmaParameter == null || amplitudeParameter == null);
     }
 
-    private double side = +1.0;
-    public void setQueueSide(double _side) {
+    private QueueSide side = CrystalBall.QueueSide.LEFT;
+    public void setQueueSide(CrystalBall.QueueSide _side) {
         side = _side;
     }
 
-    public double getSide() {
+    public CrystalBall.QueueSide getSide() {
         return side;
     }
     

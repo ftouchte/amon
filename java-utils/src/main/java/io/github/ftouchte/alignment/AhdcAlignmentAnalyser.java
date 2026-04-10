@@ -230,12 +230,12 @@ public class AhdcAlignmentAnalyser {
             double alpha0 = 0;
             double leftWidth  = xpeak - x01;
             double rightWidth = x02 - xpeak;
-            double cbSide = +1.0; // per defaulf, queue à gauche
+            CrystalBall.QueueSide cbSide = CrystalBall.QueueSide.LEFT; // per defaulf, queue à gauche
             if (leftWidth > rightWidth) { // right asymmetry
                 alpha0 = leftWidth/sigma;
             } else {
                 alpha0 = rightWidth/sigma;
-                cbSide = -1.0;
+                cbSide = CrystalBall.QueueSide.RIGHT;
             }
 
             // perform fit
@@ -544,14 +544,8 @@ public class AhdcAlignmentAnalyser {
     static void computeNewLayerAngles(ResultsOverIterations results) {
         double[] angles = results.layer_angles;
         double[] residuals = results.layer_residuals;
-        double r_max = 0;
-        for (int i = 0; i < residuals.length; i++) {
-            if (Math.abs(residuals[i]) > r_max)
-                r_max = Math.abs(residuals[i]);
-        }
         for (int i = 0; i < angles.length; i++) {
             double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
-            //angles[i] = angles[i] - Math.toDegrees(alphaRad)*Math.pow(residuals[i]/r_max, 2.0)*0.5;
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
@@ -563,18 +557,11 @@ public class AhdcAlignmentAnalyser {
     static void computeNewWireAngles(ResultsOverIterations results) {
         double[] angles = results.wire_angles;
         double[] residuals = results.wire_residuals;
-        double r_max = 0;
-        for (int i = 0; i < residuals.length; i++) {
-            if (Math.abs(residuals[i]) > r_max)
-                r_max = Math.abs(residuals[i]);
-        }
         for (int i = 0; i < angles.length; i++) {
             double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
-            //angles[i] = angles[i] - Math.toDegrees(alphaRad)*Math.pow(residuals[i]/r_max, 2.0)*0.5;
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
-
 
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
@@ -673,7 +660,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 50) {
+        while (value > 1*1e-3 && niter < 1) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
