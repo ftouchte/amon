@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -564,6 +565,90 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
+    /**
+     * Rotate the layers with the worst shifts
+     * @param results
+     * @param nlayers number of layer to be rotated.
+     */
+    static void computeNewLayerAngles(ResultsOverIterations results, int nlayers) {
+        double[] angles = results.layer_angles;
+        double[] residuals = results.layer_residuals;
+        double[] abs_residuals = new double[residuals.length];
+        for (int i = 0; i < residuals.length; i ++) {
+            abs_residuals[i] = Math.abs(residuals[i]);
+        }
+        /// --- sort values according to the residuals
+        int[] sortedIndices = sortIndices(abs_residuals, false);
+        /// --- only look at the nlayers worst residuals
+        for (int loop = 0; loop < sortedIndices.length && loop < nlayers; loop++) {
+            int i = sortedIndices[loop];
+            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
+        }
+    }
+
+    /**
+     * 
+     * @param vector data to be sorted
+     * @return the array of id in the right order
+     */
+    public static int[] sortIndices(double[] vector, boolean rising) {
+        class Data implements Comparable<Data> {
+            private int id;
+            private double value;
+            public Data(int _id, double _value) { id = _id; value = _value;}
+            public int compareTo(Data data) {
+                return Double.compare(this.value, data.value);
+            }
+            public int getInt() { return id;}
+            //public double getValue() {return value;}
+        }
+
+        ArrayList<Data> list = new ArrayList<>();
+        for (int i = 0; i < vector.length; i++) {
+            list.add(new Data(i, vector[i]));
+        }
+        if (rising) { // rising
+            list.sort(null);
+        } else { // inverse order
+            list.sort(Collections.reverseOrder());
+        }
+
+        int[] indices = new int[vector.length];
+        for (int i = 0; i < list.size(); i++) {
+            indices[i] = list.get(i).getInt();
+        }
+
+        return indices;
+    }
+
+    static void computeNewLayerAnglesV2(ResultsOverIterations results) {
+        double[] angles = results.layer_angles;
+        double[] residuals = results.layer_residuals;
+        
+        // find the smallest residuals
+        int i_min = -1;
+        double res_min = 1e10;
+        for (int i = 0; i < residuals.length; i++) {
+            if (Math.abs(residuals[i]) < res_min) {
+                res_min = Math.abs(residuals[i]);
+                i_min = i;
+            }
+        }
+
+        // rotate others layers with respect the best one (the one with the smallest residual)
+        for (int i = 0; i < angles.length; i++) {
+            if (i != i_min) {
+                double alphaRad = (residuals[i]-residuals[i_min])/AhdcWireId.layerNum2Radius(i+1);
+                angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
+            }
+            
+        }
+
+
+    }
+
+
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
             // rotate AHDCdet
@@ -661,7 +746,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 1) {
+        while (value > 1*1e-3 && niter < 12) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -685,8 +770,9 @@ public class AhdcAlignmentAnalyser {
             undoLayerRotations(AHDCdet, results.layer_angles);
 
             /// --- Update rotation angles
-            //computeNewLayerAngles(niter, results);
             computeNewLayerAngles(results);
+            //computeNewLayerAngles(results, 2);
+            //computeNewLayerAnglesV2(results);
 
             /// --- Rotate AHDC detector
             doLayerRotations(AHDCdet, results.layer_angles);
