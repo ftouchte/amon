@@ -6,16 +6,16 @@ package io.github.ftouchte.alignment;
 public class AhdcWireId {
 
     /** Number between 0 and 575 */
-    int num;
+    public int num;
 
     /** Always 1 */
-    int sector;
+    public int sector;
 
     /** Can be 11, 21, 22, 31, 32, 41, 42, 51 */
-    int layer;
+    public int layer;
     
     /** component id on a given layer, numerotation starting at 1 */
-    int component;
+    public int component;
     
     /**
      * Ahdc wire id defined with a num ranging from 0 to 575
