@@ -253,19 +253,19 @@ public class AhdcAlignmentAnalyser {
             cb.print();
             GraphErrors gr = fitResult.getSecond();
             double mean = cb.getMu();
-            //double width = cb.getSigma();
-            double width = 0.5*(leftWidth + rightWidth);
+            double width = cb.getSigma();
+            //double width = 0.5*(leftWidth + rightWidth);
 
             // store residual for the current rotation angle 
             if (i > 0) {                      
                 results.layer_residuals[i-1] = mean;
                 // Add results in the title for partical reason (the groot's version is too old)
-                h.setTitle(String.format("mean : %.5f, width : %5f, alpha : %.5f deg", mean, width, results.layer_angles[i-1]));
+                h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.3f deg", mean, width, results.layer_angles[i-1]));
             }
             if (i == 0) {
                 h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             }
-            h.setTitleY(String.format("iter : %d , count", niter));
+            h.setTitleY(String.format("iter %d , count", niter));
 
             g_layer.addPoint(i, mean, 0, 0);
             g_layer_cost.addPoint(i, cb.getFitCost(), 0, 0);
