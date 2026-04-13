@@ -162,6 +162,7 @@ public class CrystalBall {
         System.out.println("   sigma     :  " + sigma);
         System.out.printf ("   side      :  %+d\n", side.getSign());
         System.out.println("   (fit) amplitude  :  " + amplitude);
+        System.out.println("   (fit) cost       :  " + cost);
         System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
     }
 
@@ -184,12 +185,31 @@ public class CrystalBall {
     /** amplitude parameter from. Use use {@link #evalFit(double)} */
     double amplitude = 1;
 
+    /** cost of the least squares fit*/
+    double cost = -1; 
+
+    /**
+     * 
+     * @return {@link #amplitude}
+     */
     public double getFitAmplitude() {
         return amplitude;
     }
 
     public void setFitAmplitude(double _amplitude) {
         amplitude = _amplitude;
+    }
+
+    /**
+     * 
+     * @return {@link #cost}
+     */
+    public double getFitCost() {
+        return cost;
+    }
+
+    public void setFitCost(double _cost) {
+        cost = _cost;
     }
 
 

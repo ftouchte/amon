@@ -30,22 +30,27 @@ public class CrystallBallFitter {
 
     public void setAlphaParameter(double _value, double _min, double _max) {
         alphaParameter = new FitParameter(_value, _min, _max);
+        alphaParameter.setName("alpha");
     }
 
     public void setNpowerParameter(double _value, double _min, double _max) {
         npowerParameter = new FitParameter(_value, _min, _max);
+        npowerParameter.setName("npower");
     }
 
     public void setMuParameter(double _value, double _min, double _max) {
         muParameter = new FitParameter(_value, _min, _max);
+        muParameter.setName("mu");
     }
 
     public void setSigmaParameter(double _value, double _min, double _max) {
         sigmaParameter = new FitParameter(_value, _min, _max);
+        sigmaParameter.setName("sigma");
     }
 
     public void setAmplitudeParameter(double _value, double _min, double _max) {
         amplitudeParameter = new FitParameter(_value, _min, _max);
+        amplitudeParameter.setName("amplitude");
     }
 
     public double[] getParameters() {
@@ -188,6 +193,7 @@ public class CrystallBallFitter {
 
         CrystalBall cb = new CrystalBall(alpha, npower, mu, sigma);
         cb.setFitAmplitude(amplitude);
+        cb.setFitCost(optimum.getCost());
         return cb;
 
     }
@@ -263,6 +269,15 @@ public class CrystallBallFitter {
             res[i] = (double) vector[i];
         }
         return res;
+    }
+
+    public void print() {
+        System.out.println("> Crsytall Ball Fitter :");
+        alphaParameter.print();
+        npowerParameter.print();
+        muParameter.print();
+        sigmaParameter.print();
+        amplitudeParameter.print();
     }
 
     public static void example2(String[] args) {

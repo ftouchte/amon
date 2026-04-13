@@ -28,4 +28,18 @@ public class FitParameter {
         minValue = _min;
         maxValue = _max;
     }
+
+    String name = "";
+
+    public void setName(String _name) {
+        name = _name;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void print() {
+        System.out.printf("  (%s) value : %f , min : %f , max : %f\n", name.equals("") ? "unnammed" : name, value, minValue, maxValue);
+    }
 }

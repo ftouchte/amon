@@ -55,13 +55,7 @@ import io.github.ftouchte.utils.fOptions;
 public class AhdcAlignmentAnalyser {
     
     
-    /** Number of threads running simultaneously */
-    static int nThreads = 40; // 4
-    /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 7000; // 150
-
-    /** Frequency of event loggin */
-    static int frequency_of_event_loggin = 100;
+    
 
     /**
      * This the main method. It is used to run an iteration of the alignment procedure.
@@ -76,8 +70,9 @@ public class AhdcAlignmentAnalyser {
      * @param AHDCdet current state of the AHDC geometry (after rotation)
      * @param clas_alignment position of the center of CLAS with respect to the center of ALERT. Useful for {@link #scan_ahdc_position(String[])}
      * @param flag_run_wire_alignment a flag to prevent fitting of wire by wire histograms due to statistics limitation
+     * @param flag_do_fit perform a KF fit or do a simple propagation
      */
-    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment, boolean flag_run_wire_alignment) {
+    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment, boolean flag_run_wire_alignment, boolean flag_do_fit) {
         
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -109,7 +104,7 @@ public class AhdcAlignmentAnalyser {
                 
                     if (event == EVT_POISON) break;
 
-                    fill_histos(local_histos, event, AHDCdet, analyser, alertEngine);
+                    fill_histos(local_histos, event, AHDCdet, analyser, alertEngine, flag_do_fit);
 
                 }
 
@@ -189,6 +184,7 @@ public class AhdcAlignmentAnalyser {
         EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
         GraphErrors g_layer = new GraphErrors();
+        GraphErrors g_layer_cost = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
 
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
@@ -241,12 +237,14 @@ public class AhdcAlignmentAnalyser {
 
             // perform fit
             CrystallBallFitter cbFitter = new CrystallBallFitter();
-            cbFitter.setAlphaParameter(alpha0, 0.7*Math.abs(alpha0), + 1.3*Math.abs(alpha0));
+            //cbFitter.setAlphaParameter(Math.abs(alpha0), Math.max(0.7*Math.abs(alpha0), 1e-3), + 1.3*Math.abs(alpha0));
+            cbFitter.setAlphaParameter(alpha0, 0.3, 5);
             cbFitter.setNpowerParameter(5, 3, 100); // 3 is a standard value
             cbFitter.setMuParameter(xpeak, xmin, xmax);
-            cbFitter.setSigmaParameter(sigma, 0.6*sigma, 1.1*sigma);
+            cbFitter.setSigmaParameter(sigma, Math.max(0.6*sigma, 1e-6), 1.1*sigma);
             cbFitter.setAmplitudeParameter(amp, 0.8*amp, 1.2*amp);
             cbFitter.setQueueSide(cbSide);
+            cbFitter.print();
 
             
             Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
@@ -255,18 +253,22 @@ public class AhdcAlignmentAnalyser {
             cb.print();
             GraphErrors gr = fitResult.getSecond();
             double mean = cb.getMu();
+            //double width = cb.getSigma();
+            double width = 0.5*(leftWidth + rightWidth);
 
             // store residual for the current rotation angle 
             if (i > 0) {                      
                 results.layer_residuals[i-1] = mean;
                 // Add results in the title for partical reason (the groot's version is too old)
-                h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.layer_angles[i-1]));
+                h.setTitle(String.format("mean : %.5f, width : %5f, alpha : %.5f deg", mean, width, results.layer_angles[i-1]));
             }
             if (i == 0) {
-                h.setTitle(String.format("mean : %.5f", mean));
+                h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             }
+            h.setTitleY(String.format("iter : %d , count", niter));
 
             g_layer.addPoint(i, mean, 0, 0);
+            g_layer_cost.addPoint(i, cb.getFitCost(), 0, 0);
 
             // Draw histograms
             c.cd(i);
@@ -284,6 +286,14 @@ public class AhdcAlignmentAnalyser {
         c_layer.draw(g_layer);
         c_layer.save(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
         System.out.println(layerOutDir + "/summary-residual-LR-layer-iter-" + niter + ".pdf");
+
+        EmbeddedCanvas c_layer_cost = new EmbeddedCanvas(1200, 900);
+        g_layer_cost.setTitleX("layer");
+        g_layer_cost.setTitleY("cost");
+        g_layer_cost.setTitle("Least squares fit cost versus layer");
+        c_layer_cost.draw(g_layer_cost);
+        c_layer_cost.save(layerOutDir + "/fit-cost-residual-LR-layer-iter-" + niter + ".pdf");
+        System.out.println(layerOutDir + "/fit-cost-residual-LR-layer-iter-" + niter + ".pdf");
 
     }
 
@@ -446,14 +456,18 @@ public class AhdcAlignmentAnalyser {
     }
 
 
-    static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine) {
+    static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine, boolean flag_do_fit) {
         if (analyser.hasElasticElectron(event)) {
             // // Retrieve the kinematics of the electron
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine
-            //alertEngine.processDataEventProjOnly(event, AHDCdet);
-            alertEngine.processDataEvent(event, AHDCdet);
+            if (flag_do_fit) {
+                alertEngine.processDataEvent(event, AHDCdet);
+            } else {
+                alertEngine.processDataEventProjOnly(event, AHDCdet);
+            }
+            
 
             // Data analysis
             DataBank trackBank = event.getBank("AHDC::kftrack");
@@ -707,8 +721,10 @@ public class AhdcAlignmentAnalyser {
 
     /**
      * Layer alignment analysis
+     * @param args
+     * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
      */
-    static void layer_alignment(String[] args) {
+    static void layer_alignment(String[] args, boolean flag_do_fit) {
 
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o");
@@ -753,7 +769,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75, false);
+            run(niter, results, inFiles, outDir, AHDCdet, +75, false, flag_do_fit);
 
             // running criteria
             value = 0;
@@ -787,8 +803,10 @@ public class AhdcAlignmentAnalyser {
 
     /**
      * Routine to scan ahdc position with respect to CLAS
+     * @param args
+     * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
      */
-    static void scan_ahdc_position(String[] args) {
+    static void scan_ahdc_position(String[] args, boolean flag_do_fit) {
 
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o");
@@ -858,7 +876,7 @@ public class AhdcAlignmentAnalyser {
                 // run iteration
                 System.out.println("\033[1;32m ########### Start iteration : " + niter + "\033[0m clas_alignment : " + clas_alignment);
 
-                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment, false);
+                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment, false, flag_do_fit);
 
                 // running criteria
                 value = 0;
@@ -926,8 +944,10 @@ public class AhdcAlignmentAnalyser {
 
     /**
      * Wire alignment analysis
+     * @param args
+     * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
      */
-    static void wire_alignment(String[] args) {
+    static void wire_alignment(String[] args, boolean flag_do_fit) {
 
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o");
@@ -975,7 +995,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75, true);
+            run(niter, results, inFiles, outDir, AHDCdet, +75, true, flag_do_fit);
 
             // running criteria
             value = 0;
@@ -1005,6 +1025,13 @@ public class AhdcAlignmentAnalyser {
 
     }
 
+    /** Number of threads running simultaneously */
+    static int nThreads = 40; // 4
+    /** Maximum capacity of the queue conataining events */
+    static int queue_capacity = 7000; // 150
+
+    /** Frequency of event loggin */
+    static int frequency_of_event_loggin = 100;
 
     /**
      * Uncomment the relevant line to run the analysis
@@ -1012,9 +1039,9 @@ public class AhdcAlignmentAnalyser {
      * Code to be run: amon/scripts/hipo/run-ahdc-aligner.sh
      */
     public static void main(String[] args) {
-        //scan_ahdc_position(args);
-        layer_alignment(args);
-        //wire_alignment(args);
+        //scan_ahdc_position(args, false);
+        layer_alignment(args, true);
+        //wire_alignment(args, false);
     }
 
 
