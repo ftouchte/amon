@@ -59,6 +59,7 @@ public class AlertElasticAnalyser {
                 double py = recBank.getFloat("py", row);
                 double pz = recBank.getFloat("pz", row);
                 ParticleRow electron_candidate = new ParticleRow(px * Units.GeV, py * Units.GeV, pz * Units.GeV);
+                electron_candidate.SetBankRow(row);
                 // physics kinematics
                 double scattered_beam_energy = Math.sqrt(Math.pow(electron_candidate.p(Units.GeV),2) + Math.pow(electron_mass,2));
                 double nu = beam_energy - scattered_beam_energy;
@@ -74,6 +75,7 @@ public class AlertElasticAnalyser {
                         double py1 = trackBank.getFloat("py", trow);
                         double pz1 = trackBank.getFloat("pz", trow);
                         ParticleRow track_candidate = new ParticleRow(px1 * Units.MeV, py1 * Units.MeV, pz1 * Units.MeV);
+                        track_candidate.SetBankRow(trow);
                         if (trackBank.getInt("n_hits", trow) >= nhits_min) {
                             all_tracks.add(track_candidate);
                         }

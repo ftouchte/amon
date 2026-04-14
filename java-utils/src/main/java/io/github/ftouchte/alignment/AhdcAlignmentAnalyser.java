@@ -41,6 +41,7 @@ import org.jlab.service.alert.ALERTEngine;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.fitting.CrystalBall;
 import io.github.ftouchte.fitting.CrystallBallFitter;
+import io.github.ftouchte.utils.ParticleRow;
 import io.github.ftouchte.utils.fOptions;
 
 
@@ -410,7 +411,8 @@ public class AhdcAlignmentAnalyser {
 
 
     static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine, boolean flag_do_fit) {
-        if (analyser.hasElasticElectron(event)) {
+        //if (analyser.hasElasticElectron(event)) {
+        if (analyser.IsElastic(event)) {
             // // Retrieve the kinematics of the electron
             // ParticleRow electron = analyser.getElectron();
 
@@ -426,30 +428,36 @@ public class AhdcAlignmentAnalyser {
             DataBank trackBank = event.getBank("AHDC::kftrack");
             DataBank hitBank = event.getBank("AHDC::hits");
 
-            // Loop over tracks
-            for (int i = 0; i < trackBank.rows(); i++) {
-                int trackid = trackBank.getInt("trackid", i);
-                double vz = trackBank.getFloat("z", i); // mm
-                for (int j = 0; j < hitBank.rows(); j++) {
-                    if (trackid == hitBank.getInt("trackid", j)) {
-                        int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
-                        double residual = hitBank.getDouble("residual", j); // mm
-                        double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm, residual_LR stocked here for dev purpose
-                        int component = hitBank.getInt("wire", j);
-                        AhdcWireId wireId = new AhdcWireId(1, layer, component);
+            // Look at residuals in elastic tracks
+            ParticleRow elastic_track = analyser.getAhdcTrack();
+            int track_row = elastic_track.GetBankRow();
+            int trackid = trackBank.getInt("trackid", track_row);
+            double vz = trackBank.getFloat("z", track_row); // mm
+            for (int j = 0; j < hitBank.rows(); j++) {
+                if (trackid == hitBank.getInt("trackid", j)) {
+                    int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
+                    double residual = hitBank.getDouble("residual", j); // mm
+                    double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm, residual_LR stocked here for dev purpose
+                    int component = hitBank.getInt("wire", j);
+                    AhdcWireId wireId = new AhdcWireId(1, layer, component);
 
-                        // Fill histograms per layers
-                        histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
-                        histos.h1_residual_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual);
-                        histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz, residual_LR);
-                        histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
-                        histos.h1_residual_per_layers.get(0).fill(residual);
-                        histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz, residual_LR);
+                    // Fill histograms per layers
+                    histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
+                    histos.h1_residual_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual);
+                    histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz, residual_LR);
+                    histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
+                    histos.h1_residual_per_layers.get(0).fill(residual);
+                    histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz, residual_LR);
 
-                        // Fill histos per wires
-                        histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
-                    }
+                    // Fill histos per wires
+                    histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
+
+                    // if (Math.abs(residual_LR) < 1e-5) {
+                    //     hitBank.show();
+                    //     trackBank.show();
+                    // }
                 }
+                
                 // double px = trackBank.getFloat("px", i);
                 // double py = trackBank.getFloat("py", i);
                 // double pz = trackBank.getFloat("pz", i);
@@ -1070,7 +1078,7 @@ public class AhdcAlignmentAnalyser {
     }
 
     /** Number of threads running simultaneously */
-    static int nThreads = 80; // 4
+    static int nThreads = 40; // 4
     /** Maximum capacity of the queue conataining events */
     static int queue_capacity = 9000; // 150
 
