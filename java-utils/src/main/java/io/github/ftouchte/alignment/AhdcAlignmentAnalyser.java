@@ -22,6 +22,7 @@ import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
+import org.jlab.geom.detector.alert.AHDC.AlertDCWireIdentifier;
 import org.jlab.groot.base.PadMargins;
 import org.jlab.groot.base.TStyle;
 import org.jlab.groot.data.GraphErrors;
@@ -188,66 +189,8 @@ public class AhdcAlignmentAnalyser {
         for (int i = 0; i < global_histos.h1_residual_LR_per_layers.size(); i++) {
 
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
-
-            /// --- initialize fit parameters
-            float[] data = h.getData();
-            double amp = h.getMax();
-            int binMax = h.getMaximumBin();
-            int binHalfLeft = -1;
-            int binHalfRight = -1;
-            int binTenthLeft = -1;
-            int binTenthRight = -1;
-            for (int bin = 0; bin < data.length-1; bin++) {
-                if (bin < binMax) {
-                    if (data[bin] < 0.5*amp && data[bin+1] > 0.5*amp) {
-                        binHalfLeft = bin;
-                    }
-                    if (data[bin] < 0.1*amp && data[bin+1] > 0.1*amp) {
-                        binTenthLeft = bin;
-                    }
-                } else {
-                    if (data[bin] > 0.5*amp && data[bin+1] < 0.5*amp) {
-                        binHalfRight = bin;
-                    }
-                    if (data[bin] > 0.1*amp && data[bin+1] < 0.1*amp) {
-                        binTenthRight = bin;
-                    }
-                }
-            }
-            double x1 = h.getxAxis().getBinCenter(binHalfLeft); // value at half amplitude
-            double x2 = h.getxAxis().getBinCenter(binHalfRight); // value at half amplitude
-            double xpeak = h.getxAxis().getBinCenter(h.getMaximumBin());
-            double x01 = h.getxAxis().getBinCenter(binTenthLeft); // value at 0.1* amplitude
-            double x02 = h.getxAxis().getBinCenter(binTenthRight); // value at 0.1* amplitude
-
-            double sigma = (x2-x1)/2;
-            double xmin = xpeak - 1.4*sigma;
-            double xmax = xpeak + 1.4*sigma;
             
-            double alpha0 = 0;
-            double leftWidth  = xpeak - x01;
-            double rightWidth = x02 - xpeak;
-            CrystalBall.QueueSide cbSide = CrystalBall.QueueSide.LEFT; // per defaulf, queue à gauche
-            if (leftWidth > rightWidth) { // right asymmetry
-                alpha0 = leftWidth/sigma;
-            } else {
-                alpha0 = rightWidth/sigma;
-                cbSide = CrystalBall.QueueSide.RIGHT;
-            }
-
-            // perform fit
-            CrystallBallFitter cbFitter = new CrystallBallFitter();
-            //cbFitter.setAlphaParameter(Math.abs(alpha0), Math.max(0.7*Math.abs(alpha0), 1e-3), + 1.3*Math.abs(alpha0));
-            cbFitter.setAlphaParameter(alpha0, 0.3, 5);
-            cbFitter.setNpowerParameter(5, 3, 100); // 3 is a standard value
-            cbFitter.setMuParameter(xpeak, xmin, xmax);
-            cbFitter.setSigmaParameter(sigma, Math.max(0.6*sigma, 1e-6), 1.1*sigma);
-            cbFitter.setAmplitudeParameter(amp, 0.8*amp, 1.2*amp);
-            cbFitter.setQueueSide(cbSide);
-            cbFitter.print();
-
-            
-            Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
             CrystalBall cb = fitResult.getFirst();
             System.out.println("* layer + " + i);
             cb.print();
@@ -260,12 +203,13 @@ public class AhdcAlignmentAnalyser {
             if (i > 0) {                      
                 results.layer_residuals[i-1] = mean;
                 // Add results in the title for partical reason (the groot's version is too old)
-                h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.3f deg", mean, width, results.layer_angles[i-1]));
+                //h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.3f deg", mean, width, results.layer_angles[i-1]));
+                h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.4f -> %.4f deg", mean, width, results.layer_angles_start[i-1], results.layer_angles_end[i-1]));
             }
             if (i == 0) {
                 h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             }
-            h.setTitleY(String.format("iter %d , count", niter));
+            //h.setTitleY(String.format("iter %d , count", niter));
 
             g_layer.addPoint(i, mean, 0, 0);
             g_layer_cost.addPoint(i, cb.getFitCost(), 0, 0);
@@ -373,6 +317,8 @@ public class AhdcAlignmentAnalyser {
         check_output_dir(outDir + "/layers/");
         String layerOutDir = outDir + "/layers/iter-" + niter;
         check_output_dir(layerOutDir);
+        String slicesDir = layerOutDir + "/corr-slices";
+        check_output_dir(slicesDir);
 
         EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
@@ -393,32 +339,28 @@ public class AhdcAlignmentAnalyser {
             for (int bin = 0; bin < h2.getXAxis().getNBins(); bin++) {
                 
                 H1F h = h2.sliceX(bin);
-                
-                /// --- do a gaussian fit for simplicity
-                double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
-                double sigma = h.getRMS();
-                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.4*sigma, peak+1.4*sigma);
-                //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
-                func.setParameter(0, h.getMax());
-                func.setParameter(1, h.getMean());
-                func.setParameter(2, h.getRMS());
-                func.setParameter(3, h.getMin());
-                func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
-                func.setParLimits(1, -3, 3);
-                func.setParLimits(2, 0, 3);
-                func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
-                func.setLineColor(2);
-                func.setLineWidth(2);
-                h.fit(func);
-                // Retrieve fit results
-                double mean = func.getParameter(1);
-                double width = func.getParameter(2);
+
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                CrystalBall cb = fitResult.getFirst();
+                System.out.println("* layer + " + i);
+                cb.print();
+                GraphErrors func = fitResult.getSecond();
+                double mean = cb.getMu();
+                double width = cb.getSigma();
 
                 // store results
                 if (width < 0.5){
                     gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
                     gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
                 }
+                h.setTitleX("residual LR (mm)");
+                h.setTitleY("count");
+                if (i > 0){ 
+                    h.setTitle(String.format("mean : %f , width %f", mean, width));
+                }
+
+                // output
+                save_histo1D(h, func, String.format("%s/layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
             } // end loop over bin
 
             // now fit the graph with a strait line
@@ -430,7 +372,7 @@ public class AhdcAlignmentAnalyser {
             PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(2);
             double[] params = polFitter.fit(observedPoints.toList());
 
-            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -16, 16);
+            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -160, 160);
             func.setLineColor(2);
             func.setLineWidth(4);
             
@@ -438,13 +380,24 @@ public class AhdcAlignmentAnalyser {
             c.cd(i);
             c.getPad(i).setPalette("kBird");
             c.getPad(i).getAxisFrame().setDrawAxisZ(false);
-            h2_initial.setTitle(String.format("slope : %f, constant : %f", params[1], params[0]));
+            h2_initial.setTitle(String.format("300*slope : %f, constant : %f", params[1]*300, params[0]));
             c.draw(h2_initial);
             //c.draw(gr, "same P");
             c.draw(func, "same L");
             c.draw(gr_bis, "same P");
             c.getPad(i).getAxisY().setRange(-0.5, 0.5);
             c.getPad(i).getAxisFrame().setDrawAxisZ(false); // again
+
+            // residual analysis based on the fit
+            if (i > 0) {
+                double slope = params[1];
+                double constant = params[0];
+                double residual_start = slope*gr_bis.getDataX(1) + constant; // 0 ignored
+                double residual_end = slope*gr_bis.getDataX(gr_bis.getDataSize(0)-2) + constant; // gr_bis.getDataSize(0) - 1 ignored
+
+                results.layer_residuals_start[i-1] = residual_start;
+                results.layer_residuals_end[i-1] = residual_end;
+            }
 
             
 
@@ -476,12 +429,12 @@ public class AhdcAlignmentAnalyser {
             // Loop over tracks
             for (int i = 0; i < trackBank.rows(); i++) {
                 int trackid = trackBank.getInt("trackid", i);
-                double vz = trackBank.getFloat("z", i)*0.1; // convert mm to cm
+                double vz = trackBank.getFloat("z", i); // mm
                 for (int j = 0; j < hitBank.rows(); j++) {
                     if (trackid == hitBank.getInt("trackid", j)) {
                         int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
                         double residual = hitBank.getDouble("residual", j); // mm
-                        double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm
+                        double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm, residual_LR stocked here for dev purpose
                         int component = hitBank.getInt("wire", j);
                         AhdcWireId wireId = new AhdcWireId(1, layer, component);
 
@@ -549,6 +502,34 @@ public class AhdcAlignmentAnalyser {
                 }
                 
             }
+        }
+    }
+
+    /**
+     * 
+     * @param angles modified
+     * @param residuals
+     */
+    static void computeNewLayerAngles(double[] angles, double[] residuals) {
+        for (int i = 0; i < angles.length; i++) {
+            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
+        }
+    }
+
+    static void printRotationAngles(ResultsOverIterations results, boolean flag_wire) {
+        if (!flag_wire) {
+            double[] start = results.layer_angles_start;
+            double[] end = results.layer_angles_end;
+            System.out.println("----------------------------------------------");
+            System.out.println("Correction angles to be applied");
+                System.out.printf("   %5s   %6s    %6s\n", "layer", "start", "end");
+            for (int i = 0; i < start.length; i++) {
+                System.out.printf("   %5d   %6.4f    %6.4f\n", AhdcWireId.number2layer(i+1), start[i], end[i]);
+            }
+            System.out.println("----------------------------------------------");
+        } else {
+            System.out.println("to be done later...");
         }
     }
 
@@ -636,32 +617,21 @@ public class AhdcAlignmentAnalyser {
         return indices;
     }
 
-    static void computeNewLayerAnglesV2(ResultsOverIterations results) {
-        double[] angles = results.layer_angles;
-        double[] residuals = results.layer_residuals;
-        
-        // find the smallest residuals
-        int i_min = -1;
-        double res_min = 1e10;
-        for (int i = 0; i < residuals.length; i++) {
-            if (Math.abs(residuals[i]) < res_min) {
-                res_min = Math.abs(residuals[i]);
-                i_min = i;
-            }
-        }
-
-        // rotate others layers with respect the best one (the one with the smallest residual)
-        for (int i = 0; i < angles.length; i++) {
-            if (i != i_min) {
-                double alphaRad = (residuals[i]-residuals[i_min])/AhdcWireId.layerNum2Radius(i+1);
-                angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
-            }
-            
-        }
-
-
+    static AlertDCDetector rotateDetector(double[] _wire_angles_start, double[] _wire_angles_end) {
+        AlertDCFactory factory = new AlertDCFactory();
+        factory.setWireCorrectionAngles(_wire_angles_start, _wire_angles_end);
+        return factory.createDetectorCLAS(new DatabaseConstantProvider());
     }
 
+    static public double[] layerAngles2WireAngles(double[] layer_angles) {
+        double[] wire_angles = new double[576];
+        for (int i = 0; i < 576; i++) {
+            AlertDCWireIdentifier identifier = new AlertDCWireIdentifier(i);
+            int num = AlertDCWireIdentifier.layer2number(identifier.getLayerId())-1;
+            wire_angles[i] = layer_angles[num];
+        }
+        return wire_angles;
+    }
 
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
@@ -783,15 +753,18 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
 
             /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
-            undoLayerRotations(AHDCdet, results.layer_angles);
+            //undoLayerRotations(AHDCdet, results.layer_angles);
 
             /// --- Update rotation angles
-            computeNewLayerAngles(results);
+            //computeNewLayerAngles(results);
+            computeNewLayerAngles(results.layer_angles_start, results.layer_residuals_start);
+            computeNewLayerAngles(results.layer_angles_end, results.layer_residuals_end);
             //computeNewLayerAngles(results, 2);
-            //computeNewLayerAnglesV2(results);
+            printRotationAngles(results, false);
 
             /// --- Rotate AHDC detector
-            doLayerRotations(AHDCdet, results.layer_angles);
+            //doLayerRotations(AHDCdet, results.layer_angles);
+            AHDCdet = rotateDetector(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1025,10 +998,81 @@ public class AhdcAlignmentAnalyser {
 
     }
 
+    public static void save_histo1D(H1F h, GraphErrors gr, String filename) {
+        EmbeddedCanvas c = new EmbeddedCanvas(800, 600);
+        c.draw(h);
+        c.draw(gr, "same L");
+        c.save(filename);
+    }
+
+    public static Pair<CrystalBall, GraphErrors> fit_with_crystal_ball(H1F h) {
+        /// --- initialize fit parameters
+        float[] data = h.getData();
+        double amp = h.getMax();
+        int binMax = h.getMaximumBin();
+        int binHalfLeft = -1;
+        int binHalfRight = -1;
+        int binTenthLeft = -1;
+        int binTenthRight = -1;
+        for (int bin = 0; bin < data.length-1; bin++) {
+            if (bin < binMax) {
+                if (data[bin] < 0.5*amp && data[bin+1] > 0.5*amp) {
+                    binHalfLeft = bin;
+                }
+                if (data[bin] < 0.1*amp && data[bin+1] > 0.1*amp) {
+                    binTenthLeft = bin;
+                }
+            } else {
+                if (data[bin] > 0.5*amp && data[bin+1] < 0.5*amp) {
+                    binHalfRight = bin;
+                }
+                if (data[bin] > 0.1*amp && data[bin+1] < 0.1*amp) {
+                    binTenthRight = bin;
+                }
+            }
+        }
+        double x1 = h.getxAxis().getBinCenter(binHalfLeft); // value at half amplitude
+        double x2 = h.getxAxis().getBinCenter(binHalfRight); // value at half amplitude
+        double xpeak = h.getxAxis().getBinCenter(h.getMaximumBin());
+        double x01 = h.getxAxis().getBinCenter(binTenthLeft); // value at 0.1* amplitude
+        double x02 = h.getxAxis().getBinCenter(binTenthRight); // value at 0.1* amplitude
+
+        double sigma = (x2-x1)/2;
+        double xmin = xpeak - 1.4*sigma;
+        double xmax = xpeak + 1.4*sigma;
+        
+        double alpha0 = 0;
+        double leftWidth  = xpeak - x01;
+        double rightWidth = x02 - xpeak;
+        CrystalBall.QueueSide cbSide = CrystalBall.QueueSide.LEFT; // per defaulf, queue à gauche
+        if (leftWidth > rightWidth) { // right asymmetry
+            alpha0 = leftWidth/sigma;
+        } else {
+            alpha0 = rightWidth/sigma;
+            cbSide = CrystalBall.QueueSide.RIGHT;
+        }
+
+        // perform fit
+        CrystallBallFitter cbFitter = new CrystallBallFitter();
+        //cbFitter.setAlphaParameter(Math.abs(alpha0), Math.max(0.7*Math.abs(alpha0), 1e-3), + 1.3*Math.abs(alpha0));
+        cbFitter.setAlphaParameter(alpha0, 0.3, 5);
+        cbFitter.setNpowerParameter(5, 3, 100); // 3 is a standard value
+        cbFitter.setMuParameter(xpeak, xmin, xmax);
+        cbFitter.setSigmaParameter(sigma, Math.max(0.6*sigma, 1e-6), 1.1*sigma);
+        cbFitter.setAmplitudeParameter(amp, 0.8*amp, 1.2*amp);
+        cbFitter.setQueueSide(cbSide);
+        cbFitter.print();
+
+        
+        Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
+
+        return fitResult;
+    }
+
     /** Number of threads running simultaneously */
-    static int nThreads = 40; // 4
+    static int nThreads = 80; // 4
     /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 7000; // 150
+    static int queue_capacity = 9000; // 150
 
     /** Frequency of event loggin */
     static int frequency_of_event_loggin = 100;

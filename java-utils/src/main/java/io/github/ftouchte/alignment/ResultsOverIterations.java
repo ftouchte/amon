@@ -13,6 +13,12 @@ public class ResultsOverIterations {
     //public double[] layer_angles = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     public double[] layer_residuals = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
+    public double[] layer_angles_start = {0.881, 1.023, 0.638, 0.905, 0.545, 0.680, 0.499, 0.567};
+    public double[] layer_angles_end = {0.881, 1.023, 0.638, 0.905, 0.545, 0.680, 0.499, 0.567};
+
+    public double[] layer_residuals_start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    public double[] layer_residuals_end = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
     // wires
     public double[] wire_angles = new double[576];
     public double[] wire_residuals = new double[576];

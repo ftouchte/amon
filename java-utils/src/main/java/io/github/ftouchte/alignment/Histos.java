@@ -58,9 +58,9 @@ public class Histos {
 
         /// --- histograms 2D
         for (int i = 0; i < 9; i++) {
-            H2F h = new H2F("corr-vz-residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, 60, -16, 16, 120, -1.5, 1.5);
-            h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", vz (cm)");
-            if (i == 0) h.setTitleX("all layers, vz(cm)");
+            H2F h = new H2F("corr-vz-residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, 60, -160, 160, 120, -1.5, 1.5);
+            h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", vz (mm)");
+            if (i == 0) h.setTitleX("all layers, vz(mm)");
             if (i % 3 == 0) h.setTitleY("residual LR (mm)");
             h2_corr_vz_residual_LR_per_layers.add(h);
         }
