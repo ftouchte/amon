@@ -366,14 +366,14 @@ public class AhdcAlignmentAnalyser {
 
             // now fit the graph with a strait line
             WeightedObservedPoints observedPoints = new WeightedObservedPoints();
-            for (int pt = 1; pt < gr_bis.getDataSize(0)-1; pt++) { // the 2 end points are excluded
+            for (int pt = 2; pt < gr_bis.getDataSize(0)-2; pt++) { // the 4 end points are excluded
                 observedPoints.add(gr_bis.getDataX(pt), gr_bis.getDataY(pt));
             }
             //observedPoints.add(i, niter);
             PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(2);
             double[] params = polFitter.fit(observedPoints.toList());
 
-            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -160, 160);
+            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -215, 160);
             func.setLineColor(2);
             func.setLineWidth(4);
             
@@ -393,8 +393,12 @@ public class AhdcAlignmentAnalyser {
             if (i > 0) {
                 double slope = params[1];
                 double constant = params[0];
-                double residual_start = slope*gr_bis.getDataX(1) + constant; // 0 ignored
-                double residual_end = slope*gr_bis.getDataX(gr_bis.getDataSize(0)-2) + constant; // gr_bis.getDataSize(0) - 1 ignored
+                double z_min = -188;
+                double z_max = 162.5;
+                // double residual_start = slope*gr_bis.getDataX(2) + constant; 
+                // double residual_end = slope*gr_bis.getDataX(gr_bis.getDataSize(0)-3) + constant;
+                double residual_start = slope*z_min + constant; 
+                double residual_end = slope*z_max + constant; 
 
                 results.layer_residuals_start[i-1] = residual_start;
                 results.layer_residuals_end[i-1] = residual_end;
@@ -520,6 +524,21 @@ public class AhdcAlignmentAnalyser {
      */
     static void computeNewLayerAngles(double[] angles, double[] residuals) {
         for (int i = 0; i < angles.length; i++) {
+            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
+        }
+    }
+
+    static void computeNewLayerAngles(double[] angles, double[] residuals, int nlayers) {
+        double[] abs_residuals = new double[residuals.length];
+        for (int i = 0; i < residuals.length; i ++) {
+            abs_residuals[i] = Math.abs(residuals[i]);
+        }
+        /// --- sort values according to the residuals
+        int[] sortedIndices = sortIndices(abs_residuals, false);
+        /// --- only look at the nlayers worst residuals
+        for (int loop = 0; loop < sortedIndices.length && loop < nlayers; loop++) {
+            int i = sortedIndices[loop];
             double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
@@ -764,9 +783,10 @@ public class AhdcAlignmentAnalyser {
             //undoLayerRotations(AHDCdet, results.layer_angles);
 
             /// --- Update rotation angles
+
+            computeNewLayerAngles(results.layer_angles_start, results.layer_residuals_start, 8);
+            computeNewLayerAngles(results.layer_angles_end, results.layer_residuals_end, 8);
             //computeNewLayerAngles(results);
-            computeNewLayerAngles(results.layer_angles_start, results.layer_residuals_start);
-            computeNewLayerAngles(results.layer_angles_end, results.layer_residuals_end);
             //computeNewLayerAngles(results, 2);
             printRotationAngles(results, false);
 
@@ -1078,7 +1098,7 @@ public class AhdcAlignmentAnalyser {
     }
 
     /** Number of threads running simultaneously */
-    static int nThreads = 40; // 4
+    static int nThreads = 60; // 4
     /** Maximum capacity of the queue conataining events */
     static int queue_capacity = 9000; // 150
 
