@@ -100,7 +100,7 @@ public class AhdcAlignmentAnalyser {
                     DataEvent event = queue.take();
 
                     nevents++;
-                    if (nevents % frequency_of_event_loggin == 0) {
+                    if (nevents % frequency_of_event_login == 0) {
                         System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
                     }
                 
@@ -402,6 +402,9 @@ public class AhdcAlignmentAnalyser {
 
                 results.layer_residuals_start[i-1] = residual_start;
                 results.layer_residuals_end[i-1] = residual_end;
+
+                results.layer_residuals_slope[i-1] = slope;
+                results.layer_residuals_constant[i-1] = constant;
             }
 
             
@@ -755,11 +758,33 @@ public class AhdcAlignmentAnalyser {
         g0.setTitleX("iterations");
         g0.setTitleY("cost");
 
+        ArrayList<GraphErrors> gr_slopes = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("layer slope");
+            gr_slopes.add(gr);
+        }
+
+        ArrayList<GraphErrors> gr_constants = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("layer constant");
+            gr_constants.add(gr);
+        }
+
         /// --- Loop over criteria
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 12) {
+        while (value > 1*1e-3 && niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -794,11 +819,32 @@ public class AhdcAlignmentAnalyser {
             //doLayerRotations(AHDCdet, results.layer_angles);
             AHDCdet = rotateDetector(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
+            // output
+            for (int i = 0; i < 8; i++) {
+                gr_slopes.get(i).addPoint(niter, results.layer_residuals_slope[i], 0, 0);
+                gr_constants.get(i).addPoint(niter, results.layer_residuals_constant[i], 0, 0);
+            }
+
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
         c0.draw(g0);
         c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
         System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1200, 900);
+        for (int i = 0; i < 8; i++) {
+            if (i == 0) {
+                c1.draw(gr_slopes.get(i), "P");
+                c2.draw(gr_constants.get(i), "P");
+            } else {
+                c1.draw(gr_slopes.get(i), "same P");
+                c2.draw(gr_constants.get(i), "same P");
+            }
+        }
+
+        c1.save(outDir + "/summary-layer-slopes-over-iterations.pdf");
+        c2.save(outDir + "/summary-layer-constants-over-iterations.pdf");
 
     }
 
@@ -1103,7 +1149,7 @@ public class AhdcAlignmentAnalyser {
     static int queue_capacity = 9000; // 150
 
     /** Frequency of event loggin */
-    static int frequency_of_event_loggin = 100;
+    static int frequency_of_event_login = 100;
 
     /**
      * Uncomment the relevant line to run the analysis
