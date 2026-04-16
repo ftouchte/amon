@@ -521,9 +521,7 @@ public class AhdcAlignmentAnalyser {
     }
 
     /**
-     * 
-     * @param angles modified
-     * @param residuals
+     *  Here all layers are rotated. Equivalent to {@link #computeNewLayerAngles(double[], double[], int)} for nlayers = 8
      */
     static void computeNewLayerAngles(double[] angles, double[] residuals) {
         for (int i = 0; i < angles.length; i++) {
@@ -532,6 +530,12 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
+    /**
+     * Rotate the layers with the worst shifts
+     * @param angles angles to be updated 
+     * @param residuals residuals to estimate the new correction angles
+     * @param nlayers number of layer to be rotated.
+     */
     static void computeNewLayerAngles(double[] angles, double[] residuals, int nlayers) {
         double[] abs_residuals = new double[residuals.length];
         for (int i = 0; i < residuals.length; i ++) {
@@ -567,47 +571,12 @@ public class AhdcAlignmentAnalyser {
      * New method to update rotation angles
      * @param results
      */
-    static void computeNewLayerAngles(ResultsOverIterations results) {
-        double[] angles = results.layer_angles;
-        double[] residuals = results.layer_residuals;
-        for (int i = 0; i < angles.length; i++) {
-            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
-            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
-        }
-    }
-
-    /**
-     * New method to update rotation angles
-     * @param results
-     */
     static void computeNewWireAngles(ResultsOverIterations results) {
         double[] angles = results.wire_angles;
         double[] residuals = results.wire_residuals;
         for (int i = 0; i < angles.length; i++) {
             AhdcWireId wireId = new AhdcWireId(i);
             double alphaRad = residuals[i]/AhdcWireId.layer2Radius(wireId.layer);
-            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
-        }
-    }
-
-    /**
-     * Rotate the layers with the worst shifts
-     * @param results
-     * @param nlayers number of layer to be rotated.
-     */
-    static void computeNewLayerAngles(ResultsOverIterations results, int nlayers) {
-        double[] angles = results.layer_angles;
-        double[] residuals = results.layer_residuals;
-        double[] abs_residuals = new double[residuals.length];
-        for (int i = 0; i < residuals.length; i ++) {
-            abs_residuals[i] = Math.abs(residuals[i]);
-        }
-        /// --- sort values according to the residuals
-        int[] sortedIndices = sortIndices(abs_residuals, false);
-        /// --- only look at the nlayers worst residuals
-        for (int loop = 0; loop < sortedIndices.length && loop < nlayers; loop++) {
-            int i = sortedIndices[loop];
-            double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
@@ -653,6 +622,11 @@ public class AhdcAlignmentAnalyser {
         return factory.createDetectorCLAS(new DatabaseConstantProvider());
     }
 
+    /**
+     * Convert a layer by layer results to a wire by wire results. Idea: all the wires belonging to the same layer have the same modification.
+     * @param layer_angles
+     * @return a vector of 576 double containing the wire values
+     */
     static public double[] layerAngles2WireAngles(double[] layer_angles) {
         double[] wire_angles = new double[576];
         for (int i = 0; i < 576; i++) {
@@ -663,6 +637,11 @@ public class AhdcAlignmentAnalyser {
         return wire_angles;
     }
 
+    /**
+     * Inverse operation of {@link #doLayerRotations(AlertDCDetector, double[])}
+     * @param AHDCdet AHDC detector to be rotated
+     * @param layer_angles rotation angles for the layers
+     */
     static void undoLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         for (int num = 0; num < 8; num++) {
             // rotate AHDCdet
@@ -676,6 +655,11 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
+    /**
+     * Rotate the layers of the AHDC
+     * @param AHDCdet AHDC detector to be rotated
+     * @param layer_angles rotation angles for the layers
+     */
     static void doLayerRotations(AlertDCDetector AHDCdet, double[] layer_angles) {
         System.out.println("\033[1;32m > Rotate AHDC detector \033[0m");
         for (int num = 0; num < 8; num++) {
@@ -819,7 +803,7 @@ public class AhdcAlignmentAnalyser {
             //doLayerRotations(AHDCdet, results.layer_angles);
             AHDCdet = rotateDetector(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
-            // output
+            ///--- output
             for (int i = 0; i < 8; i++) {
                 gr_slopes.get(i).addPoint(niter, results.layer_residuals_slope[i], 0, 0);
                 gr_constants.get(i).addPoint(niter, results.layer_residuals_constant[i], 0, 0);
@@ -961,7 +945,7 @@ public class AhdcAlignmentAnalyser {
                 undoLayerRotations(AHDCdet, results.layer_angles);
 
                 /// --- Update rotation angles
-                computeNewLayerAngles(results);
+                computeNewLayerAngles(results.layer_angles, results.layer_residuals);
 
                 /// --- Rotate AHDC detector
                 doLayerRotations(AHDCdet, results.layer_angles);
