@@ -13,9 +13,20 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Function;
 
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresOptimizer;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
+import org.apache.commons.math3.fitting.leastsquares.LevenbergMarquardtOptimizer;
+import org.apache.commons.math3.fitting.leastsquares.MultivariateJacobianFunction;
+import org.apache.commons.math3.fitting.leastsquares.ParameterValidator;
+import org.apache.commons.math3.linear.Array2DRowRealMatrix;
+import org.apache.commons.math3.linear.ArrayRealVector;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.Pair;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
@@ -25,6 +36,7 @@ import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWireIdentifier;
 import org.jlab.groot.base.PadMargins;
 import org.jlab.groot.base.TStyle;
+import org.jlab.groot.data.DataVector;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
@@ -36,12 +48,14 @@ import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.jnp.hipo4.data.Event;
 import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
+import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
 
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.fitting.CrystalBall;
 import io.github.ftouchte.fitting.CrystallBallFitter;
 import io.github.ftouchte.utils.ParticleRow;
+import io.github.ftouchte.utils.Units;
 import io.github.ftouchte.utils.fOptions;
 
 
@@ -91,9 +105,14 @@ public class AhdcAlignmentAnalyser {
                 System.out.println("\033[1;32m **** Create new thread : " + Thread.currentThread().getName() + " \033[0m");
                 Histos local_histos = new Histos(niter);
                 AlertElasticAnalyser analyser = new AlertElasticAnalyser();
+                // ALERT engine
                 ALERTEngine alertEngine = new ALERTEngine();
                 alertEngine.init();
                 alertEngine.set_clas_alignement(clas_alignment);
+                // AHDC engine
+                AHDCEngine ahdcEngine = new AHDCEngine();
+                ahdcEngine.init();
+
                 int nevents = 0;
 
                 while (true) {
@@ -106,7 +125,7 @@ public class AhdcAlignmentAnalyser {
                 
                     if (event == EVT_POISON) break;
 
-                    fill_histos(local_histos, event, AHDCdet, analyser, alertEngine, flag_do_fit);
+                    fill_histos(local_histos, event, AHDCdet, analyser, alertEngine, ahdcEngine, flag_do_fit);
 
                 }
 
@@ -183,6 +202,8 @@ public class AhdcAlignmentAnalyser {
         check_output_dir(outDir + "/layers/");
         String layerOutDir = outDir + "/layers/iter-" + niter;
         check_output_dir(layerOutDir);
+
+        /// --- residual LR
         EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
         GraphErrors g_layer = new GraphErrors();
@@ -191,14 +212,21 @@ public class AhdcAlignmentAnalyser {
 
             H1F h = global_histos.h1_residual_LR_per_layers.get(i);
             
+            double mean = 0;
+            double width = -1;
+            GraphErrors gr = null;
             Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
-            CrystalBall cb = fitResult.getFirst();
-            System.out.println("* layer + " + i);
-            cb.print();
-            GraphErrors gr = fitResult.getSecond();
-            double mean = cb.getMu();
-            double width = cb.getSigma();
-            //double width = 0.5*(leftWidth + rightWidth);
+            if (fitResult != null) {
+                CrystalBall cb = fitResult.getFirst();
+                System.out.println("* Fit result : residual LR layer " + i);
+                cb.print();
+                gr = fitResult.getSecond();
+                mean = cb.getMu();
+                width = cb.getSigma();
+
+                g_layer.addPoint(i, mean, 0, 0);
+                g_layer_cost.addPoint(i, cb.getFitCost(), 0, 0);
+            }
 
             // store residual for the current rotation angle 
             if (i > 0) {                      
@@ -209,16 +237,13 @@ public class AhdcAlignmentAnalyser {
             }
             if (i == 0) {
                 h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            }
-            //h.setTitleY(String.format("iter %d , count", niter));
-
-            g_layer.addPoint(i, mean, 0, 0);
-            g_layer_cost.addPoint(i, cb.getFitCost(), 0, 0);
+            }           
 
             // Draw histograms
             c.cd(i);
             c.draw(h);
-            c.draw(gr, "same L");
+            if (gr != null)
+                c.draw(gr, "same L");
             
         }
         c.save(layerOutDir + "/residual_LR_iter_" + niter + ".pdf");
@@ -240,6 +265,74 @@ public class AhdcAlignmentAnalyser {
         c_layer_cost.save(layerOutDir + "/fit-cost-residual-LR-layer-iter-" + niter + ".pdf");
         System.out.println(layerOutDir + "/fit-cost-residual-LR-layer-iter-" + niter + ".pdf");
 
+        /// residual normal
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1500, 1200);
+        c2.divide(3, 3);
+        for (int i = 0; i < global_histos.h1_residual_per_layers.size(); i++) {
+            H1F h = global_histos.h1_residual_per_layers.get(i);
+            // fit
+            double mean = h.getMean();
+            double width = h.getRMS();
+            GraphErrors gr = null;
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            if (fitResult != null) {
+                CrystalBall cb = fitResult.getFirst();
+                System.out.println("* Fit result : residual normal layer " + i);
+                cb.print();
+                gr = fitResult.getSecond();
+                mean = cb.getMu();
+                width = cb.getSigma();
+            }
+            // title
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            // draw
+            c2.cd(i);
+            c2.draw(h);
+            c2.draw(gr, "same L");
+        }
+        c2.save(layerOutDir + "/residual_normal_iter_" + niter + ".pdf");
+        System.out.println("residual_normal_iter_" + niter + ".pdf created");
+
+        /// track theta
+        {
+            H1F h = global_histos.h1_track_theta;
+            // fit
+            double mean = h.getMean();
+            double width = h.getRMS();
+            GraphErrors gr = null;
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            if (fitResult != null) {
+                CrystalBall cb = fitResult.getFirst();
+                System.out.println("* Fit result : track theta ");
+                cb.print();
+                gr = fitResult.getSecond();
+                mean = cb.getMu();
+                width = cb.getSigma();
+            }
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            save_histo1D(h, gr, layerOutDir + "/track_theta.pdf");
+        }
+
+        /// track delta phi
+        {
+            H1F h = global_histos.h1_track_delta_phi;
+            // fit
+            double mean = h.getMean();
+            double width = h.getRMS();
+            GraphErrors gr = null;
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            if (fitResult != null) {
+                CrystalBall cb = fitResult.getFirst();
+                System.out.println("* Fit result : track delta phi");
+                cb.print();
+                gr = fitResult.getSecond();
+                mean = cb.getMu();
+                width = cb.getSigma();
+            }
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            save_histo1D(h, gr, layerOutDir + "/track_delta_phi.pdf");
+        }
     }
 
     static void analyse_wire_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
@@ -321,6 +414,7 @@ public class AhdcAlignmentAnalyser {
         String slicesDir = layerOutDir + "/corr-slices";
         check_output_dir(slicesDir);
 
+        /// --- correlation vz residual LR
         EmbeddedCanvas c = new EmbeddedCanvas(1500, 1200);
         c.divide(3, 3);
 
@@ -341,13 +435,20 @@ public class AhdcAlignmentAnalyser {
                 
                 H1F h = h2.sliceX(bin);
 
+                // fit
+                double mean = h.getMean();
+                double width = h.getRMS();
+                GraphErrors func = null;
                 Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
-                CrystalBall cb = fitResult.getFirst();
-                System.out.println("* layer + " + i);
-                cb.print();
-                GraphErrors func = fitResult.getSecond();
-                double mean = cb.getMu();
-                double width = cb.getSigma();
+                if (fitResult != null) {
+                    CrystalBall cb = fitResult.getFirst();
+                    System.out.println("* Fit result : corr vz residual LR layer + " + i + ",  bin " + bin);
+                    cb.print();
+                    func = fitResult.getSecond();
+                    mean = cb.getMu();
+                    width = cb.getSigma();
+                }
+                h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
 
                 // store results
                 if (width < 0.5){
@@ -361,7 +462,7 @@ public class AhdcAlignmentAnalyser {
                 }
 
                 // output
-                save_histo1D(h, func, String.format("%s/layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
+                save_histo1D(h, func, String.format("%s/residual-LR-layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
             } // end loop over bin
 
             // now fit the graph with a strait line
@@ -369,8 +470,7 @@ public class AhdcAlignmentAnalyser {
             for (int pt = 2; pt < gr_bis.getDataSize(0)-2; pt++) { // the 4 end points are excluded
                 observedPoints.add(gr_bis.getDataX(pt), gr_bis.getDataY(pt));
             }
-            //observedPoints.add(i, niter);
-            PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(2);
+            PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(1);
             double[] params = polFitter.fit(observedPoints.toList());
 
             F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -215, 160);
@@ -407,23 +507,128 @@ public class AhdcAlignmentAnalyser {
                 results.layer_residuals_constant[i-1] = constant;
             }
 
-            
-
-        
         } // end loop over h2
 
         c.save(layerOutDir + "/corr_vz_residual_LR_iter_" + niter + ".pdf");
         System.out.println("corr_vz_residual_LR_iter_" + niter + ".pdf created");
+
+        /// --- time2distance
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1500, 1200);
+        c2.divide(3, 3);
+        for (int i = 0; i < global_histos.h2_time2distance_per_layers.size(); i++) {
+            H2F h2_initial = global_histos.h2_time2distance_per_layers.get(i);
+            H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
+
+            GraphErrors gr = new GraphErrors();
+            gr.setMarkerSize(4);
+            gr.setLineColor(1); // black
+
+            GraphErrors gr_bis = new GraphErrors();
+            gr_bis.setMarkerSize(4);
+            gr_bis.setLineColor(1); // black
+
+            for (int bin = 0; bin < h2.getXAxis().getNBins(); bin++) {
+                
+                H1F h = h2.sliceX(bin);
+                h.setTitleX("distance (mm)");
+                h.setTitleY("count");
+
+                double mean = h.getMean();
+                double width = h.getRMS();
+                GraphErrors func = null;
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                if (fitResult != null) {
+                    CrystalBall cb = fitResult.getFirst();
+                    System.out.println("* Fit result : time2distance layer + " + i + ",  bin " + bin);
+                    cb.print();
+                    func = fitResult.getSecond();
+                    mean = cb.getMu();
+                    width = cb.getSigma();
+                }
+
+                // store results
+                //if (width < 0.5){
+                if (true){
+                    gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
+                    gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
+                }
+                if (i > 0){ 
+                    h.setTitle(String.format("mean : %f , width %f", mean, width));
+                }
+
+                // output
+                save_histo1D(h, func, String.format("%s/time2distance-layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
+            } // end loop over bin
+
+            // Data point to be fit
+            ArrayList<Double> xList = new ArrayList<>();
+            ArrayList<Double> yList = new ArrayList<>();
+            xList.add(0.0);
+            yList.add(0.0);
+            for (int pt = 0; pt < gr_bis.getDataSize(0)-2; pt++) { // exclude the 2 end points
+                double x = gr_bis.getDataX(pt);
+                double y = gr_bis.getDataY(pt);
+                if (x < 230) { // filter
+                    xList.add(x);
+                    yList.add(y);
+                }
+            }
+            double[] xData = new double[xList.size()];
+            double[] yData = new double[xList.size()];
+
+            for (int bin = 0; bin < xData.length; bin++) {
+                xData[bin] = xList.get(bin);
+                yData[bin] = yList.get(bin);
+            }
+
+            // Fit
+            GraphErrors func = null;
+
+            try {
+                double[] fittedParameters = fit_time2distance(xData, yData);
+                int Npts = 1000;
+                double tmin = 0;
+                double tmax = 250;
+                func = new GraphErrors();
+                func.setLineColor(2);
+                func.setLineThickness(1);
+                func.setMarkerSize(0);
+                for (int bin = 0; bin < Npts; bin++) {
+                    double time = tmin + (tmax-tmin)*bin/(Npts-1);
+                    func.addPoint(time, eval_t2d(time, fittedParameters), 0, 0);
+                }
+            } catch (Exception e) {
+                System.out.println("Fail to fit time2disatnce: layer " + i);
+                System.out.println("Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+            
+            c2.cd(i);
+            c2.getPad(i).setPalette("kBird");
+            c2.getPad(i).getAxisFrame().setDrawAxisZ(false);
+            //h2_initial.setTitle(String.format("T2D: %e + %e*x + %e*x^2 + %e*x^3 + %e*x^4", params[0], params[1], params[2], params[3], params[4], params[5]));
+            c2.draw(h2_initial);
+            if (func != null) c2.draw(func, "same L");
+            c2.draw(gr_bis, "same P");
+            c2.getPad(i).getAxisY().setRange(0, 3);
+            c2.getPad(i).getAxisX().setRange(0, 250);
+            c2.getPad(i).getAxisFrame().setDrawAxisZ(false); // again
+
+        }
+        c2.save(layerOutDir + "/time2distance_iter_" + niter + ".pdf");
+        System.out.println("time2distance_LR_iter_" + niter + ".pdf created");
+
     }
 
 
-    static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine, boolean flag_do_fit) {
+    static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine, AHDCEngine ahdcEngine, boolean flag_do_fit) {
         //if (analyser.hasElasticElectron(event)) {
         if (analyser.IsElastic(event)) {
             // // Retrieve the kinematics of the electron
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine
+            ahdcEngine.processDataEvent(event);
             if (flag_do_fit) {
                 alertEngine.processDataEvent(event, AHDCdet);
             } else {
@@ -437,6 +642,7 @@ public class AhdcAlignmentAnalyser {
 
             // Look at residuals in elastic tracks
             ParticleRow elastic_track = analyser.getAhdcTrack();
+            ParticleRow elastic_electron = analyser.getElectron();
             int track_row = elastic_track.GetBankRow();
             int trackid = trackBank.getInt("trackid", track_row);
             double vz = trackBank.getFloat("z", track_row); // mm
@@ -447,17 +653,32 @@ public class AhdcAlignmentAnalyser {
                     double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm, residual_LR stocked here for dev purpose
                     int component = hitBank.getInt("wire", j);
                     AhdcWireId wireId = new AhdcWireId(1, layer, component);
+                    double time = hitBank.getDouble("time", j);
+                    double doca = hitBank.getDouble("doca", j);
+                    double distance = doca - residual;
 
                     // Fill histograms per layers
                     histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
                     histos.h1_residual_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual);
                     histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz, residual_LR);
+                    histos.h2_time2distance_per_layers.get(AhdcWireId.layer2number(layer)).fill(time, distance);
+                        // integrated
                     histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
                     histos.h1_residual_per_layers.get(0).fill(residual);
                     histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz, residual_LR);
+                    histos.h2_time2distance_per_layers.get(0).fill(time, distance);
 
                     // Fill histos per wires
                     histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
+
+                    // Fill integrated histos
+                    histos.h1_track_theta.fill(elastic_track.theta(Units.deg));
+                    double delta_phi = elastic_track.phi(Units.deg) - elastic_electron.phi(Units.deg);
+                    delta_phi = Math.abs(delta_phi) - 180; //center at zero
+                    histos.h1_track_delta_phi.fill(delta_phi);
+
+                    //System.out.println("hit time : " + time);
+
 
                     // if (Math.abs(residual_LR) < 1e-5) {
                     //     hitBank.show();
@@ -1056,15 +1277,27 @@ public class AhdcAlignmentAnalyser {
 
     }
 
+    /**
+     * Save histogram as pdf
+     * @param h histogram
+     * @param gr fit function
+     * @param filename output name (full path)
+     */
     public static void save_histo1D(H1F h, GraphErrors gr, String filename) {
         EmbeddedCanvas c = new EmbeddedCanvas(800, 600);
         c.draw(h);
-        c.draw(gr, "same L");
+        if (gr != null)
+            c.draw(gr, "same L");
         c.save(filename);
     }
 
+    /**
+     * Fit the hsitogram with a cristal ball distribution. Return null if the fit failed
+     * @param h histogram to be fitted
+     * @return
+     */
     public static Pair<CrystalBall, GraphErrors> fit_with_crystal_ball(H1F h) {
-        /// --- initialize fit parameters
+        // initialize fit parameters
         float[] data = h.getData();
         double amp = h.getMax();
         int binMax = h.getMaximumBin();
@@ -1119,12 +1352,136 @@ public class AhdcAlignmentAnalyser {
         cbFitter.setSigmaParameter(sigma, Math.max(0.6*sigma, 1e-6), 1.1*sigma);
         cbFitter.setAmplitudeParameter(amp, 0.8*amp, 1.2*amp);
         cbFitter.setQueueSide(cbSide);
-        cbFitter.print();
+        //cbFitter.print();
 
-        
-        Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
+        try {
+            Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
+            return fitResult;
+        } catch (Exception e) {
+            System.out.println("Crystal Ball fit failed for histogram: "+ h.getTitleX());
+            cbFitter.print();
+            System.out.println("Error: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
 
-        return fitResult;
+    /**
+     * Current time2distance parametrization of Michael. Ref. coatjava
+     * @param time variable
+     * @param params parameters
+     * @return the distance with respect to the AHDC wire
+     */
+    static double eval_t2d(double time, double[] params) {
+        double p1_int = params[0];
+        double p1_slope = params[1];
+        double p2_int = params[2];
+        double p2_slope = params[3];
+        double p3_int = params[4];
+        double p3_slope = params[5];
+        double t1_x0 = params[6];
+        double t1_width = params[7];
+        double t2_x0 = params[8];
+        double t2_width = params[9];
+
+        double p1 = p1_int + p1_slope*time;
+        double p2 = p2_int + p2_slope*time;
+        double p3 = p3_int + p3_slope*time;
+
+        double t1 = 1.0/(1.0 + Math.exp(-(time - t1_x0)/t1_width));
+        double t2 = 1.0/(1.0 + Math.exp(-(time - t2_x0)/t2_width));
+
+        return p1*(1.0 - t1) + t1*p2*(1.0 - t2) + t2*p3;
+    }
+
+    /**
+     * Return the parameters of the time2distance used by by {@link #eval_t2d(double, double[])}
+     * @param xData
+     * @param yData
+     * @return
+     */
+    public static double[] fit_time2distance(double[] xData, double[] yData) {
+
+        // --- Compute a new vector yDataModelled acoording to the model
+        MultivariateJacobianFunction model = new MultivariateJacobianFunction() {
+            
+            public Pair<RealVector, RealMatrix> value(final RealVector parameters) {
+
+                double[] params = parameters.toArray();
+
+                // --- model values               
+                double[] yDataModelled = new double[xData.length];
+
+                for (int i = 0; i < yDataModelled.length; i++) {
+                    yDataModelled[i] = eval_t2d(xData[i], params);
+                }
+
+                // --- jacobian
+                double[][] jacobian = new double[yDataModelled.length][params.length];
+                for (int j = 0; j < params.length; j++) { // columns
+
+                    double[] params_plus = params.clone();
+                    double[] params_minus = params.clone();
+                    
+                    double eps = 1e-6* (Math.abs(params[j]) + 1.0);
+                    params_plus[j]  += eps;
+                    params_minus[j] -= eps;
+
+                    for (int i = 0; i < yDataModelled.length; i++) { // rows
+                        double eval_plus = eval_t2d(xData[i], params_plus);
+                        double eval_minus = eval_t2d(xData[i], params_minus);
+                        jacobian[i][j] = (eval_plus-eval_minus)/(2*eps);
+                    }
+                }
+
+                return new Pair<>(
+                    new ArrayRealVector(yDataModelled),
+                    new Array2DRowRealMatrix(jacobian)
+                );
+            }
+        };
+
+        /// --- parameter validator
+        ParameterValidator validator = new ParameterValidator() {
+            public RealVector validate(RealVector params) {
+                
+                double[] p = params.toArray();
+                // cf. eval_t2d()
+                p[0] = Math.min(Math.max(p[0], -2), 5);
+                p[1] = Math.min(Math.max(p[1], -0.04), 0.04);
+                p[2] = Math.min(Math.max(p[2], -2), 5);
+                p[3] = Math.min(Math.max(p[3], -2), 0.04);
+                p[4] = Math.min(Math.max(p[4], -2), 5);
+                p[5] = Math.min(Math.max(p[5], -4), 0.04);
+                p[6] = Math.min(Math.max(p[6], -10), 50);
+                p[7] = Math.min(Math.max(p[7], 0.1), 100);
+                p[8] = Math.min(Math.max(p[8], 100), 300);
+                p[9] = Math.min(Math.max(p[9], 50), 300);
+
+                return new ArrayRealVector(p);
+            }
+        };
+
+        // from ccdb
+        double[] initialValues = {-0.735266, 	0.1015123, 	-0.025992, 	0.0171851, 	2.312859, 	-0.0070255, 	-4.344386, 	5.362382, 	259.71963, 	112.34450};
+
+        /// --- least square problem to solve : yDataModelled should be close to yData
+        LeastSquaresProblem problem = new LeastSquaresBuilder().
+                                        start(initialValues). // initial parameters
+                                        model(model). // the model
+                                        target(yData). // data to be fit
+                                        parameterValidator(validator). // parameter limits
+                                        lazyEvaluation(false).
+                                        maxEvaluations(5000).
+                                        maxIterations(5000).
+                                        build();
+
+        LeastSquaresOptimizer.Optimum optimum = new LevenbergMarquardtOptimizer().optimize(problem);
+
+        double[] fittedParams = optimum.getPoint().toArray();
+
+        return fittedParams;
+
     }
 
     /** Number of threads running simultaneously */
