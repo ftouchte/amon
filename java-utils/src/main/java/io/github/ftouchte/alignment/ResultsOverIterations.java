@@ -18,11 +18,15 @@ public class ResultsOverIterations {
     // public double[] layer_angles_end = {0.881, 1.023, 0.638, 0.905, 0.545, 0.680, 0.499, 0.567};
 
     // crystal ball v12 iter 12
-    public double[] layer_angles_start = {0.8998, 1.0507, 0.6151, 0.8525, 0.4530, 0.6205, 0.4035, 0.5831};
-    public double[] layer_angles_end   = {0.8774, 0.9017, 0.5051, 0.8746, 0.5643, 0.6194, 0.4645, 0.4064};
+    // public double[] layer_angles_start = {0.8998, 1.0507, 0.6151, 0.8525, 0.4530, 0.6205, 0.4035, 0.5831};
+    // public double[] layer_angles_end   = {0.8774, 0.9017, 0.5051, 0.8746, 0.5643, 0.6194, 0.4645, 0.4064};
+
+    // crystal ball v13 iter 20
+    public double[] layer_angles_start = {0.8609, 1.0181, 0.5654, 0.7998, 0.3913, 0.5151, 0.2749, 0.5057};
+    public double[] layer_angles_end   = {0.8412, 0.8157, 0.4084, 0.7939, 0.4747, 0.5086, 0.3518, 0.2534};
 
     public double[] layer_residuals_start = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    public double[] layer_residuals_end = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    public double[] layer_residuals_end   = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
     public double[] layer_residuals_slope    = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     public double[] layer_residuals_constant = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
