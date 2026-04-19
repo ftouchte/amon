@@ -24,6 +24,9 @@ public class Histos {
     /** 1D residuals LR per wire */
     ArrayList<H1F> h1_residual_LR_per_wires = new ArrayList<>();
 
+    /** 2D residuals LR per wires versus vz*/
+    ArrayList<H2F> h2_corr_vz_residual_LR_per_wires = new ArrayList<>();
+
     /** track theta */
     H1F h1_track_theta;
 
@@ -32,6 +35,9 @@ public class Histos {
 
     /** Time2Distance per layer */
     ArrayList<H2F> h2_time2distance_per_layers = new ArrayList<>();
+
+    /** Time2Distance per wires */
+    ArrayList<H2F> h2_time2distance_per_wires = new ArrayList<>();
 
 
     /**
@@ -79,6 +85,15 @@ public class Histos {
             h2_corr_vz_residual_LR_per_layers.add(h);
         }
 
+        /// h2 corr vz residual LR per wires
+        for (int i = 0; i < 576; i++) {
+            H2F h = new H2F("corr-vz-residual-LR-wire-" + i + "itr-" + niter, 60, -215, 160, 120, -1.5, 1.5);
+            AhdcWireId identifier = new AhdcWireId(i);
+            h.setTitleX("L" + identifier.layer + "W" + identifier.component +  ", vz (mm)");
+            if (i % 3 == 0) h.setTitleY("residual LR (mm)");
+            h2_corr_vz_residual_LR_per_wires.add(h);
+        }
+
         /// h2 time2distance per layers
         for (int i = 0; i < 9; i++) {
             H2F h = new H2F("time2distance-" + AhdcWireId.number2layer(i) + "itr-" + niter, 100, 0, 250, 100, 0, 3);
@@ -86,6 +101,15 @@ public class Histos {
             if (i == 0) h.setTitleX("all layers, time (ns)");
             if (i % 3 == 0) h.setTitleY("distance (mm)");
             h2_time2distance_per_layers.add(h);
+        }
+
+        /// h2 time2distance per wires
+        for (int i = 0; i < 576; i++) {
+            H2F h = new H2F("time2distance-" + i + "itr-" + niter, 100, 0, 250, 100, 0, 3);
+            AhdcWireId identifier = new AhdcWireId(i);
+            h.setTitleX("L" + identifier.layer + "W" + identifier.component +  ", time (ns)");
+            if (i % 3 == 0) h.setTitleY("distance (mm)");
+            h2_time2distance_per_wires.add(h);
         }
 
         /// h1 track theta
@@ -119,6 +143,9 @@ public class Histos {
         // Per wires
         for (int i = 0; i < 576; i++) {
             this.h1_residual_LR_per_wires.get(i).add(histos.h1_residual_LR_per_wires.get(i));
+            this.h2_corr_vz_residual_LR_per_wires.get(i).add(histos.h2_corr_vz_residual_LR_per_wires.get(i));
+            // h2 time2distance
+            this.h2_time2distance_per_wires.get(i).add(histos.h2_time2distance_per_wires.get(i));
         }
 
         // Integrated

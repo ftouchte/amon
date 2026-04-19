@@ -193,9 +193,10 @@ public class AhdcAlignmentAnalyser {
         analyse_layer_2D_histograms(global_histos, outDir, niter, results);
 
         /// --- Analyse histograms per wire
-        if (flag_run_wire_alignment) 
+        if (flag_run_wire_alignment) {
             analyse_wire_histograms(global_histos, outDir, niter, results);
-
+            analyse_wire_2D_histograms(global_histos, outDir, niter, results);
+        }
         
        
     }
@@ -336,6 +337,13 @@ public class AhdcAlignmentAnalyser {
     }
 
     static void analyse_wire_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
+
+        // create a new dir
+        check_output_dir(outDir + "/wires/");
+        String wireOutDir = outDir + "/wires/iter-" + niter;
+        check_output_dir(wireOutDir);
+
+        /// --- residual LR
         // (4x3)x48 = 576
         ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
         for (int i = 0; i < 48; i++) {
@@ -343,45 +351,31 @@ public class AhdcAlignmentAnalyser {
             c0.divide(3, 4);
             canvas.add(c0);
         }
-        // create a new dir
-        check_output_dir(outDir + "/wires/");
-        String wireOutDir = outDir + "/wires/iter-" + niter;
-        check_output_dir(wireOutDir);
+        
         GraphErrors g_wire = new GraphErrors();
+        GraphErrors g_wire_cost = new GraphErrors();
         for (int i = 0; i < global_histos.h1_residual_LR_per_wires.size(); i++) {
             H1F h = global_histos.h1_residual_LR_per_wires.get(i);
-            //double mean = h.getBinContent(h.getMaximumBin());
-            double peak = h.getxAxis().getBinCenter(h.getMaximumBin());
-            double sigma = h.getRMS();
-            if (h.getIntegral() > 100) {
-                F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", peak-1.8*sigma, peak+1.8*sigma);
-                //F1D func = new F1D("func" + h.getName(), "[a]*gaus(x, [b], [c]) + [d]", -1.0, 1.0);
-                func.setParameter(0, h.getMax());
-                func.setParameter(1, h.getMean());
-                func.setParameter(2, h.getRMS());
-                func.setParameter(3, h.getMin());
-                func.setParLimits(0, 0, Math.max(1.5*h.getMax(), 1.0)); // prevent to have a trivial interval : lim_min = lim_max
-                func.setParLimits(1, -3, 3);
-                func.setParLimits(2, 0, 3);
-                func.setParLimits(3, 0, Math.max(1.5*h.getMin(),1.0)); // prevent to have a trivial interval : lim_min = lim_max
-                func.setLineColor(2);
-                func.setLineWidth(2);
-                h.fit(func);
-                // Retrieve fit results
-                double mean = func.getParameter(1);
-                double width = func.getParameter(2);
+            
+            double mean = 0;
+            double width = -1;
+            GraphErrors gr = null;
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            if (fitResult != null) {
+                CrystalBall cb = fitResult.getFirst();
+                // System.out.println("* Fit result : residual LR layer " + i);
+                // cb.print();
+                gr = fitResult.getSecond();
+                mean = cb.getMu();
+                width = cb.getSigma();
 
-                // store residual for the current rotation angle
-                results.wire_residuals[i] = mean;
-                h.setTitle(String.format("iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
                 g_wire.addPoint(i, mean, 0, 0);
-            } else {
-                double mean = 0; // set at zero to prevent weird fit // double mean = h.getMean();
-                results.wire_residuals[i] = mean;
-                g_wire.addPoint(i, mean, 0, 0);
-                //h.setTitle("Not enough entry, fit not performed");
-                h.setTitle(String.format("(No fit) iter : %d, mean : %.5f mm, alpha : %.3f deg", niter, mean, results.wire_angles[i]));
+                g_wire_cost.addPoint(i, cb.getFitCost(), 0, 0);
             }
+
+            // store residual for the current rotation angle                  
+            results.wire_residuals[i] = mean;
+            h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.4f -> %.4f deg", mean, width, results.wire_angles_start[i], results.wire_angles_end[i]));
             
 
             // draw historgrams
@@ -389,6 +383,8 @@ public class AhdcAlignmentAnalyser {
             int canvas_frame = i % 12; // bbetween 0 and 11
             canvas.get(canvas_num).cd(canvas_frame);
             canvas.get(canvas_num).draw(h);
+            if (gr != null)
+                canvas.get(canvas_num).draw(gr, "same L");
         }
 
         // save histograms
@@ -404,6 +400,14 @@ public class AhdcAlignmentAnalyser {
         c_wire.draw(g_wire);
         c_wire.save(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
         System.out.println(wireOutDir + "/summary-residual-LR-wire-iter-" + niter + ".pdf");
+
+        EmbeddedCanvas c_wire_cost = new EmbeddedCanvas(1200, 900);
+        g_wire_cost.setTitleX("wire");
+        g_wire_cost.setTitleY("cost");
+        g_wire_cost.setTitle("Least squares fit cost versus wire");
+        c_wire_cost.draw(g_wire_cost);
+        c_wire_cost.save(wireOutDir + "/monitoring_fit_quality_residual_LR_iter_" + niter + ".pdf");
+        System.out.println(wireOutDir + "/monitoring_fit_quality_residual_LR_iter_" + niter + ".pdf");
     }
 
     static void analyse_layer_2D_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
@@ -451,15 +455,13 @@ public class AhdcAlignmentAnalyser {
                 h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
 
                 // store results
-                if (width < 0.5){
+                //if (width < 0.5){
+                if (true){
                     gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
                     gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
                 }
                 h.setTitleX("residual LR (mm)");
                 h.setTitleY("count");
-                if (i > 0){ 
-                    h.setTitle(String.format("mean : %f , width %f", mean, width));
-                }
 
                 // output
                 save_histo1D(h, func, String.format("%s/residual-LR-layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
@@ -550,9 +552,7 @@ public class AhdcAlignmentAnalyser {
                     gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
                     gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
                 }
-                if (i > 0){ 
-                    h.setTitle(String.format("mean : %f , width %f", mean, width));
-                }
+                h.setTitle(String.format("mean : %f , width %f", mean, width));
 
                 // output
                 save_histo1D(h, func, String.format("%s/time2distance-layer-%d-slice-%d.pdf", slicesDir, i > 0 ? AhdcWireId.number2layer(i) : 0, bin));
@@ -621,6 +621,238 @@ public class AhdcAlignmentAnalyser {
 
     }
 
+    static void analyse_wire_2D_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
+        // same outdir as for 1D histograms
+        check_output_dir(outDir + "/wires/");
+        String wireOutDir = outDir + "/wires/iter-" + niter;
+        check_output_dir(wireOutDir);
+        String slicesDir = wireOutDir + "/corr-slices";
+        check_output_dir(slicesDir);
+
+        /// --- correlation vz residual LR
+        // (4x3)x48 = 576
+        ArrayList<EmbeddedCanvas> canvas = new ArrayList<>(); // 48 canvas
+        for (int i = 0; i < 48; i++) {
+            EmbeddedCanvas c0 = new EmbeddedCanvas(1500, 1600);
+            c0.divide(3, 4);
+            canvas.add(c0);
+        }
+
+        for (int i = 0; i < global_histos.h2_corr_vz_residual_LR_per_wires.size(); i++) {
+            H2F h2_initial = global_histos.h2_corr_vz_residual_LR_per_wires.get(i);
+            H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
+            
+            GraphErrors gr = new GraphErrors();
+            gr.setMarkerSize(4);
+            gr.setLineColor(1); // black
+
+            GraphErrors gr_bis = new GraphErrors();
+            gr_bis.setMarkerSize(4);
+            gr_bis.setLineColor(1); // black
+
+            AhdcWireId identifier = new AhdcWireId(i);
+
+            for (int bin = 0; bin < h2.getXAxis().getNBins(); bin++) {
+                
+                H1F h = h2.sliceX(bin);
+
+                // fit
+                double mean = h.getMean();
+                double width = h.getRMS();
+                GraphErrors func = null;
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                if (fitResult != null) {
+                    CrystalBall cb = fitResult.getFirst();
+                    // System.out.println("* Fit result : corr vz residual LR layer + " + i + ",  bin " + bin);
+                    // cb.print();
+                    func = fitResult.getSecond();
+                    mean = cb.getMu();
+                    width = cb.getSigma();
+                }
+                h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+
+                // store results
+                //if (width < 0.5){
+                if (true){
+                    gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
+                    gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
+                }
+                h.setTitleX("residual LR (mm)");
+                h.setTitleY("count");
+
+                // output
+                save_histo1D(h, func, String.format("%s/residual-LR-wire-L%dW%d-slice-%d.pdf", slicesDir, identifier.layer, identifier.component, bin));
+            } // end loop over bin
+
+            // now fit the graph with a strait line
+            WeightedObservedPoints observedPoints = new WeightedObservedPoints();
+            for (int pt = 2; pt < gr_bis.getDataSize(0)-2; pt++) { // the 4 end points are excluded
+                observedPoints.add(gr_bis.getDataX(pt), gr_bis.getDataY(pt));
+            }
+            PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(1);
+            double[] params = polFitter.fit(observedPoints.toList());
+
+            F1D func = new F1D("strait-fit", String.format("%f + %f*x", params[0], params[1]), -215, 160);
+            func.setLineColor(2);
+            func.setLineWidth(4);
+            
+            // draw
+            int canvas_num = i / 12; // between 0 and 47
+            int canvas_frame = i % 12; // between 0 and 11
+            canvas.get(canvas_num).cd(canvas_frame);
+            canvas.get(canvas_num).getPad(canvas_frame).setPalette("kBird");
+            canvas.get(canvas_num).getPad(canvas_frame).getAxisFrame().setDrawAxisZ(false);
+            h2_initial.setTitle(String.format("300*slope : %f, constant : %f", params[1]*300, params[0]));
+            canvas.get(canvas_num).draw(h2_initial);
+            canvas.get(canvas_num).draw(func, "same L");
+            canvas.get(canvas_num).draw(gr_bis, "same P");
+            canvas.get(canvas_num).getPad(canvas_frame).getAxisY().setRange(-0.5, 0.5);
+            canvas.get(canvas_num).getPad(canvas_frame).getAxisFrame().setDrawAxisZ(false); // again
+
+            // residual analysis based on the fit
+            double slope = params[1];
+            double constant = params[0];
+            double z_min = -188;
+            double z_max = 162.5;
+            double residual_start = slope*z_min + constant; 
+            double residual_end = slope*z_max + constant; 
+
+            results.wire_residuals_start[i] = residual_start;
+            results.wire_residuals_end[i] = residual_end;
+
+            results.wire_residuals_slope[i] = slope;
+            results.wire_residuals_constant[i] = constant;
+
+        } // end loop over h2
+
+        // save histograms
+        for (int i = 0; i < 48; i++) {
+            canvas.get(i).save(wireOutDir + String.format("/corr_vz_resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+            System.out.println(String.format("corr_vz_resilual_LR_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+        }
+
+        /// --- time2distance
+        // (4x3)x48 = 576
+        ArrayList<EmbeddedCanvas> canvas2 = new ArrayList<>(); // 48 canvas
+        for (int i = 0; i < 48; i++) {
+            EmbeddedCanvas c0 = new EmbeddedCanvas(1500, 1600);
+            c0.divide(3, 4);
+            canvas2.add(c0);
+        }
+        //ArrayList<double[]> t2d_params_list = new ArrayList<>();
+        for (int i = 0; i < global_histos.h2_time2distance_per_wires.size(); i++) {
+            H2F h2_initial = global_histos.h2_time2distance_per_wires.get(i);
+            H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
+
+            GraphErrors gr = new GraphErrors();
+            gr.setMarkerSize(4);
+            gr.setLineColor(1); // black
+
+            GraphErrors gr_bis = new GraphErrors();
+            gr_bis.setMarkerSize(4);
+            gr_bis.setLineColor(1); // black
+
+            AhdcWireId identifier = new AhdcWireId(i);
+
+            for (int bin = 0; bin < h2.getXAxis().getNBins(); bin++) {
+                
+                H1F h = h2.sliceX(bin);
+                h.setTitleX("distance (mm)");
+                h.setTitleY("count");
+
+                double mean = h.getMean();
+                double width = h.getRMS();
+                GraphErrors func = null;
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                if (fitResult != null) {
+                    CrystalBall cb = fitResult.getFirst();
+                    // System.out.println("* Fit result : time2distance layer + " + i + ",  bin " + bin);
+                    // cb.print();
+                    func = fitResult.getSecond();
+                    mean = cb.getMu();
+                    width = cb.getSigma();
+                }
+
+                // store results
+                //if (width < 0.5){
+                if (true){
+                    gr.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, width);
+                    gr_bis.addPoint(h2.getXAxis().getBinCenter(bin), mean, 0, 0);
+                }
+                h.setTitle(String.format("mean : %f , width %f", mean, width));
+
+                // output
+                save_histo1D(h, func, String.format("%s/time2distance-wire-L%dW%d-slice-%d.pdf", slicesDir, identifier.layer, identifier.component, bin));
+            } // end loop over bin
+
+            // Data point to be fit
+            ArrayList<Double> xList = new ArrayList<>();
+            ArrayList<Double> yList = new ArrayList<>();
+            xList.add(0.0);
+            yList.add(0.0);
+            for (int pt = 0; pt < gr_bis.getDataSize(0)-2; pt++) { // exclude the 2 end points
+                double x = gr_bis.getDataX(pt);
+                double y = gr_bis.getDataY(pt);
+                if (x < 230) { // filtering
+                    xList.add(x);
+                    yList.add(y);
+                }
+            }
+            double[] xData = new double[xList.size()];
+            double[] yData = new double[xList.size()];
+
+            for (int bin = 0; bin < xData.length; bin++) {
+                xData[bin] = xList.get(bin);
+                yData[bin] = yList.get(bin);
+            }
+
+            // Fit
+            GraphErrors func = null;
+
+            try {
+                double[] fittedParameters = fit_time2distance(xData, yData);
+                int Npts = 1000;
+                double tmin = 0;
+                double tmax = 250;
+                func = new GraphErrors();
+                func.setLineColor(2);
+                func.setLineThickness(1);
+                func.setMarkerSize(0);
+                for (int bin = 0; bin < Npts; bin++) {
+                    double time = tmin + (tmax-tmin)*bin/(Npts-1);
+                    func.addPoint(time, eval_t2d(time, fittedParameters), 0, 0);
+                }
+                //t2d_params_list.add(fittedParameters);
+            } catch (Exception e) {
+                System.out.println("Fail to fit time2disatnce: wire L" + identifier.layer + "W" + identifier.component);
+                System.out.println("Error: " + e.getMessage());
+                e.printStackTrace();
+                //t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+            }
+            
+            int canvas_num = i / 12; // between 0 and 47
+            int canvas_frame = i % 12; // between 0 and 11
+            canvas2.get(canvas_num).cd(canvas_frame);
+            canvas2.get(canvas_num).getPad(canvas_frame).setPalette("kBird");
+            canvas2.get(canvas_num).getPad(canvas_frame).getAxisFrame().setDrawAxisZ(false);
+            h2_initial.setTitle("time2distance");
+            canvas2.get(canvas_num).draw(h2_initial);
+            if (func != null) canvas2.get(canvas_num).draw(func, "same L");
+            canvas2.get(canvas_num).draw(gr_bis, "same P");
+            canvas2.get(canvas_num).getPad(canvas_frame).getAxisY().setRange(0, 3);
+            canvas2.get(canvas_num).getPad(canvas_frame).getAxisX().setRange(0, 250);
+            canvas2.get(canvas_num).getPad(canvas_frame).getAxisFrame().setDrawAxisZ(false); // again
+
+        }
+        // save histograms
+        for (int i = 0; i < 48; i++) {
+            canvas2.get(i).save(wireOutDir + String.format("/time2distance_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+            System.out.println(String.format("time2distance_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
+        }
+        //save_time2distance(t2d_params_list);
+
+    }
+
 
     static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertElasticAnalyser analyser, ALERTEngine alertEngine, AHDCEngine ahdcEngine, boolean flag_do_fit) {
         //if (analyser.hasElasticElectron(event)) {
@@ -671,6 +903,8 @@ public class AhdcAlignmentAnalyser {
 
                     // Fill histos per wires
                     histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
+                    histos.h2_corr_vz_residual_LR_per_wires.get(wireId.num).fill(vz, residual_LR);
+                    histos.h2_time2distance_per_wires.get(wireId.num).fill(time, distance);
 
                     // Fill integrated histos
                     histos.h1_track_theta.fill(elastic_track.theta(Units.deg));
@@ -1202,7 +1436,7 @@ public class AhdcAlignmentAnalyser {
         options.LoadOptions(args);
         options.Show();
 
-        /// --- Verify input files are not empty
+        /// --- Verify input that files are not empty
         ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
         if (inFiles.size() == 0) {
             System.out.println("Please provide inputs files using the option: -i");
@@ -1213,18 +1447,13 @@ public class AhdcAlignmentAnalyser {
         String outDir = options.GetValue("-o");
         check_output_dir(outDir);
 
-        /// --- Define initial geometry parameters
-        AlertDCDetector AHDCdet = (new AlertDCFactory()).createDetectorCLAS(new DatabaseConstantProvider());
-
-        /// --- Start with a well know layer alignment
-        doLayerRotations(AHDCdet, new double[] {0.756, 1.517, 0.984, 0.807, 0.382, 1.305, 0.975, 0.679});
-
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
 
-        /// --- rotate AHDC detector
-        // System.out.println(" Initial rotation angles : AHDC detector");
-        // doWireRotations(AHDCdet, results.wire_angles);
+        /// --- Define initial geometry according the values in ResultsOverIterations (start from layer alignment)
+        results.wire_angles_start = layerAngles2WireAngles(results.layer_angles_start);
+        results.wire_angles_end   = layerAngles2WireAngles(results.layer_angles_end);
+        AlertDCDetector AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1232,11 +1461,33 @@ public class AhdcAlignmentAnalyser {
         g0.setTitleX("iterations");
         g0.setTitleY("cost");
 
+        ArrayList<GraphErrors> gr_slopes = new ArrayList<>();
+        for (int i = 0; i < 576; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("wire slope");
+            gr_slopes.add(gr);
+        }
+
+        ArrayList<GraphErrors> gr_constants = new ArrayList<>();
+        for (int i = 0; i < 576; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("wire constant");
+            gr_constants.add(gr);
+        }
+
         /// --- Loop over criteria
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 2*1e-3 && niter < 25) {
+        while (value > 1*1e-3 && niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1256,20 +1507,41 @@ public class AhdcAlignmentAnalyser {
             g0.addPoint(niter, value, 0, 0);
             System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
 
-            /// --- Undo AHDC rotation before applying new rotation angles to prevent accumulation
-            undoWireRotations(AHDCdet, results.wire_angles);
-
             /// --- Update rotation angles
-            computeNewWireAngles(results);
+            /// functions to be renammed
+            computeNewLayerAngles(results.wire_angles_start, results.wire_residuals_start, 576); // wire start 
+            computeNewLayerAngles(results.wire_angles_end, results.wire_residuals_end, 576); // wire end
+            //printRotationAngles(results, false);
 
-            /// --- Rotate AHDC detector
-            doWireRotations(AHDCdet, results.wire_angles);
-            
+            /// --- Update AHDC geometry
+            AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
+
+            ///--- output
+            for (int i = 0; i < 8; i++) {
+                gr_slopes.get(i).addPoint(niter, results.wire_residuals_slope[i], 0, 0);
+                gr_constants.get(i).addPoint(niter, results.wire_residuals_constant[i], 0, 0);
+            }
+
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
         c0.draw(g0);
         c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
         System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1200, 900);
+        for (int i = 0; i < 576; i++) {
+            if (i == 0) {
+                c1.draw(gr_slopes.get(i), "P");
+                c2.draw(gr_constants.get(i), "P");
+            } else {
+                c1.draw(gr_slopes.get(i), "same P");
+                c2.draw(gr_constants.get(i), "same P");
+            }
+        }
+
+        c1.save(outDir + "/summary-wire-slopes-over-iterations.pdf");
+        c2.save(outDir + "/summary-wire-constants-over-iterations.pdf");
 
     }
 
@@ -1444,18 +1716,20 @@ public class AhdcAlignmentAnalyser {
                 double[] p = params.toArray();
                 // cf. eval_t2d()
                 p[6] = Math.min(Math.max(p[6], 0), 100); // transition time t1
-                p[8] = Math.min(Math.max(p[8], p[6]), 200); // transition time t2
-                p[7] = Math.min(Math.max(p[7], 1e-3*(1+p[6])), 1e-1*(1+p[6])); // should be small
-                p[9] = Math.min(Math.max(p[9], 1e-3*(1+p[8])), 1e-1*(1+p[8])); // should be small
+                p[8] = Math.min(Math.max(p[8], p[6]), 150); // transition time t2
+                p[7] = Math.min(Math.max(p[7], 1e-2*(1+p[6])), p[6]); // should be small
+                p[9] = Math.min(Math.max(p[9], 1e-2*(1+p[8])), p[8]-p[6]); // should be small
 
                 p[0] = Math.min(Math.max(p[0], 0), 0); // int
-                p[1] = Math.min(Math.max(p[1], 0), 0.04); // slope : 4 mm/ 100 ns
+                p[1] = Math.min(Math.max(p[1], 0), 0.015); // slope : 4 mm/ 100 ns
 
-                p[2] = Math.min(Math.max(p[2], p[0]+p[1]*p[6]), 5);
-                p[3] = Math.min(Math.max(p[3], 0), 0.04); // slope : 4 mm/ 100 ns
+                double d1 = p[0]+p[1]*p[6];
+                p[2] = Math.min(Math.max(p[2], 0.9*d1), 1.1*d1);
+                p[3] = Math.min(Math.max(p[3], 0), 0.02); // slope : 4 mm/ 100 ns
 
-                p[4] = Math.min(Math.max(p[4], p[2]+p[3]*p[8]), 5); // int
-                p[5] = Math.min(Math.max(p[5], 0), 0.04); // slope : 4 mm/ 100 ns
+                double d2 = p[2]+p[3]*p[8];
+                p[4] = Math.min(Math.max(p[4], 0.9*d2), 1.1*d2); // int
+                p[5] = Math.min(Math.max(p[5], 0), 0.01); // slope : 4 mm/ 100 ns
                 
                 return new ArrayRealVector(p);
             }
@@ -1515,8 +1789,8 @@ public class AhdcAlignmentAnalyser {
      */
     public static void main(String[] args) {
         //scan_ahdc_position(args, false);
-        layer_alignment(args, true);
-        //wire_alignment(args, false);
+        //layer_alignment(args, true);
+        wire_alignment(args, true);
     }
 
 
