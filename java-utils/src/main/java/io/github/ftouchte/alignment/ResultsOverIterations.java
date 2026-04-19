@@ -31,7 +31,19 @@ public class ResultsOverIterations {
     public double[] layer_residuals_slope    = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     public double[] layer_residuals_constant = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 
+    //-----------
     // wires
+    //-----------
     public double[] wire_angles = new double[576];
     public double[] wire_residuals = new double[576];
+
+    public double[] wire_angles_start = new double[576];
+    public double[] wire_residuals_start = new double[576];
+
+    public double[] wire_angles_end = new double[576];
+    public double[] wire_residuals_end = new double[576];
+
+    public double[] wire_residuals_slope    = new double[576];
+    public double[] wire_residuals_constant = new double[576];
+    
 }
