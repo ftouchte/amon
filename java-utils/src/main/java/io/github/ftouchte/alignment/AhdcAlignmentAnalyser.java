@@ -1,5 +1,7 @@
 package io.github.ftouchte.alignment;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -593,10 +595,12 @@ public class AhdcAlignmentAnalyser {
                     double time = tmin + (tmax-tmin)*bin/(Npts-1);
                     func.addPoint(time, eval_t2d(time, fittedParameters), 0, 0);
                 }
+                //t2d_params_list.add(fittedParameters);
             } catch (Exception e) {
                 System.out.println("Fail to fit time2disatnce: layer " + i);
                 System.out.println("Error: " + e.getMessage());
                 e.printStackTrace();
+                //t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
             }
             
             c2.cd(i);
@@ -613,6 +617,7 @@ public class AhdcAlignmentAnalyser {
         }
         c2.save(layerOutDir + "/time2distance_iter_" + niter + ".pdf");
         System.out.println("time2distance_LR_iter_" + niter + ".pdf created");
+        //save_time2distance(t2d_params_list);
 
     }
 
@@ -1382,7 +1387,7 @@ public class AhdcAlignmentAnalyser {
         double t1 = 1.0/(1.0 + Math.exp(-(time - t1_x0)/t1_width));
         double t2 = 1.0/(1.0 + Math.exp(-(time - t2_x0)/t2_width));
 
-        return p1*(1.0 - t1) + t1*p2*(1.0 - t2) + t2*p3;
+        return p1*(1.0 - t1) + t1*(1.0 - t2)*p2 + t1*t2*p3;
     }
 
     /**
@@ -1438,17 +1443,20 @@ public class AhdcAlignmentAnalyser {
                 
                 double[] p = params.toArray();
                 // cf. eval_t2d()
-                p[0] = Math.min(Math.max(p[0], -2), 5);
-                p[1] = Math.min(Math.max(p[1], -0.04), 0.04);
-                p[2] = Math.min(Math.max(p[2], -2), 5);
-                p[3] = Math.min(Math.max(p[3], -2), 0.04);
-                p[4] = Math.min(Math.max(p[4], -2), 5);
-                p[5] = Math.min(Math.max(p[5], -4), 0.04);
-                p[6] = Math.min(Math.max(p[6], -10), 50);
-                p[7] = Math.min(Math.max(p[7], 0.1), 100);
-                p[8] = Math.min(Math.max(p[8], 100), 300);
-                p[9] = Math.min(Math.max(p[9], 50), 300);
+                p[6] = Math.min(Math.max(p[6], 0), 100); // transition time t1
+                p[8] = Math.min(Math.max(p[8], p[6]), 200); // transition time t2
+                p[7] = Math.min(Math.max(p[7], 1e-3*(1+p[6])), 1e-1*(1+p[6])); // should be small
+                p[9] = Math.min(Math.max(p[9], 1e-3*(1+p[8])), 1e-1*(1+p[8])); // should be small
 
+                p[0] = Math.min(Math.max(p[0], 0), 0); // int
+                p[1] = Math.min(Math.max(p[1], 0), 0.04); // slope : 4 mm/ 100 ns
+
+                p[2] = Math.min(Math.max(p[2], p[0]+p[1]*p[6]), 5);
+                p[3] = Math.min(Math.max(p[3], 0), 0.04); // slope : 4 mm/ 100 ns
+
+                p[4] = Math.min(Math.max(p[4], p[2]+p[3]*p[8]), 5); // int
+                p[5] = Math.min(Math.max(p[5], 0), 0.04); // slope : 4 mm/ 100 ns
+                
                 return new ArrayRealVector(p);
             }
         };
@@ -1475,8 +1483,21 @@ public class AhdcAlignmentAnalyser {
 
     }
 
-    // public static void save_time2distance() {
-
+    // public static void save_time2distance(ArrayList<double[]> layer_list) {
+    //     try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+    //         // loop over layer
+    //         for (int i = 1; i < 9; i++) {
+    //             double[] p = layer_list.get(i);
+                   // need to know the number of wire in each layer, don't have time to do that that night
+    //                 writer.write("First line");
+    //                 writer.newLine();
+    //                 writer.write("Second line");
+    //                 writer.newLine();
+    //                 writer.write("Third line");
+    //             } 
+    //     } catch (IOException e) {
+    //         e.printStackTrace();
+    //     }
     // }
 
     /** Number of threads running simultaneously */
