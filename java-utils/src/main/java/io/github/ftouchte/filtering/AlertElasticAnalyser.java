@@ -11,9 +11,9 @@ import java.util.ArrayList;
 /**
  * Inspired by amon/analysis/kalman-filter/kfmon_data.cpp
  * 
- * For now: the study is made on a deuteron target
+ * For now: the study assumes a deuteron target
  */
-public class AlertElasticAnalyser {
+public class AlertElasticAnalyser implements AlertTrackSelector {
     
     // Constants
     double beam_energy = 2.23951 * Units.GeV; // incident energy if the electron, GeV
@@ -179,5 +179,41 @@ public class AlertElasticAnalyser {
      */
     public ParticleRow getAhdcTrack() {
         return this.ahdc_track;
+    }
+
+    public enum Mode {
+        IS_ELASTIC,
+        HAS_ELASTIC_ELECTRON
+    }
+
+    private Mode mode = Mode.IS_ELASTIC;
+
+
+    public void setFilterMode(Mode _mode) {
+        mode = _mode;
+    }
+
+    public Mode getFilterMode() {
+        return this.mode;
+    }
+
+    public boolean hasGoodTrack(DataEvent event) {
+        if (mode == Mode.IS_ELASTIC) {
+            return this.IsElastic(event);
+        } 
+        else if (mode == Mode.HAS_ELASTIC_ELECTRON) {
+            return this.hasElasticElectron(event);
+        } 
+        else {
+            return false;
+        }
+    }
+
+    public ArrayList<Integer> getAhdcKFTrackRows() {
+        ArrayList<Integer> list = new ArrayList<>();
+        if (ahdc_track != null) {
+            list.add(ahdc_track.GetBankRow());
+        }
+        return list;
     }
 }
