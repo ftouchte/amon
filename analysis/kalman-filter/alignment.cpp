@@ -1,6 +1,8 @@
 /**
  * @brief Make summary plots related to the AHDC alignment
  * 
+ * Code resuming the AHDC position scan
+ * 
  * @date March 31, 2026
  */
 
