@@ -195,7 +195,7 @@ public class AhdcAlignmentAnalyser {
         /// --- Analyse histograms per wire
         if (flag_run_wire_alignment) {
             analyse_wire_histograms(global_histos, outDir, niter, results);
-            analyse_wire_2D_histograms(global_histos, outDir, niter, results);
+            //analyse_wire_2D_histograms(global_histos, outDir, niter, results);
         }
         
        
@@ -218,7 +218,7 @@ public class AhdcAlignmentAnalyser {
             double mean = 0;
             double width = -1;
             GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "residual LR, layer " + i + "/8 in analyse_layer_histograms()...");
             if (fitResult != null) {
                 CrystalBall cb = fitResult.getFirst();
                 // System.out.println("* Fit result : residual LR layer " + i);
@@ -275,7 +275,7 @@ public class AhdcAlignmentAnalyser {
             double mean = h.getMean();
             double width = h.getRMS();
             GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "residual normal, layer " + i + "/8 in analyse_layer_histograms()...");
             if (fitResult != null) {
                 CrystalBall cb = fitResult.getFirst();
                 // System.out.println("* Fit result : residual normal layer " + i);
@@ -301,15 +301,15 @@ public class AhdcAlignmentAnalyser {
             double mean = h.getMean();
             double width = h.getRMS();
             GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
-            if (fitResult != null) {
-                CrystalBall cb = fitResult.getFirst();
-                // System.out.println("* Fit result : track theta ");
-                // cb.print();
-                gr = fitResult.getSecond();
-                mean = cb.getMu();
-                width = cb.getSigma();
-            }
+            // Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "track theta in analyse_layer_histograms()...");
+            // if (fitResult != null) {
+            //     CrystalBall cb = fitResult.getFirst();
+            //     // System.out.println("* Fit result : track theta ");
+            //     // cb.print();
+            //     gr = fitResult.getSecond();
+            //     mean = cb.getMu();
+            //     width = cb.getSigma();
+            // }
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             save_histo1D(h, gr, layerOutDir + "/track_theta.pdf");
         }
@@ -321,7 +321,7 @@ public class AhdcAlignmentAnalyser {
             double mean = h.getMean();
             double width = h.getRMS();
             GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "track delta phi in analyse_layer_histograms()...");
             if (fitResult != null) {
                 CrystalBall cb = fitResult.getFirst();
                 // System.out.println("* Fit result : track delta phi");
@@ -354,37 +354,56 @@ public class AhdcAlignmentAnalyser {
         
         GraphErrors g_wire = new GraphErrors();
         GraphErrors g_wire_cost = new GraphErrors();
-        for (int i = 0; i < global_histos.h1_residual_LR_per_wires.size(); i++) {
-            H1F h = global_histos.h1_residual_LR_per_wires.get(i);
-            
-            double mean = 0;
-            double width = -1;
-            GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
-            if (fitResult != null) {
-                CrystalBall cb = fitResult.getFirst();
-                // System.out.println("* Fit result : residual LR layer " + i);
-                // cb.print();
-                gr = fitResult.getSecond();
-                mean = cb.getMu();
-                width = cb.getSigma();
 
-                g_wire.addPoint(i, mean, 0, 0);
-                g_wire_cost.addPoint(i, cb.getFitCost(), 0, 0);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(wireOutDir + "/bilan_residual_LR_iter_" + niter + ".txt"))) {
+            writer.write("# residual LR per wires");
+            writer.write("# tilte (num, sector, layer, component, mean, width, integral, cost");
+            writer.newLine();
+            writer.newLine();
+            for (int i = 0; i < global_histos.h1_residual_LR_per_wires.size(); i++) {
+                H1F h = global_histos.h1_residual_LR_per_wires.get(i);
+
+                AhdcWireId identifier = new AhdcWireId(i);
+                
+                String line = String.format("%3d   %2d   %2d   %2d   ", i, identifier.sector, identifier.layer, identifier.component);
+                
+                double mean = 0;
+                double width = -1;
+                double cost = -1;
+                GraphErrors gr = null;
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "residual LR, wire " + (i+1) + "/576 in analyse_wire_histograms()...");
+                if (fitResult != null) {
+                    CrystalBall cb = fitResult.getFirst();
+                    // System.out.println("* Fit result : residual LR layer " + i);
+                    // cb.print();
+                    gr = fitResult.getSecond();
+                    mean = cb.getMu();
+                    width = cb.getSigma();
+                    cost = cb.getFitCost();
+
+                    g_wire.addPoint(i, mean, 0, 0);
+                    g_wire_cost.addPoint(i, cb.getFitCost(), 0, 0);
+                }
+
+                // store residual for the current rotation angle                  
+                results.wire_residuals[i] = mean;
+                h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.4f -> %.4f deg", mean, width, results.wire_angles_start[i], results.wire_angles_end[i]));
+                
+                line += String.format("%f   %f   %f   %f", mean, width, h.integral(), cost);
+                writer.write(line);
+                writer.newLine();
+
+                // draw historgrams
+                int canvas_num = i / 12; // between 0 and 47
+                int canvas_frame = i % 12; // bbetween 0 and 11
+                canvas.get(canvas_num).cd(canvas_frame);
+                canvas.get(canvas_num).draw(h);
+                if (gr != null)
+                    canvas.get(canvas_num).draw(gr, "same L");
             }
-
-            // store residual for the current rotation angle                  
-            results.wire_residuals[i] = mean;
-            h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.4f -> %.4f deg", mean, width, results.wire_angles_start[i], results.wire_angles_end[i]));
-            
-
-            // draw historgrams
-            int canvas_num = i / 12; // between 0 and 47
-            int canvas_frame = i % 12; // bbetween 0 and 11
-            canvas.get(canvas_num).cd(canvas_frame);
-            canvas.get(canvas_num).draw(h);
-            if (gr != null)
-                canvas.get(canvas_num).draw(gr, "same L");
+        } catch (IOException e) {
+            System.err.println("Failure : save residual LR fit results");
+            e.printStackTrace();
         }
 
         // save histograms
@@ -443,7 +462,7 @@ public class AhdcAlignmentAnalyser {
                 double mean = h.getMean();
                 double width = h.getRMS();
                 GraphErrors func = null;
-                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "correlation vz and residual LR, layer " + i + "/8, slice " + bin + " in analyse_wire_histograms()...");
                 if (fitResult != null) {
                     CrystalBall cb = fitResult.getFirst();
                     // System.out.println("* Fit result : corr vz residual LR layer + " + i + ",  bin " + bin);
@@ -514,7 +533,7 @@ public class AhdcAlignmentAnalyser {
         /// --- time2distance
         EmbeddedCanvas c2 = new EmbeddedCanvas(1500, 1200);
         c2.divide(3, 3);
-        //ArrayList<double[]> t2d_params_list = new ArrayList<>();
+        ArrayList<double[]> t2d_params_list = new ArrayList<>();
         for (int i = 0; i < global_histos.h2_time2distance_per_layers.size(); i++) {
             H2F h2_initial = global_histos.h2_time2distance_per_layers.get(i);
             H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
@@ -536,7 +555,7 @@ public class AhdcAlignmentAnalyser {
                 double mean = h.getMean();
                 double width = h.getRMS();
                 GraphErrors func = null;
-                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "time2distance, layer " + i + "/8, slice " + bin + " in analyse_wire_histograms()...");
                 if (fitResult != null) {
                     CrystalBall cb = fitResult.getFirst();
                     // System.out.println("* Fit result : time2distance layer + " + i + ",  bin " + bin);
@@ -595,12 +614,12 @@ public class AhdcAlignmentAnalyser {
                     double time = tmin + (tmax-tmin)*bin/(Npts-1);
                     func.addPoint(time, eval_t2d(time, fittedParameters), 0, 0);
                 }
-                //t2d_params_list.add(fittedParameters);
+                t2d_params_list.add(fittedParameters);
             } catch (Exception e) {
-                System.out.println("Fail to fit time2disatnce: layer " + i);
-                System.out.println("Error: " + e.getMessage());
-                e.printStackTrace();
-                //t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+                System.out.println("Failed to fit time2disatnce: layer " + i);
+                // System.out.println("Error: " + e.getMessage());
+                // e.printStackTrace();
+                t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
             }
             
             c2.cd(i);
@@ -617,7 +636,7 @@ public class AhdcAlignmentAnalyser {
         }
         c2.save(layerOutDir + "/time2distance_iter_" + niter + ".pdf");
         System.out.println("time2distance_LR_iter_" + niter + ".pdf created");
-        //save_time2distance(t2d_params_list);
+        save_time2distance(t2d_params_list, layerOutDir + "/ccdb_time2distance_iter_" + niter + ".txt");
 
     }
 
@@ -660,7 +679,7 @@ public class AhdcAlignmentAnalyser {
                 double mean = h.getMean();
                 double width = h.getRMS();
                 GraphErrors func = null;
-                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "correlation vz and residual LR, wire " + (i+1) + "/576, slice " + bin + " in analyse_wire_histograms()...");
                 if (fitResult != null) {
                     CrystalBall cb = fitResult.getFirst();
                     // System.out.println("* Fit result : corr vz residual LR layer + " + i + ",  bin " + bin);
@@ -763,7 +782,7 @@ public class AhdcAlignmentAnalyser {
                 double mean = h.getMean();
                 double width = h.getRMS();
                 GraphErrors func = null;
-                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h);
+                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "time2distance, wire " + (i+1) + "/576, slice " + bin + " in analyse_wire_histograms()...");
                 if (fitResult != null) {
                     CrystalBall cb = fitResult.getFirst();
                     // System.out.println("* Fit result : time2distance layer + " + i + ",  bin " + bin);
@@ -825,8 +844,8 @@ public class AhdcAlignmentAnalyser {
                 //t2d_params_list.add(fittedParameters);
             } catch (Exception e) {
                 System.out.println("Fail to fit time2disatnce: wire L" + identifier.layer + "W" + identifier.component);
-                System.out.println("Error: " + e.getMessage());
-                e.printStackTrace();
+                // System.out.println("Error: " + e.getMessage());
+                // e.printStackTrace();
                 //t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
             }
             
@@ -990,7 +1009,7 @@ public class AhdcAlignmentAnalyser {
      * Rotate the layers with the worst shifts
      * @param angles angles to be updated 
      * @param residuals residuals to estimate the new correction angles
-     * @param nlayers number of layer to be rotated.
+     * @param nlayers number of layers to be rotated.
      */
     static void computeNewLayerAngles(double[] angles, double[] residuals, int nlayers) {
         double[] abs_residuals = new double[residuals.length];
@@ -1003,6 +1022,29 @@ public class AhdcAlignmentAnalyser {
         for (int loop = 0; loop < sortedIndices.length && loop < nlayers; loop++) {
             int i = sortedIndices[loop];
             double alphaRad = residuals[i]/AhdcWireId.layerNum2Radius(i+1);
+            angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
+        }
+    }
+
+    /**
+     * As for {@link #computeNewLayerAngles(double[], double[], int) but for wires}
+     * @param angles angles to be updated 
+     * @param residuals residuals to estimate the new correction angles
+     * @param nwires number of wires to be rotated.
+     */
+    static void computeNewWireAngles(double[] angles, double[] residuals, int nwires) {
+        double[] abs_residuals = new double[residuals.length];
+        for (int i = 0; i < residuals.length; i ++) {
+            abs_residuals[i] = Math.abs(residuals[i]);
+        }
+        /// --- sort values according to the residuals
+        int[] sortedIndices = sortIndices(abs_residuals, false);
+        /// --- only look at the nlayers worst residuals
+        for (int loop = 0; loop < sortedIndices.length && loop < nwires; loop++) {
+            int i = sortedIndices[loop];
+            AhdcWireId identifier = new AhdcWireId(i);
+            double radius = AhdcWireId.layer2Radius(identifier.layer);
+            double alphaRad = residuals[i]/radius;
             angles[i] = angles[i] - 0.5*Math.toDegrees(alphaRad);
         }
     }
@@ -1135,33 +1177,6 @@ public class AhdcAlignmentAnalyser {
             }
             //System.out.println("   layer " + layer + " --> will be rotated by " + layer_angles[num] + " deg");
             System.out.printf("   layer " + layer + " --> will be rotated by %.2f deg \n", layer_angles[num]);
-        }
-    }
-
-    /** Same logic as {@link #undoLayerRotations(AlertDCDetector, double[])} but for wires */
-    static void undoWireRotations(AlertDCDetector AHDCdet, double[] wire_angles) {
-        for (int num = 0; num < 576; num++) {
-            AhdcWireId id = new AhdcWireId(num);
-            // rotate AHDCdet
-            int sl = id.layer / 10;
-            int l = id.layer % 10;
-            int w = id.component;
-            AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(w); // numbering starts at 1
-            wire.rotateZ(Math.toRadians(-wire_angles[num]));
-        }
-    }
-
-    /** Same logic as {@link {@link #doLayerRotations(AlertDCDetector, double[])}} but for wires */
-    static void doWireRotations(AlertDCDetector AHDCdet, double[] wire_angles) {
-        for (int num = 0; num < 576; num++) {
-            AhdcWireId id = new AhdcWireId(num);
-            // rotate AHDCdet
-            int sl = id.layer / 10;
-            int l = id.layer % 10;
-            int w = id.component;
-            AlertDCWire wire = AHDCdet.getSector(1).getSuperlayer(sl).getLayer(l).getComponent(w); // numbering starts at 1
-            wire.rotateZ(Math.toRadians(wire_angles[num]));
-            System.out.println(String.format("   wire  %d (L%dC%02d) --> will be rotated by %.2f deg", id.num, id.layer, id.component, wire_angles[num]));
         }
     }
 
@@ -1487,7 +1502,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 25) {
+        while (value > 1*1e-3 && niter < 8) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1508,9 +1523,9 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
 
             /// --- Update rotation angles
-            /// functions to be renammed
-            computeNewLayerAngles(results.wire_angles_start, results.wire_residuals_start, 576); // wire start 
-            computeNewLayerAngles(results.wire_angles_end, results.wire_residuals_end, 576); // wire end
+            // computeNewWireAngles(results.wire_angles_start, results.wire_residuals_start, 576); // wire start 
+            // computeNewWireAngles(results.wire_angles_end, results.wire_residuals_end, 576); // wire end
+            computeNewWireAngles(results.wire_angles, results.wire_residuals, 576);
             //printRotationAngles(results, false);
 
             /// --- Update AHDC geometry
@@ -1564,7 +1579,7 @@ public class AhdcAlignmentAnalyser {
      * @param h histogram to be fitted
      * @return
      */
-    public static Pair<CrystalBall, GraphErrors> fit_with_crystal_ball(H1F h) {
+    public static Pair<CrystalBall, GraphErrors> fit_with_crystal_ball(H1F h, String debug_name) {
         // initialize fit parameters
         float[] data = h.getData();
         double amp = h.getMax();
@@ -1626,10 +1641,10 @@ public class AhdcAlignmentAnalyser {
             Pair<CrystalBall, GraphErrors> fitResult = cbFitter.fit(h, xmin, xmax);
             return fitResult;
         } catch (Exception e) {
-            System.out.println("Crystal Ball fit failed for histogram: "+ h.getTitleX());
-            cbFitter.print();
-            System.out.println("Error: " + e.getMessage());
-            e.printStackTrace();
+            System.out.println("Crystal Ball fit failed for histogram: "+ debug_name);
+            // cbFitter.print();
+            // System.out.println("Error: " + e.getMessage());
+            // e.printStackTrace();
             return null;
         }
     }
@@ -1715,20 +1730,22 @@ public class AhdcAlignmentAnalyser {
                 
                 double[] p = params.toArray();
                 // cf. eval_t2d()
-                p[6] = Math.min(Math.max(p[6], 0), 100); // transition time t1
+                p[6] = Math.min(Math.max(p[6], 0), 20); // transition time t1
                 p[8] = Math.min(Math.max(p[8], p[6]), 150); // transition time t2
                 p[7] = Math.min(Math.max(p[7], 1e-2*(1+p[6])), p[6]); // should be small
                 p[9] = Math.min(Math.max(p[9], 1e-2*(1+p[8])), p[8]-p[6]); // should be small
 
                 p[0] = Math.min(Math.max(p[0], 0), 0); // int
-                p[1] = Math.min(Math.max(p[1], 0), 0.015); // slope : 4 mm/ 100 ns
+                p[1] = Math.min(Math.max(p[1], 0), 0.025); // slope : 4 mm/ 100 ns
 
-                double d1 = p[0]+p[1]*p[6];
-                p[2] = Math.min(Math.max(p[2], 0.9*d1), 1.1*d1);
-                p[3] = Math.min(Math.max(p[3], 0), 0.02); // slope : 4 mm/ 100 ns
+                //double d1 = p[0]+p[1]*p[6];
+                //p[2] = Math.min(Math.max(p[2], 0.9*d1), 1.1*d1);
+                p[2] = Math.min(Math.max(p[2], 0), 2);
+                p[3] = Math.min(Math.max(p[3], 0), 0.03); // slope : 4 mm/ 100 ns
 
-                double d2 = p[2]+p[3]*p[8];
-                p[4] = Math.min(Math.max(p[4], 0.9*d2), 1.1*d2); // int
+                //double d2 = p[2]+p[3]*p[8];
+                //p[4] = Math.min(Math.max(p[4], 0.9*d2), 1.1*d2); // int
+                p[4] = Math.min(Math.max(p[4], 0), 2.5);
                 p[5] = Math.min(Math.max(p[5], 0), 0.01); // slope : 4 mm/ 100 ns
                 
                 return new ArrayRealVector(p);
@@ -1736,7 +1753,8 @@ public class AhdcAlignmentAnalyser {
         };
 
         // from ccdb
-        double[] initialValues = {-0.735266, 	0.1015123, 	-0.025992, 	0.0171851, 	2.312859, 	-0.0070255, 	-4.344386, 	5.362382, 	259.71963, 	112.34450};
+        //double[] initialValues = {-0.735266, 	0.1015123, 	-0.025992, 	0.0171851, 	2.312859, 	-0.0070255, 	-4.344386, 	5.362382, 	259.71963, 	112.34450};
+        double[] initialValues = {0, 0.02, 1, 0.02, 2, 0.005, 10, 1, 100, 5};
 
         /// --- least square problem to solve : yDataModelled should be close to yData
         LeastSquaresProblem problem = new LeastSquaresBuilder().
@@ -1757,22 +1775,27 @@ public class AhdcAlignmentAnalyser {
 
     }
 
-    // public static void save_time2distance(ArrayList<double[]> layer_list) {
-    //     try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
-    //         // loop over layer
-    //         for (int i = 1; i < 9; i++) {
-    //             double[] p = layer_list.get(i);
-                   // need to know the number of wire in each layer, don't have time to do that that night
-    //                 writer.write("First line");
-    //                 writer.newLine();
-    //                 writer.write("Second line");
-    //                 writer.newLine();
-    //                 writer.write("Third line");
-    //             } 
-    //     } catch (IOException e) {
-    //         e.printStackTrace();
-    //     }
-    // }
+    public static void save_time2distance(ArrayList<double[]> layer_list, String filename) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
+            // loop over layer
+            writer.write("# parameters: (p1_int, p1_slope, p2_int, p2_slope, p3_int, p3_slope, t1_x0, t1_width, t2_x0, t2_width, z0, z1, z2, extra1, extra2, chi2ndf)");
+            writer.newLine();
+            writer.newLine();
+            for (int i = 0; i < 576; i++) {
+                AhdcWireId identifier = new AhdcWireId(i);
+                double[] p = layer_list.get(AhdcWireId.layer2number(identifier.layer));
+                String line = String.format("%2d   %2d   %2d", identifier.sector, identifier.layer, identifier.component);
+                for (int j = 0; j < p.length; j++)
+                    line += "   " + p[j];
+                line += "   0.0 0.0 0.0 0.0 0.0 0.0";
+                writer.write(line);
+                writer.newLine();
+                } 
+        } catch (IOException e) {
+            System.err.println("Failure : save time2distance in a txt");
+            e.printStackTrace();
+        }
+    }
 
     /** Number of threads running simultaneously */
     static int nThreads = 60; // 4
@@ -1789,7 +1812,7 @@ public class AhdcAlignmentAnalyser {
      */
     public static void main(String[] args) {
         //scan_ahdc_position(args, false);
-        //layer_alignment(args, true);
+        //layer_alignment(args, false);
         wire_alignment(args, true);
     }
 
