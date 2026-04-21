@@ -68,7 +68,7 @@ public class Histos {
 
         /// h1 residual LR per wires
         for (int i = 0; i < 576; i++) {
-            H1F h = new H1F("residual-LR-wire-" + i + "itr-" + niter, "residual-LR-wire-" + i + "itr-" + niter, 100, -3, 3);
+            H1F h = new H1F("residual-LR-wire-" + i + "itr-" + niter, "residual-LR-wire-" + i + "itr-" + niter, 100, -1.5, 1.5);
             AhdcWireId id = new AhdcWireId(i);
             h.setTitleX("wire " + i + ", L" + id.layer + "C" + id.component + ", residual LR (mm)");
             h.setTitleY("count");
