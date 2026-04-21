@@ -17,6 +17,8 @@ import org.jlab.jnp.hipo4.io.HipoWriterSorted;
  * Filter elastic events from file.
  * 
  * Please refer to {@link AlertElasticAnalyser#AlertElasticAnalyser}
+ * 
+ * Code to be used with amon/scripts/hipo/event-filter-for-whole-run.sh
  */
 public class ElasticEventFilter {
     public static void main(String[] args) {
