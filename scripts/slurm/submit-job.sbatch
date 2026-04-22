@@ -2,7 +2,7 @@
 #SBATCH --account=clas12
 #SBATCH --partition=production
 #SBATCH --array=0-834
-#SBATCH --job-name=ftc_kf_cooking_%a
+#SBATCH --job-name=ftc_10geV_d2
 #SBATCH --output=/farm_out/%u/%x-%A-%a.out
 #SBATCH --error=/farm_out/%u/%x-%A-%a.err
 #SBATCH --time=07:00:00
