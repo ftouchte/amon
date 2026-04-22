@@ -36,11 +36,13 @@
 #include "futils.h"
 #include "fOptions.h"
 #include "Units.h"
+#include "AhdcUtils.h"
 
 void progressBar(int state, int bar_length = 100);
 TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup);
 
 /// --- Constants
+//const double beam_energy =  10676.6 * Units::MeV;
 const double beam_energy = 2.23951 * Units::GeV; // incident energy if the electron, GeV
 const double electron_mass = 0.511e-3 * Units::GeV; // energy mass of electron, GeV
 const double proton_mass = 938.272e-3 * Units::GeV; // energy mass of proton, GeV
@@ -79,7 +81,10 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_track_phi = new TH1D("track_phi", "track phi; phi (deg); count", 100, 0, 360);
     TH1D* H1_track_phi_selection = new TH1D("track_phi_selection", "track phi; phi (deg); count", 100, 0, 360);
     TH1D* H1_track_chi2 = new TH1D("track_chi2", "track chi2; chi2; count", 100, 0, 8);
-    TH1D* H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
+    TH1D* H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 43);
+
+    //TH2D* H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 8);
+    TH2D* H2_wire_occupancy_selection = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
 
     /// --- Start analysis
     int nfile = 0;
@@ -97,6 +102,7 @@ int main(int argc, char const *argv[]) {
         /// --- Defien banks to be read
         hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
         hipo::bank  recBank(factory.getSchema("REC::Particle"));
+        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
 
 
         /// --- Loop over events
@@ -114,7 +120,7 @@ int main(int argc, char const *argv[]) {
             // load bank content for this event
             reader.read(event);
             event.getStructure(trackBank);
-            event.getStructure(recBank);
+            event.getStructure(hitBank);
 
             bool aGoodTrackHasBeennFound = false;
             for (int row = 0; row < trackBank.getRows(); row++) 
@@ -122,7 +128,7 @@ int main(int argc, char const *argv[]) {
                 double px = trackBank.getFloat("px", row); // MeV
                 double py = trackBank.getFloat("py", row); // MeV
                 double pz = trackBank.getFloat("pz", row); // MeV
-                double p = sqrt(pow(px, 2)+pow(py, 2)+pow(pz, 2)); // MeV
+                double p = sqrt(px*px + py*py + pz*pz); // MeV
                 double dEdx = trackBank.getFloat("dEdx", row);
                 int nhits = trackBank.getInt("n_hits", row);
                 double vz = trackBank.getFloat("z", row)*0.1; // cm
@@ -133,10 +139,6 @@ int main(int argc, char const *argv[]) {
                 if (phi_rad < 0) phi_rad += 2*M_PI;
                 double phi_deg = phi_rad*180.0/M_PI;
 
-                //boolean flag = nhits >= 7 && p > 100 && p < 600 && dEdx > 0 && dEdx < 200;
-                // if (nhits >= 7 && p > 100 && p < 600 && dEdx > 0 && dEdx < 200) {
-                //     trackRows.add(row);
-                // }
 
                 H2_corr_p_dEdx->Fill(p, dEdx);
                 H1_track_vz->Fill(vz);
@@ -146,6 +148,7 @@ int main(int argc, char const *argv[]) {
                 H1_track_theta->Fill(theta_deg);
                 H1_track_chi2->Fill(chi2);
 
+                /// --- track selection
                 if (nhits >= nhits_min && vz > vz_min && vz < vz_max && chi2 > chi2_min && chi2 < chi2_max) {
                     H2_corr_p_dEdx_selection->Fill(p, dEdx);
                     H1_track_p_selection->Fill(p);
@@ -153,21 +156,33 @@ int main(int argc, char const *argv[]) {
                     H1_track_theta_selection->Fill(theta_deg);
                     ntracks++;
                     aGoodTrackHasBeennFound = true;
+                    
+                    /// --- Loop over hits
+                    int trackid = trackBank.getInt("trackid", row);
+                    for (int i = 0; i < hitBank.getRows(); i++) {
+                        if (trackid == hitBank.getInt("trackid", i)) {
+                            int component = hitBank.getInt("wire", i);
+                            int layer = 10*hitBank.getByte("superlayer", i) + hitBank.getByte("layer", i);
+                            H2_wire_occupancy_selection->Fill(component, AhdcUtils::layer2number(layer));
+                        }
+                    }
                 }
 
             } // end loop over track rows
 
             if (aGoodTrackHasBeennFound) {
+                event.getStructure(recBank);
                 for (int row = 0; row < recBank.getRows(); row++) {
                     // Select trigger electrons
                     if (recBank.getInt("pid", row) == 11 && recBank.getShort("status", row) < 0) {
+                    //if (recBank.getInt("pid", row) == 11) {
                         // compute kinematic variables
                         double px = recBank.getFloat("px", row) * Units::GeV;
                         double py = recBank.getFloat("py", row) * Units::GeV;
                         double pz = recBank.getFloat("pz", row) * Units::GeV;
-                        double p = sqrt(pow(px, 2)+pow(py, 2)+pow(pz, 2));
+                        double p = sqrt(px*px + py*py + pz*pz);
                         // physics kinematics
-                        double scattered_beam_energy = sqrt(pow(p,2) + pow(electron_mass,2));
+                        double scattered_beam_energy = sqrt(p*p + electron_mass*electron_mass);
                         double nu = beam_energy - scattered_beam_energy;
                         double theta = acos(pz/p) * Units::rad;
                         double Q2 = 4*beam_energy*scattered_beam_energy*pow(sin(theta/2),2);
@@ -212,6 +227,8 @@ int main(int argc, char const *argv[]) {
 
     H1_W2->Write("W2");
     //showCuts(H1_W2, 3.5, 3.8)->Write("W2_showing_elastic_limits");
+
+    H2_wire_occupancy_selection->Write("wire_occupancy_with_cuts");
 
     f->Close();
     printf("nb good tracks : %ld\n", ntracks);
