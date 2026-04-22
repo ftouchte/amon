@@ -35,7 +35,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev track_selection
+
+track_selection: track_selection.o fOptions.o
+	$(CXX) -o track_selection.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 lookat10gev: lookat10gev.o fOptions.o
 	$(CXX) -o lookat10gev.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 

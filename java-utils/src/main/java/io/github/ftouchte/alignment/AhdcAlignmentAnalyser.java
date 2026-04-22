@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -15,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.Function;
 
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
@@ -36,9 +34,6 @@ import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWireIdentifier;
-import org.jlab.groot.base.PadMargins;
-import org.jlab.groot.base.TStyle;
-import org.jlab.groot.data.DataVector;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
@@ -880,7 +875,7 @@ public class AhdcAlignmentAnalyser {
             // // Retrieve the kinematics of the electron
             // ParticleRow electron = analyser.getElectron();
 
-            // Run engine
+            // Run engine to fill the residual_LR
             ahdcEngine.processDataEvent(event);
             if (flag_do_fit) {
                 alertEngine.processDataEvent(event, AHDCdet);
@@ -906,6 +901,10 @@ public class AhdcAlignmentAnalyser {
                 double pz = trackBank.getFloat("pz", track_row); // MeV
                 double p = Math.sqrt(Math.pow(px, 2)+Math.pow(py, 2)+Math.pow(pz, 2));
                 double track_theta_deg = Math.toDegrees(Math.acos(pz/p));
+                double track_phi_rad = Math.atan2(py, px);
+                if (track_phi_rad < 0) track_phi_rad += 2*Math.PI;
+                double track_phi_deg = Math.toDegrees(track_phi_rad);
+                
 
                 for (int j = 0; j < hitBank.rows(); j++) {
                     if (trackid == hitBank.getInt("trackid", j)) {
@@ -940,7 +939,7 @@ public class AhdcAlignmentAnalyser {
                         // link with the electron
                         if (analyser instanceof AlertElasticAnalyser elasticAnalyser) {
                             ParticleRow elastic_electron = elasticAnalyser.getElectron();
-                            double delta_phi = track_theta_deg - elastic_electron.phi(Units.deg);
+                            double delta_phi = track_phi_deg - elastic_electron.phi(Units.deg);
                             delta_phi = Math.abs(delta_phi) - 180; //center at zero
                             histos.h1_track_delta_phi.fill(delta_phi);
                         }
@@ -1814,8 +1813,8 @@ public class AhdcAlignmentAnalyser {
      */
     public static void main(String[] args) {
         //scan_ahdc_position(args, false);
-        //layer_alignment(args, false);
-        wire_alignment(args, false);
+        layer_alignment(args, true);
+        //wire_alignment(args, false);
     }
 
 
