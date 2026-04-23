@@ -63,6 +63,13 @@ namespace AhdcUtils {
      */
     double layerNum2Radius(int _layer_num);
 
+    /**
+     * 
+     * @param _layer layer id (11, 21, 22, ..., 51)
+     * @return the number of wire in this layer
+     */
+    int layerNbWires(int _layer);
+
 }
 
 #endif

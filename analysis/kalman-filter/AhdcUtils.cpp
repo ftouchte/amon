@@ -166,4 +166,31 @@ double  AhdcUtils::layerNum2Radius(int _layer_num) {
     return  layer2Radius(number2layer(_layer_num));
 }
 
-
+int AhdcUtils::layerNbWires(int _layer) {
+    if (_layer == 11) {
+        return 47;
+    }
+    else if (_layer == 21) {
+        return 56;
+    }
+    else if (_layer == 22) {
+        return 56;
+    }
+    else if (_layer == 31) {
+        return 72;
+    }
+    else if (_layer == 32) {
+        return 72;
+    }
+    else if (_layer == 41) {
+        return 87;
+    }
+    else if (_layer == 42) {
+        return 87;
+    }
+    else if (_layer == 51) {
+        return 99;
+    } else {
+        return 0; // not a lyaer
+    }
+}
