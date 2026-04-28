@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <map>
 
 #include "reader.h"
 
@@ -30,6 +31,7 @@
 #include "TStyle.h"
 #include "TString.h"
 #include "TLegend.h"
+#include "TLatex.h"
 #include "TF1.h"
 #include "Math/PdfFuncMathCore.h"
 #include "TText.h"
@@ -44,6 +46,9 @@
 
 void progressBar(int state, int bar_length = 100);
 TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup);
+TCanvas* xyPlotBadWires();
+TCanvas* saveResidualLRBadWiresGr1(std::map<int, TH1D*> map_gr1);
+void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file);
 
 /// --- Constants
 //const double beam_energy =  10676.6 * Units::MeV;
@@ -88,10 +93,72 @@ int main(int argc, char const *argv[]) {
         std::string name = Form("wire_disposition_layer_%d", layer);
         std::string title = Form("Wire occupation versus Electron phi (layer %d); #phi_{e} (deg); wire", layer);
         TH2D* h2 = new TH2D(name.c_str(), title.c_str(), nbWires, 0, 360, nbWires, 1, nbWires+1);
+        h2->SetStats(false);
         H2_corr_wire_phi.push_back(h2);
     }
 
     TH2D* H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy->SetStats(false);
+
+    /// --- Study bad wires
+    std::map<int,TH1D*> bad_wires_map1;
+    std::map<int,TH1D*> bad_wires_map2;
+    std::map<int,TH1D*> bad_wires_map3;
+    std::vector<int> bad_wires_vec1 = {24, 25, 75, 76, 77, 131, 132, 133};
+    std::vector<int> bad_wires_vec2 = {34, 35, 88, 89, 90, 144, 145, 214};
+    std::vector<int> bad_wires_vec3 = {47, 46, 102, 100, 226, 298, 157};
+        // group 1
+    for (int i = 0; i < (int) bad_wires_vec1.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(bad_wires_vec1[i]);
+        //int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        std::string name = Form("L%dW%d_bad_residual_LR", 10*sl+l, w);
+        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count", bad_wires_vec1[i], 10*sl+l, w);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        
+        bad_wires_map1[bad_wires_vec1[i]] = h;
+    }
+        // group 2
+    for (int i = 0; i < (int) bad_wires_vec2.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(bad_wires_vec2[i]);
+        //int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        std::string name = Form("L%dW%d_bad_residual_LR", 10*sl+l, w);
+        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count", bad_wires_vec2[i], 10*sl+l, w);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        
+        bad_wires_map2[bad_wires_vec2[i]] = h;
+    }
+    // group 3
+    for (int i = 0; i < (int) bad_wires_vec3.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(bad_wires_vec3[i]);
+        //int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        std::string name = Form("L%dW%d_bad_residual_LR", 10*sl+l, w);
+        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count", bad_wires_vec3[i], 10*sl+l, w);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        
+        bad_wires_map3[bad_wires_vec3[i]] = h;
+    }
+
+    
+    /// ---
+    std::vector<TH1D*> H1_all_residual_LR;
+    for (int i = 0; i < 576; i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(i);
+        int layer = ids[1];
+        int wire = ids[2];
+        std::string name = Form("L%dW%d_residual_LR", layer, wire);
+        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count",i, layer, wire);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        H1_all_residual_LR.push_back(h);
+    }
 
     /// --- Start analysis
     int nfile = 0;
@@ -109,6 +176,8 @@ int main(int argc, char const *argv[]) {
         /// --- Define banks to be read
         hipo::bank  recBank(factory.getSchema("REC::Particle"));
         hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
 
 
         /// --- Loop over events
@@ -153,18 +222,72 @@ int main(int argc, char const *argv[]) {
                         nelectrons++;
                         /// --- loop over AHDC::adc
                         event.getStructure(adcBank);
-                        for (int row = 0; row < adcBank.getRows(); row++) {
-                            int layer = adcBank.getByte("layer", row);
-                            int wire  = adcBank.getShort("component", row);
+                        for (int i = 0; i < adcBank.getRows(); i++) {
+                            int layer = adcBank.getByte("layer", i);
+                            int wire  = adcBank.getShort("component", i);
+                            //int adc = adcBank.getInt("ADC", i);
+                            //int wfType = adcBank.getInt("wfType", i);
+
+                            //if (adc < 30) continue;
+                            //if (wfType > 2) continue;
 
                             int num = AhdcUtils::layer2number(layer);
 
                             H2_corr_wire_phi[num-1]->Fill(phi / Units::deg, wire);
                             H2_wire_occupancy->Fill(wire, num);
-
-                            //printf("%lf ", phi / Units::deg);
                             
                         } // end loop over adcBank rows
+
+                        /// --- find elastic tracks
+                        event.getStructure(hitBank);
+                        event.getStructure(trackBank);
+                        int track_row = -1; 
+                        for (int t = 0; t < trackBank.getRows(); t++) {
+                            int nhits = trackBank.getInt("n_hits", t);
+                            double track_px = trackBank.getFloat("px", row) * Units::MeV;
+                            double track_py = trackBank.getFloat("py", row) * Units::MeV;
+                            double track_phi = atan2(track_py, track_px) * Units::rad;
+                            if (track_phi < 0) track_phi += 2*M_PI;
+                            double delta_phi = fabs(fabs(phi-track_phi)-M_PI);
+                            if (delta_phi < 20*Units::deg && nhits >= 7){ 
+                                track_row = t;
+                                break;
+                            }
+                        } // end loop over track
+
+                        if (track_row < 0) continue;
+                        int trackid = trackBank.getInt("trackid", track_row);
+                        for (int i = 0; i < hitBank.getRows(); i++) {
+
+                            if (trackid != hitBank.getInt("trackid", i)) continue;
+
+                            int layer = 10*hitBank.getByte("superlayer", i) + hitBank.getByte("layer", i);
+                            int wire = hitBank.getInt("wire", i);
+                            double residual_LR = hitBank.getDouble("timeOverThreshold", i); // mm, contains residual LR
+                            
+                            int wireNum = AhdcUtils::slc2wire(1, layer, wire);
+
+                            // all residual_LR
+                            H1_all_residual_LR[wireNum]->Fill(residual_LR);
+
+                            // bad wires gr 1
+                            auto it1 = bad_wires_map1.find(wireNum);
+                            if (it1 != bad_wires_map1.end()) {
+                                it1->second->Fill(residual_LR);
+                            }
+                            // bad wires gr 2
+                            auto it2 = bad_wires_map2.find(wireNum);
+                            if (it2 != bad_wires_map2.end()) {
+                                it2->second->Fill(residual_LR);
+                            }
+                            // bad wires gr 3
+                            auto it3 = bad_wires_map3.find(wireNum);
+                            if (it3 != bad_wires_map3.end()) {
+                                it3->second->Fill(residual_LR);
+                            }
+
+                        } // end loop over hits
+
                         break; // we only select one electron per event
                     }
 
@@ -213,6 +336,14 @@ int main(int argc, char const *argv[]) {
         canvas->Write("wire_disposition_all_in_one");
 
     }
+
+    xyPlotBadWires()->Write("xy_view_of_bad_wires");
+
+    saveResidualLRBadWiresGr1(bad_wires_map1)->Write("residual_LR_bad_wires_gr_1");
+    saveResidualLRBadWiresGr1(bad_wires_map2)->Write("residual_LR_bad_wires_gr_2");
+    saveResidualLRBadWiresGr1(bad_wires_map3)->Write("residual_LR_bad_wires_gr_3");
+
+    save_all_residual_LR_histos(H1_all_residual_LR, f);
 
 
 
@@ -266,4 +397,135 @@ TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup) {
     line_sup->Draw("same L");
 
     return canvas;
+}
+
+
+TCanvas* saveResidualLRBadWiresGr1(std::map<int, TH1D*> map_gr1) {
+    TCanvas* canvas = new TCanvas();
+    canvas->Divide(3,3);
+    int counter = 0;
+    for (const auto& [wireNum, h] : map_gr1) {
+        counter++;
+        canvas->cd(counter);
+        h->Draw();
+    }
+    return canvas;
+}
+
+
+#include "AhdcDetector.h"
+
+TCanvas* xyPlotBadWires() {
+    AhdcDetector* ahdc = new AhdcDetector();
+
+    TGraph* gr_all_wires = new TGraph();
+    gr_all_wires->SetTitle(";x (mm); y(mm)");
+    gr_all_wires->SetMarkerStyle(4);
+    gr_all_wires->SetMarkerColor(kBlue-9);
+
+    for (int s = 0; s < ahdc->GetNumberOfSectors(); s++) {
+		for (int sl = 0; sl < ahdc->GetSector(s)->GetNumberOfSuperLayers(); sl++){
+			for (int l = 0; l < ahdc->GetSector(s)->GetSuperLayer(sl)->GetNumberOfLayers(); l++){
+				for (int w = 0; w < ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetNumberOfWires(); w++){
+					AhdcWire* wire = ahdc->GetSector(s)->GetSuperLayer(sl)->GetLayer(l)->GetWire(w);
+                    gr_all_wires->AddPoint(wire->x, wire->y);
+                }
+            }
+        }
+    }
+
+    TGraph* gr_bad_wires = new TGraph();
+    gr_bad_wires->SetTitle(";x (mm); y(mm)");
+    gr_bad_wires->SetMarkerStyle(8);
+    gr_bad_wires->SetMarkerColor(kRed);
+    
+
+    std::vector<int> bad_wires_id = {24, 25, 34, 35, 46, 47, 64, 65, 75, 76, 77, 88, 89, 90, 100, 102, 122, 124, 120, 131, 132, 133, 144, 145, 165, 167, 214, 226, 298};
+
+    std::vector<TLatex*> bad_wires_labels;
+
+    for (int i = 0; i < (int) bad_wires_id.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(bad_wires_id[i]);
+        int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        AhdcWire* wire = ahdc->GetSector(s-1)->GetSuperLayer(sl-1)->GetLayer(l-1)->GetWire(w-1);
+        gr_bad_wires->AddPoint(wire->x, wire->y);
+
+        TLatex* txt = new TLatex(wire->x, wire->y-0.3, TString::Format("%d, L%dW%d", bad_wires_id[i], ids[1], ids[2]).Data());
+        txt->SetTextSize(0.01);
+        txt->SetTextAlign(12);
+        bad_wires_labels.push_back(txt);
+    }
+
+    TGraph* gr_fixed_wires = new TGraph();
+    gr_fixed_wires->SetTitle(";x (mm); y(mm)");
+    gr_fixed_wires->SetMarkerStyle(8);
+    gr_fixed_wires->SetMarkerColor(kBlue);
+
+    std::vector<int> fixed_wires_id = {64, 65, 122, 124, 120};
+
+    for (int i = 0; i < (int) fixed_wires_id.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(fixed_wires_id[i]);
+        int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        AhdcWire* wire = ahdc->GetSector(s-1)->GetSuperLayer(sl-1)->GetLayer(l-1)->GetWire(w-1);
+        gr_fixed_wires->AddPoint(wire->x, wire->y);
+    }
+
+
+    // Rendering
+    TCanvas* canvas = new TCanvas();
+    canvas->cd();
+    gr_all_wires->Draw("P");
+    gr_bad_wires->Draw("P");
+    gr_fixed_wires->Draw("P");
+
+    // show text
+    for (int i = 0; i < (int) bad_wires_labels.size(); i++) {
+        bad_wires_labels[i]->Draw();
+    }
+
+    return canvas;
+
+}
+
+void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file) {
+    // initialize canvas
+    std::vector<TCanvas*> canvas;
+    for (int i = 0; i < 48; i++) {
+        TCanvas* c = new TCanvas(TString::Format("canvas_residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data(), "", 1500, 1600);
+        c->Divide(3,4);
+        canvas.push_back(c);
+    }
+
+    // draw histograms
+    for (int i = 0; i < 576; i++) {
+        int num = i / 12;
+        int pad = i % 12 + 1;
+        canvas[num]->cd(pad);
+        histos[i]->Draw();
+    }
+
+    // save histos
+    TDirectory * dir = file->mkdir("all_residuals_LR");
+    dir->cd();
+    for (int i = 0; i < 48; i++) {
+        canvas[i]->Write(TString::Format("residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data());
+        if (i == 0) {
+            canvas[i]->Print("all_residual.pdf[");
+        } 
+        else if (i == 47) {
+            canvas[i]->Print("all_residual.pdf]");
+        } 
+        else {
+            canvas[i]->Print("all_residual.pdf");
+        }
+    }
+    // go back to file
+    file->cd();
+
 }
