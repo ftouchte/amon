@@ -2,11 +2,15 @@ package io.github.ftouchte.filtering;
 
 import org.jlab.io.base.DataEvent;
 
+import io.github.ftouchte.alignment.AhdcWireId;
 import io.github.ftouchte.utils.ParticleRow;
 import io.github.ftouchte.utils.Units;
 
 import org.jlab.io.base.DataBank;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Inspired by amon/analysis/kalman-filter/kfmon_data.cpp
@@ -215,5 +219,31 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
             list.add(ahdc_track.GetBankRow());
         }
         return list;
+    }
+
+    private Set<Integer> badWires = new HashSet<>(
+        Arrays.asList(24, 25, 75, 76, 77, 131, 132, 133, 34, 35,
+                    88, 89, 90, 144, 145, 214, 167, 165, 47, 46,
+                    102, 100, 226, 298)
+    );
+    public boolean hasBadWires(DataEvent event) {
+        if (this.IsElastic(event)) {
+            ParticleRow track = this.getAhdcTrack();
+            DataBank trackBank = event.getBank("AHDC::kftrack");
+            DataBank hitBank = event.getBank("AHDC::hits");
+            int row = track.GetBankRow();
+            int trackid = trackBank.getInt("trackid", row);
+            for (int h = 0; h < hitBank.rows(); h++) {
+                if (trackid == hitBank.getInt("trackid", h)) {
+                    int layer = 10*hitBank.getByte("superlayer", h) + hitBank.getByte("layer", h);
+                    int component = hitBank.getInt("wire", h);
+                    int wire = AhdcWireId.slc2wire(1, layer, component);
+                    if (badWires.contains(wire)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
