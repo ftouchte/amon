@@ -17,7 +17,7 @@ double futils::toRadian(double degree) { return M_PI*degree/180;}
 
 /** Constructor */
 AhdcWire::AhdcWire(int _id, Point3D _top, Point3D _bot) : id(_id), top(_top), bot(_bot) {
-	set_z(-150.0);
+	set_z(top.z);
 }
 
 /** (Default) Constructor */
@@ -49,8 +49,8 @@ void AhdcWire::set_z(double _z) {
 	uy = uy/rho;
 	uz = uz/rho;
 	z = _z;
-	x = top.x + (z+150)*ux;
-	y = top.y + (z+150)*uy;
+	x = top.x + (z-top.z)*ux;
+	y = top.y + (z-top.z)*uy;
 	//printf("%lf %lf %lf\n", x, y, z);
 }
 
@@ -75,10 +75,10 @@ AhdcLayer::AhdcLayer(int _id, int _nwires, double _rlayer, double _stereoangle) 
 			double alpha = futils::toRadian(360.0/nwires);
 			top.x = rlayer*cos(alpha*wirePhiIndex); 
 			top.y = rlayer*sin(alpha*wirePhiIndex);
-			top.z = -150; // sometimes set to -150
+			top.z = -188; // before -150
 			bot.x = rlayer*cos(alpha*wirePhiIndex + futils::toRadian(stereoangle));
 			bot.y = rlayer*sin(alpha*wirePhiIndex + futils::toRadian(stereoangle));
-			bot.z = 150; // sometimes set to +150
+			bot.z = 162.5; // before +150
 			ptrWires[i] = AhdcWire(i+1,top,bot);
 		}
 	}
@@ -139,7 +139,19 @@ AhdcSuperLayer::AhdcSuperLayer(int _id, int _nlayers, int _nwires, double _rsupe
 		ptrLayers = new AhdcLayer[nlayers];
 		for (int i = 0; i < nlayers; i++){
 			std::cout << "BUILD LAYER " << i + 1 << std::endl;
-			ptrLayers[i] = AhdcLayer(i+1,nwires,rsuperlayer + 4.0*i,orientation*(-20)); // 4.0 is the distance between two layer of a given superlayer in AHDC
+			double thster = -20;
+			if (i == 0) {
+				thster = -19.1489;
+			} else if (i == 1) {
+				thster = -19.2857;
+			} else if (i == 2) {
+				thster = -20.0;
+			} else if (i == 3) {
+				thster = -20.6897;
+			} else {
+				thster = -20.0;
+			}
+			ptrLayers[i] = AhdcLayer(i+1,nwires,rsuperlayer + 4.0*i,orientation*(thster)); // 4.0 is the distance between two layer of a given superlayer in AHDC
 		}
 	}
 }
