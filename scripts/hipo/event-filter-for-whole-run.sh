@@ -1,7 +1,7 @@
 #!/bin/bash
 
-path=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/v120
-outdir=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/elastic-filtered/v120
+path=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/elastic-filtered/v120/recooked
+outdir=/lustre24/expphy/volatile/clas12/touchte/kalman-filter/elastic-filtered/v120/bad_wires
 
 for file in $path/rec*
 #for file in v120/rec_clas_022712.evio.0000[0-3].hipo

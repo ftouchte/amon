@@ -106,7 +106,8 @@ public class ElasticEventFilter {
 			reader.nextEvent(inEvent);
 
             // Check that the event is an elastic
-            if (analyser.IsElastic(new HipoDataEvent(inEvent, factory))) {
+            //if (analyser.IsElastic(new HipoDataEvent(inEvent, factory))) {
+            if (analyser.hasBadWires(new HipoDataEvent(inEvent, factory))) {
                 counter++;
                 // loop over all existing banks in the input file (reader)
                 for(int b = 0; b < schemaBanks.size(); b++){
