@@ -64,7 +64,7 @@ Window::Window() :
 	Adjustment_cut_timeOverThreshold_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeMax_min(Gtk::Adjustment::create(0.0, 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
 	Adjustment_cut_timeMax_max(Gtk::Adjustment::create(samplingTime*(NumberOfBins-1), 0.0, samplingTime*(NumberOfBins-1), 1, 0.0, 0.0)),
-	Adjustment_zpos(Gtk::Adjustment::create(-150, -150.0, 150.0, 1.0, 0.0, 0.0)),
+	Adjustment_zpos(Gtk::Adjustment::create(-188, -188, 162.5, 1.0, 0.0, 0.0)),
 	Scale_amplitude_min(Adjustment_amplitude_min, Gtk::Orientation::HORIZONTAL),
 	Scale_amplitude_max(Adjustment_amplitude_max, Gtk::Orientation::HORIZONTAL),
 	Scale_cut_adcOffset_min(Adjustment_cut_adcOffset_min, Gtk::Orientation::HORIZONTAL),
@@ -1693,7 +1693,20 @@ void Window::on_mouse_clicked (int n_press, double x, double y) {
 			sprintf(buffer, "L%d W%d", layer, component);
 			auto area = Gtk::make_managed<Gtk::DrawingArea>();
 			auto draw_function = [this, wire, buffer] (const Cairo::RefPtr<Cairo::Context>& cr, int width, int height) {
-								cairo_plot_waveform(cr, width, height, wire, buffer);
+								if (wire->pulse.get_samples().size() == 0) {
+									cr->set_source_rgb(1.0, 0.0, 0.0);
+									cr->select_font_face("@cairo:sans-serif",Cairo::ToyFontFace::Slant::NORMAL,Cairo::ToyFontFace::Weight::NORMAL);
+									cr->set_font_size(0.1*height);
+									cr->move_to(0, height);
+									Cairo::TextExtents te;
+									cr->get_text_extents(buffer, te);
+									int wpos = 0.5*width - 0.5*te.width;
+									int hpos = height - 0.5*te.height;
+									cr->move_to(wpos, hpos);
+									cr->show_text(buffer);
+								} else {
+									cairo_plot_waveform(cr, width, height, wire, buffer);
+								}
 						      };
 			area->set_draw_func(draw_function);
 			window->set_child(*area);

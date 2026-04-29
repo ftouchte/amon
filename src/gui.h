@@ -136,7 +136,7 @@ protected :
 	bool flag_wfType_3 = false;
 	bool flag_wfType_4 = false;
 	bool flag_wfType_5 = false;
-	double zpos = -150.0; ///< define in which z we should look at for AHDC (x,y) view
+	double zpos = 0; ///< define in which z we should look at for AHDC (x,y) view
 	int HV_SECTOR = -1;
 	Gtk::TextView TextView_occupancy;
 	Glib::RefPtr<Gtk::TextBuffer> TextBuffer_occupancy;
