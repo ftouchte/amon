@@ -106,6 +106,7 @@ protected :
 	hipo::dictionary hipo_factory;
 	hipo::event hipo_event;
 	hipo::bank adcBank;
+	hipo::bank hitBank;
 	hipo::bank wfBank;
 	hipo::bank trackBank;
 	long unsigned int hipo_nEvent = 0;
