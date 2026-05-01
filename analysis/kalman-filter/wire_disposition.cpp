@@ -9,6 +9,7 @@
  * @date April 23, 2026
  ********************************************************************/
 
+#include "wire_disposition.h"
  
  #include <cstdlib>
 #include <cstdio>
@@ -38,17 +39,25 @@
 #include "THStack.h"
 #include "TArrow.h"
 #include "TLine.h"
+#include "TTree.h"
 
 #include "futils.h"
 #include "fOptions.h"
 #include "Units.h"
 #include "AhdcUtils.h"
+#include "AhdcDetector.h"
+#include "AhdcCCDB.h"
+
 
 void progressBar(int state, int bar_length = 100);
 TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup);
 TCanvas* xyPlotBadWires();
-TCanvas* saveResidualLRBadWiresGr1(std::map<int, TH1D*> map_gr1);
-void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file);
+TCanvas* saveResidualLRBadWiresGroup(std::map<int, TH1D*> map_gr1, const char *name = nullptr);
+//void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file);
+void save_all_wires_histos(std::vector<TH1D*> histos, TFile* file, const char * name);
+void fillTrackWireOccupancy(TH2D* h, double x, double y);
+void plot_t0_distribution(TFile* file);
+void saveBadWireLeadingEdgeTime(std::map<int, TH1D*> map, TFile* file);
 
 /// --- Constants
 //const double beam_energy =  10676.6 * Units::MeV;
@@ -57,7 +66,6 @@ const double electron_mass = 0.511e-3 * Units::GeV; // energy mass of electron, 
 const double proton_mass = 938.272e-3 * Units::GeV; // energy mass of proton, GeV
 const double helium_mass = 3.73 * Units::GeV; // energy mass of Helium-4, GeV
 const double deuteron_mass = 1.875 * Units::GeV; // energy mass of Deuterium, GeV
-
 
 int main(int argc, char const *argv[]) {
 
@@ -100,13 +108,18 @@ int main(int argc, char const *argv[]) {
     TH2D* H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
     H2_wire_occupancy->SetStats(false);
 
+    TH2D* H2_track_wire_occupancy = new TH2D("track_wire_occupancy", "Wire occupancy for track; x (mm); y (mm)", 500, -80, 80, 500, -80, 80);
+    H2_track_wire_occupancy->SetStats(false);
+    AhdcDetector* ahdc = new AhdcDetector();
+
     /// --- Study bad wires
     std::map<int,TH1D*> bad_wires_map1;
     std::map<int,TH1D*> bad_wires_map2;
     std::map<int,TH1D*> bad_wires_map3;
     std::vector<int> bad_wires_vec1 = {24, 25, 75, 76, 77, 131, 132, 133};
     std::vector<int> bad_wires_vec2 = {34, 35, 88, 89, 90, 144, 145, 214};
-    std::vector<int> bad_wires_vec3 = {47, 46, 102, 100, 226, 298, 157};
+    std::vector<int> bad_wires_vec3 = {47, 46, 102, 100, 226, 298, 157, 45, 158, 101};
+
         // group 1
     for (int i = 0; i < (int) bad_wires_vec1.size(); i++) {
         std::vector<int> ids = AhdcUtils::wire2slc(bad_wires_vec1[i]);
@@ -147,6 +160,21 @@ int main(int argc, char const *argv[]) {
         bad_wires_map3[bad_wires_vec3[i]] = h;
     }
 
+    std::vector<int> all_bad_wires = {24, 25, 75, 76, 77, 131, 132, 133, 34, 35, 88, 89, 90, 144, 145, 214, 47, 46, 102, 100, 226, 298, 157, 45, 158, 101};
+    std::map<int, TH1D*> leadingEdgeTimeBadWires_map;
+    for (int i = 0; i < (int) all_bad_wires.size(); i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(all_bad_wires[i]);
+        //int s = ids[0];
+        int sl = ids[1] / 10;
+        int l = ids[1] % 10;
+        int w = ids[2];
+        std::string name = Form("L%dW%d_leadingEdgeTime", 10*sl+l, w);
+        std::string title = Form("Num %d, L%dW%d, leadingEdgeTime; leadingEdgeTime (ns); count", all_bad_wires[i], 10*sl+l, w);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, 0, 700);
+        
+        leadingEdgeTimeBadWires_map[all_bad_wires[i]] = h;
+    }
+
     
     /// ---
     std::vector<TH1D*> H1_all_residual_LR;
@@ -159,6 +187,25 @@ int main(int argc, char const *argv[]) {
         TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
         H1_all_residual_LR.push_back(h);
     }
+
+    std::vector<TH1D*> H1_all_leadingEdgeTime;
+    for (int i = 0; i < 576; i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(i);
+        int layer = ids[1];
+        int wire = ids[2];
+        std::string name = Form("bad_L%dW%d_leadingEdgeTime", layer, wire);
+        std::string title = Form("Num %d, L%dW%d, leadingEdgeTime; leadingEdgeTime (ns); count", i, layer, wire);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, 0, 700);
+        H1_all_leadingEdgeTime.push_back(h);
+    }
+
+    /// --- Define TTree
+    gInterpreter->GenerateDictionary("Hit;Track;std::vector<Hit>", "vector");
+    TTree *tree = new TTree("tree", "tracks avec hits");
+
+    Track track;
+
+    tree->Branch("track", &track);
 
     /// --- Start analysis
     int nfile = 0;
@@ -246,11 +293,30 @@ int main(int argc, char const *argv[]) {
                             int nhits = trackBank.getInt("n_hits", t);
                             double track_px = trackBank.getFloat("px", row) * Units::MeV;
                             double track_py = trackBank.getFloat("py", row) * Units::MeV;
+                            double track_pz = trackBank.getFloat("pz", row) * Units::MeV;
+                            double track_p = sqrt(track_px*track_px + track_py*track_py + track_pz*track_pz);
+                            double track_theta = acos(track_pz/track_p) * Units::rad;
                             double track_phi = atan2(track_py, track_px) * Units::rad;
                             if (track_phi < 0) track_phi += 2*M_PI;
                             double delta_phi = fabs(fabs(phi-track_phi)-M_PI);
                             if (delta_phi < 20*Units::deg && nhits >= 7){ 
                                 track_row = t;
+                                // fill TTree
+                                track.px = px;
+                                track.py = py;
+                                track.pz = pz;
+                                track.p = track_p;
+                                track.theta = track_theta / Units::deg;
+                                track.phi = track_phi / Units::deg;
+                                track.nhits = trackBank.getInt("n_hits", t);
+
+                                track.electron_p = p;
+                                track.electron_px = px;
+                                track.electron_py = py;
+                                track.electron_pz = pz;
+                                track.electron_theta = theta / Units::deg;
+                                track.electron_phi = phi / Units::deg;
+                                track.hits.clear();
                                 break;
                             }
                         } // end loop over track
@@ -269,6 +335,7 @@ int main(int argc, char const *argv[]) {
 
                             // all residual_LR
                             H1_all_residual_LR[wireNum]->Fill(residual_LR);
+                            
 
                             // bad wires gr 1
                             auto it1 = bad_wires_map1.find(wireNum);
@@ -286,10 +353,39 @@ int main(int argc, char const *argv[]) {
                                 it3->second->Fill(residual_LR);
                             }
 
+                            // leadingTime
+                            int adcRow = hitBank.getShort("id", i) - 1;
+                            double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcRow);
+                            H1_all_leadingEdgeTime[wireNum]->Fill(leadingEdgeTime);
+
+                            auto it = leadingEdgeTimeBadWires_map.find(wireNum);
+                            if (it != leadingEdgeTimeBadWires_map.end()) {
+                                it->second->Fill(leadingEdgeTime);
+                            }
+
+                            // new: track wire occupancy
+                            AhdcWire* wire_geom = ahdc->GetSector(0)->GetSuperLayer(layer / 10 - 1)->GetLayer(layer % 10 - 1)->GetWire(wire-1);
+                            fillTrackWireOccupancy(H2_track_wire_occupancy, wire_geom->x, wire_geom->y);
+
+                            // Fill TTree
+                            Hit h;
+                            h.sector = 1;
+                            h.superlayer = layer / 10;
+                            h.layer = layer % 10;
+                            h.component = wire;
+                            h.wireNum = wireNum;
+                            h.adc = hitBank.getInt("adc", i);
+                            h.time = hitBank.getDouble("time", i);
+                            h.residual_LR = residual_LR;
+                            h.residual = hitBank.getDouble("residual", i);
+                            track.hits.push_back(h);
+
                         } // end loop over hits
 
+                        tree->Fill();
+
                         break; // we only select one electron per event
-                    }
+                    } // end cut on W2 to select elastics
 
                 } // end selection of trigger electrons
 
@@ -339,13 +435,17 @@ int main(int argc, char const *argv[]) {
 
     xyPlotBadWires()->Write("xy_view_of_bad_wires");
 
-    saveResidualLRBadWiresGr1(bad_wires_map1)->Write("residual_LR_bad_wires_gr_1");
-    saveResidualLRBadWiresGr1(bad_wires_map2)->Write("residual_LR_bad_wires_gr_2");
-    saveResidualLRBadWiresGr1(bad_wires_map3)->Write("residual_LR_bad_wires_gr_3");
+    saveResidualLRBadWiresGroup(bad_wires_map1, "residual_LR_bad_wires_gr_1.pdf")->Write("residual_LR_bad_wires_gr_1");
+    saveResidualLRBadWiresGroup(bad_wires_map2, "residual_LR_bad_wires_gr_2.pdf")->Write("residual_LR_bad_wires_gr_2");
+    saveResidualLRBadWiresGroup(bad_wires_map3, "residual_LR_bad_wires_gr_3.pdf")->Write("residual_LR_bad_wires_gr_3");
 
-    save_all_residual_LR_histos(H1_all_residual_LR, f);
+    save_all_wires_histos(H1_all_residual_LR, f, "residual_LR");
+    save_all_wires_histos(H1_all_leadingEdgeTime, f, "leadingEdgeTime");
+    saveBadWireLeadingEdgeTime(leadingEdgeTimeBadWires_map, f);
+    plot_t0_distribution(f);
+    H2_track_wire_occupancy->Write("new_track_wire_occupancy");
 
-
+    tree->Write();
 
 
     f->Close();
@@ -400,9 +500,33 @@ TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup) {
 }
 
 
+TCanvas* saveResidualLRBadWiresGroup(std::map<int, TH1D*> map_gr1, const char *name) {
+    TCanvas* canvas = new TCanvas(name, "", 1500, 1200);
+    if (map_gr1.size() < 10) {
+        canvas->Divide(3,3);
+    } else {
+        canvas->Divide(3,4);
+    }
+    
+    int counter = 0;
+    for (const auto& [wireNum, h] : map_gr1) {
+        counter++;
+        canvas->cd(counter);
+        h->Draw();
+    }
+    if (name != nullptr)
+        canvas->Print(name);
+    return canvas;
+}
+
 TCanvas* saveResidualLRBadWiresGr1(std::map<int, TH1D*> map_gr1) {
     TCanvas* canvas = new TCanvas();
-    canvas->Divide(3,3);
+    if (map_gr1.size() < 10) {
+        canvas->Divide(3,3);
+    } else {
+        canvas->Divide(3,4);
+    }
+    
     int counter = 0;
     for (const auto& [wireNum, h] : map_gr1) {
         counter++;
@@ -411,9 +535,6 @@ TCanvas* saveResidualLRBadWiresGr1(std::map<int, TH1D*> map_gr1) {
     }
     return canvas;
 }
-
-
-#include "AhdcDetector.h"
 
 TCanvas* xyPlotBadWires() {
     AhdcDetector* ahdc = new AhdcDetector();
@@ -493,11 +614,47 @@ TCanvas* xyPlotBadWires() {
 
 }
 
-void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file) {
+// void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file) {
+//     // initialize canvas
+//     std::vector<TCanvas*> canvas;
+//     for (int i = 0; i < 48; i++) {
+//         TCanvas* c = new TCanvas(TString::Format("canvas_residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data(), "", 1500, 1600);
+//         c->Divide(3,4);
+//         canvas.push_back(c);
+//     }
+
+//     // draw histograms
+//     for (int i = 0; i < 576; i++) {
+//         int num = i / 12;
+//         int pad = i % 12 + 1;
+//         canvas[num]->cd(pad);
+//         histos[i]->Draw();
+//     }
+
+//     // save histos
+//     TDirectory * dir = file->mkdir("all_residuals_LR");
+//     dir->cd();
+//     for (int i = 0; i < 48; i++) {
+//         canvas[i]->Write(TString::Format("residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data());
+//         if (i == 0) {
+//             canvas[i]->Print("all_residual.pdf[");
+//         } 
+//         else if (i == 47) {
+//             canvas[i]->Print("all_residual.pdf]");
+//         } 
+//         else {
+//             canvas[i]->Print("all_residual.pdf");
+//         }
+//     }
+//     // go back to file
+//     file->cd();
+// }
+
+void save_all_wires_histos(std::vector<TH1D*> histos, TFile* file, const char * name) {
     // initialize canvas
     std::vector<TCanvas*> canvas;
     for (int i = 0; i < 48; i++) {
-        TCanvas* c = new TCanvas(TString::Format("canvas_residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data(), "", 1500, 1600);
+        TCanvas* c = new TCanvas(TString::Format("canvas_%s_w%d-%d", name, 12*i, 12*(i+1)-1).Data(), "", 1500, 1600);
         c->Divide(3,4);
         canvas.push_back(c);
     }
@@ -511,21 +668,100 @@ void save_all_residual_LR_histos(std::vector<TH1D*> histos, TFile* file) {
     }
 
     // save histos
-    TDirectory * dir = file->mkdir("all_residuals_LR");
+    TDirectory * dir = file->mkdir(TString::Format("all_%s[", name).Data());
     dir->cd();
     for (int i = 0; i < 48; i++) {
-        canvas[i]->Write(TString::Format("residual_LR_w%d-%d", 12*i, 12*(i+1)-1).Data());
+        canvas[i]->Write(TString::Format("%s_w%d-%d", name, 12*i, 12*(i+1)-1).Data());
         if (i == 0) {
-            canvas[i]->Print("all_residual.pdf[");
+            canvas[i]->Print(TString::Format("%s.pdf[", name).Data());
         } 
         else if (i == 47) {
-            canvas[i]->Print("all_residual.pdf]");
+            canvas[i]->Print(TString::Format("%s.pdf]", name).Data());
         } 
         else {
-            canvas[i]->Print("all_residual.pdf");
+            canvas[i]->Print(TString::Format("%s.pdf", name).Data());
         }
     }
     // go back to file
     file->cd();
-
 }
+
+
+void fillTrackWireOccupancy(TH2D* h, double x, double y) {
+    TAxis* xAxis = h->GetXaxis();
+    TAxis* yAxis = h->GetXaxis();
+    int binx = xAxis->FindBin(x);
+    int biny = yAxis->FindBin(y);
+    double xc = xAxis->GetBinCenter(binx);
+    double yc = yAxis->GetBinCenter(biny);
+    double radius = 1; //mm
+    double deltax = xAxis->GetBinWidth(binx);
+	double deltay = yAxis->GetBinWidth(biny);
+    int xRange = radius/deltax;
+    int yRange = radius/deltay;
+    for (int nx = -xRange; nx <= xRange; nx++) {
+        for (int ny = -yRange; ny <= yRange; ny++) {
+            double X = xc + nx*deltax;
+            double Y = yc + ny*deltay;
+            if (sqrt((X-xc)*(X-xc)+(Y-yc)*(Y-yc)) < radius) {
+                h->Fill(X,Y);
+            }
+        }
+    }
+}
+
+void plot_t0_distribution(TFile* file) {
+
+    AhdcCCDB* ccdb = new AhdcCCDB("mysql://clas12reader@clasdb.jlab.org/clas12", 22712, "default", "no");
+
+    TH1D* h = new TH1D("t0", "wire t0 distribution; t0 (ns); count", 100, 150, 380);
+    
+    TGraphErrors* gr = new TGraphErrors(576);
+    // gr->SetTitle("wire; wire; t0 (ns)");
+    // gr->SetMarkerStyle(20);
+    int counter = 0;
+    for (int i = 0; i < 576; i++) {
+        double t0 = ccdb->get_t0(i).t0;
+        //double dt0 = ccdb->get_t0(i).dt0;
+        h->Fill(t0);
+        gr->SetPoint(i, i, t0);
+        //gr->SetPointError(i, 0, dt0);
+        if (t0 > 220) {
+            counter++;
+            std::vector<int> ids = AhdcUtils::wire2slc(i);
+            printf("%3d  |  %3d    %2d   %2d   %lf\n", i+1, i, ids[1], ids[2], t0);
+        }
+    }
+    printf("(nwires   :   %d)\n", counter);
+
+    TDirectory * dir = file->mkdir("t0_distribution");
+    dir->cd();
+    
+    h->Write("t0");
+    gr->Write("t0_versus_wire");
+
+    // TCanvas* c = new TCanvas();
+    // gr->Draw("ap");
+    // c->Write("t0_versus_wire");
+    
+    
+    //gr->Write("t0_versus_wire");
+    // go back to file
+    file->cd();
+}
+
+void saveBadWireLeadingEdgeTime(std::map<int, TH1D*> map, TFile* file) {
+
+    TDirectory * dir = file->mkdir("bad_wires_leadingEdgeTime");
+    dir->cd();
+
+     for (const auto& [wireNum, h] : map) {
+        h->Write();
+    }
+
+    // go back to file
+    file->cd();
+}
+
+//# From the wire swap study we found that bad wires have a very large t0. And for those that we managed to swap, they had a good t0. Assuming that the fit was not good, we set their t0 to the mean of the other wires
+//# Sector Layer Component t0 dt0 extra1 extra2 chi2ndf
