@@ -35,10 +35,16 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev track_selection wire_disposition
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev track_selection wire_disposition_dict wire_disposition
 
-wire_disposition: wire_disposition.o fOptions.o AhdcUtils.o AhdcDetector.o AhdcPulse.o Point3D.o
-	$(CXX) -o wire_disposition.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
+wire_disposition: wire_disposition.o wire_disposition_Dict.o fOptions.o AhdcUtils.o AhdcDetector.o AhdcPulse.o Point3D.o AhdcCCDB.o
+	$(CXX) -o wire_disposition.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
+
+wire_disposition_dict.cxx: wire_disposition.h wire_disposition_LinkDef.h # génération du dictionnaire
+	rootcling -f $@ -c $^ $(ROOTCFLAGS)
+
+wire_disposition_Dict.o: wire_disposition_Dict.cxx # compilation du dictionnaire
+	$(CXX) -c $< -o $@ $(shell root-config --cflags)
 
 track_selection: track_selection.o fOptions.o AhdcUtils.o
 	$(CXX) -o track_selection.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
