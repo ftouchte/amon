@@ -62,8 +62,15 @@ void fOptions::Show() {
     for (std::string opt: opts) {
         //printf("|   %s = %s\n", opt.c_str(), mopts[opt].c_str());
         printf("|   %*s = ", max_length, opt.c_str());
+        int counter = 0;
         for (auto x : mopts[opt]) {
-            printf("%s ", x.c_str());
+            if (counter < 10) {
+                printf("%s ", x.c_str());
+            } else {
+                printf(" and %d more...", (int) mopts[opt].size()-counter);
+                break;
+            }
+            counter++;
         }
         printf("\n");
     }
