@@ -57,6 +57,8 @@ void save_all_wires_histos(std::vector<TH1D*> histos, TFile* file, const char * 
 void plot_t0_distribution(TFile* file, std::vector<int> bad_wires);
 void saveMappedHistos(std::map<int, TH1D*> map, TFile* file, const char * name);
 std::map<int, TH1D*> createMapOfHistoWires(std::vector<int> bad_wires, const char * name, const char* title, int nbins, double xmin, double xmax);
+std::vector<TH2D*> generate_corr_wire_phi(const char* tag);
+TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* H2_wire_occupancy);
 
 /// --- Constants
 //const double beam_energy =  10676.6 * Units::MeV;
@@ -77,6 +79,10 @@ int main(int argc, char const *argv[]) {
     // double delta_phi_cut = 20 * Units::deg; // deg
     double W2_min = 3.5 * Units::GeV * Units::GeV;
     double W2_max = 3.8 * Units::GeV * Units::GeV;
+    double vzInf_min = -20 * Units::cm;
+    double vzInf_max = -10 * Units::cm;
+    double vzSup_min = 5 * Units::cm;
+    double vzSup_max = 15 * Units::cm;
 
 
     /// --- start timer
@@ -92,20 +98,18 @@ int main(int argc, char const *argv[]) {
 
     /// --- Initialise histograms
     TH1D* H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
+    TH1D* H1_track_vz = new TH1D("track_vz", "track vz; vz (cm); count", 100, -24, 20);
 
-    std::vector<TH2D*> H2_corr_wire_phi;
-    for (int i = 1; i <= 8; i++) {
-        int layer = AhdcUtils::number2layer(i);
-        int nbWires = AhdcUtils::layerNbWires(layer);
-        std::string name = Form("wire_disposition_layer_%d", layer);
-        std::string title = Form("Wire occupation versus Electron phi (layer %d); #phi_{e} (deg); wire", layer);
-        TH2D* h2 = new TH2D(name.c_str(), title.c_str(), nbWires, 0, 360, nbWires, 1, nbWires+1);
-        h2->SetStats(false);
-        H2_corr_wire_phi.push_back(h2);
-    }
+    std::vector<TH2D*> H2_corr_wire_phi = generate_corr_wire_phi("");
+    std::vector<TH2D*> H2_corr_wire_phi_vzInf = generate_corr_wire_phi("_vzInf");
+    std::vector<TH2D*> H2_corr_wire_phi_vzSup = generate_corr_wire_phi("_vzSup");
 
     TH2D* H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
     H2_wire_occupancy->SetStats(false);
+    TH2D* H2_wire_occupancy_vzInf = new TH2D("wire_occupancy_vzInf", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzInf->SetStats(false);
+    TH2D* H2_wire_occupancy_vzSup = new TH2D("wire_occupancy_vzSup", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzSup->SetStats(false);
 
     /// --- Study bad wires
     std::vector<int> all_bad_wires = {24, 25, 34, 35, 46, 47, 75, 76, 77, 88, 89, 90, 100, 102, 131, 132, 133, 140, 143, 144, 145, 146, 157, 165, 167, 196, 198, 214, 228, 369};
@@ -334,6 +338,31 @@ int main(int argc, char const *argv[]) {
 
                         tree->Fill();
 
+                        double vz = trackBank.getFloat("z", track_row) * Units::mm;
+                        H1_track_vz->Fill(vz);
+                        for (int i = 0; i < adcBank.getRows(); i++) {
+                            int layer = adcBank.getByte("layer", i);
+                            int wire  = adcBank.getShort("component", i);
+                            //int adc = adcBank.getInt("ADC", i);
+                            //int wfType = adcBank.getInt("wfType", i);
+
+                            //if (adc < 30) continue;
+                            //if (wfType > 2) continue;
+
+                            int num = AhdcUtils::layer2number(layer);
+
+                            // vzInf
+                            if (vz > vzInf_min && vz < vzInf_max) {
+                                H2_corr_wire_phi_vzInf[num-1]->Fill(phi / Units::deg, wire);
+                                H2_wire_occupancy_vzInf->Fill(wire, num);
+                            }
+                            // vzSup
+                            if (vz > vzSup_min && vz < vzSup_max) {
+                                H2_corr_wire_phi_vzSup[num-1]->Fill(phi / Units::deg, wire);
+                                H2_wire_occupancy_vzSup->Fill(wire, num);
+                            }
+                        } // end loop over adc
+
                         break; // we only select one electron per event
                     } // end cut on W2 to select elastics
 
@@ -356,31 +385,13 @@ int main(int argc, char const *argv[]) {
     H1_W2->Write("W2");
     showCuts(H1_W2, W2_min, W2_max)->Write("W2_showing_elastic_limits");
 
-    for (int i = 1; i <= 8; i++) {
-        int layer = AhdcUtils::number2layer(i);
-        std::string name = Form("wire_disposition_layer_%d", layer);
-        H2_corr_wire_phi[i-1]->Write(name.c_str());
-    }
+    H1_track_vz->Write("track_vz");
+    showCuts(H1_track_vz, vzInf_min, vzInf_max)->Write("track_vzInf_limits");
+    showCuts(H1_track_vz, vzSup_min, vzSup_max)->Write("track_vzSup_limits");
 
-    H2_wire_occupancy->Write("wire_occupancy");
-    
-    // ALL IN ONE
-    {
-        TCanvas* canvas = new TCanvas();
-        canvas->Divide(3,3);
-
-        // occupancy
-        canvas->cd(1);
-        H2_wire_occupancy->Draw("colz");
-        
-        // wire disposition
-        for (int i = 1; i <= 8; i++) {
-            canvas->cd(i+1);
-            H2_corr_wire_phi[i-1]->Draw("colz");
-        }
-
-        canvas->Write("wire_disposition_all_in_one");
-    }
+    save_wire_versus_phi_plots(H2_corr_wire_phi, H2_wire_occupancy)->Write("wire_disposition_all_in_one");
+    save_wire_versus_phi_plots(H2_corr_wire_phi_vzInf, H2_wire_occupancy_vzInf)->Write("wire_disposition_all_in_one_vzInf");
+    save_wire_versus_phi_plots(H2_corr_wire_phi_vzSup, H2_wire_occupancy_vzSup)->Write("wire_disposition_all_in_one_vzSup");
 
     // Others
     xyPlotBadWires(all_bad_wires, fixed_wires)->Write("xy_view_of_bad_wires");
@@ -725,6 +736,40 @@ std::map<int, TH1D*> createMapOfHistoWires(std::vector<int> bad_wires, const cha
     return map;
 
 }
+
+
+std::vector<TH2D*> generate_corr_wire_phi(const char* tag) {
+    std::vector<TH2D*> H2_corr_wire_phi;
+    for (int i = 1; i <= 8; i++) {
+        int layer = AhdcUtils::number2layer(i);
+        int nbWires = AhdcUtils::layerNbWires(layer);
+        std::string name = Form("wire_disposition_layer_%d%s", layer, tag);
+        std::string title = Form("Wire occupation versus Electron phi (layer %d); #phi_{e} (deg); wire", layer);
+        TH2D* h2 = new TH2D(name.c_str(), title.c_str(), nbWires, 0, 360, nbWires, 1, nbWires+1);
+        h2->SetStats(false);
+        H2_corr_wire_phi.push_back(h2);
+    }
+    return H2_corr_wire_phi;
+}
+
+TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* H2_wire_occupancy) {
+    TCanvas* canvas = new TCanvas();
+    canvas->Divide(3,3);
+
+    // occupancy
+    canvas->cd(1);
+    H2_wire_occupancy->Draw("colz");
+    
+    // wire disposition
+    for (int i = 1; i <= 8; i++) {
+        canvas->cd(i+1);
+        H2_corr_wire_phi[i-1]->Draw("colz");
+    }
+
+    return canvas;
+    //canvas->Write("wire_disposition_all_in_one");
+}
+
 
 //# From the wire swap study we found that bad wires have a very large t0. And for those that we managed to swap, they had a good t0. Assuming that the fit was not good, we set their t0 to the mean of the other wires
 //# Sector Layer Component t0 dt0 extra1 extra2 chi2ndf
