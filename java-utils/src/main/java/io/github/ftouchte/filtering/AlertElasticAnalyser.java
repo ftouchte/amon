@@ -222,9 +222,7 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
     }
 
     private Set<Integer> badWires = new HashSet<>(
-        Arrays.asList(24, 25, 75, 76, 77, 131, 132, 133, 34, 35,
-                    88, 89, 90, 144, 145, 214, 167, 165, 47, 46,
-                    102, 100, 226, 298)
+        Arrays.asList(24, 25, 34, 35, 46, 47, 75, 76, 77, 88, 89, 90, 100, 102, 131, 132, 133, 140, 143, 144, 145, 146, 157, 165, 167, 196, 198, 214, 228, 369)
     );
     public boolean hasBadWires(DataEvent event) {
         if (this.IsElastic(event)) {
