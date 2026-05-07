@@ -3,3 +3,8 @@
 *.dat
 lund/*
 .vscode/
+*.pcm
+*.so
+*.d
+*.cxx
+wire_disposition_dict
