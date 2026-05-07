@@ -26,7 +26,23 @@
     <dependency>
         <groupId>org.jlab.coat</groupId>
         <artifactId>coat-libs</artifactId>
-        <version>13.7.0</version>
+        <version>13.7.1</version>
+        <scope>system</scope>
+        <systemPath>/w/hallb-scshelf2102/clas12/users/touchte/coatjava/coatjava/lib/clas/coat-libs-13.7.1-SNAPSHOT.jar</systemPath>
+    </dependency>
+    <dependency>
+        <groupId>org.jlab.rec</groupId>
+        <artifactId>clas12detector-alert</artifactId>
+        <version>13.7.1</version>
+        <scope>system</scope>
+        <systemPath>/w/hallb-scshelf2102/clas12/users/touchte/coatjava/coatjava/lib/services/clas12detector-alert-13.7.1-SNAPSHOT.jar</systemPath>
+    </dependency>
+    <dependency>
+        <groupId>org.jlab.coda</groupId>
+        <artifactId>jclara</artifactId>
+        <version>4.3</version>
+        <scope>system</scope>
+        <systemPath>/w/hallb-scshelf2102/clas12/users/touchte/coatjava/coatjava/lib/utils/jclara-4.3-SNAPSHOT.jar</systemPath>
     </dependency>
   </dependencies>
 
