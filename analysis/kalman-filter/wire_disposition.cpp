@@ -19,6 +19,7 @@
 #include <string>
 #include <chrono>
 #include <map>
+#include <thread>
 
 #include "reader.h"
 
@@ -70,21 +71,6 @@ const double deuteron_mass = 1.875 * Units::GeV; // energy mass of Deuterium, Ge
 
 int main(int argc, char const *argv[]) {
 
-    /// --- Selection cuts
-    // double chi2_min = 0.1;
-    // double chi2_max = 3;
-    // double vz_min = -24 * Units::cm;
-    // double vz_max = 15 * Units::cm; 
-    // double nhits_min = 7;
-    // double delta_phi_cut = 20 * Units::deg; // deg
-    double W2_min = 3.5 * Units::GeV * Units::GeV;
-    double W2_max = 3.8 * Units::GeV * Units::GeV;
-    double vzInf_min = -20 * Units::cm;
-    double vzInf_max = -10 * Units::cm;
-    double vzSup_min = 5 * Units::cm;
-    double vzSup_max = 15 * Units::cm;
-
-
     /// --- start timer
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -96,323 +82,73 @@ int main(int argc, char const *argv[]) {
     std::vector<std::string> filenames = OPT.GetValues("-i");
     std::string output = OPT.GetValue("-o");
 
-    /// --- Initialise histograms
-    TH1D* H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
-    TH1D* H1_track_vz = new TH1D("track_vz", "track vz; vz (cm); count", 100, -24, 20);
+    SingleThreadRun t;
 
-    std::vector<TH2D*> H2_corr_wire_phi = generate_corr_wire_phi("");
-    std::vector<TH2D*> H2_corr_wire_phi_vzInf = generate_corr_wire_phi("_vzInf");
-    std::vector<TH2D*> H2_corr_wire_phi_vzSup = generate_corr_wire_phi("_vzSup");
+    /// --- Parallel computing
+    int num_threads = 10;
+    std::vector<std::thread> threads(num_threads-1);
+    std::vector<SingleThreadRun> others_t(num_threads-1);
 
-    TH2D* H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
-    H2_wire_occupancy->SetStats(false);
-    TH2D* H2_wire_occupancy_vzInf = new TH2D("wire_occupancy_vzInf", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
-    H2_wire_occupancy_vzInf->SetStats(false);
-    TH2D* H2_wire_occupancy_vzSup = new TH2D("wire_occupancy_vzSup", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
-    H2_wire_occupancy_vzSup->SetStats(false);
-
-    /// --- Study bad wires
-    std::vector<int> all_bad_wires = {24, 25, 34, 35, 46, 47, 75, 76, 77, 88, 89, 90, 100, 102, 131, 132, 133, 140, 143, 144, 145, 146, 157, 165, 167, 196, 198, 214, 228, 369};
-    std::vector<int> fixed_wires = {64, 65, 122, 124, 120};
+    int num_files = filenames.size();
+    int num_files_per_threads = num_files / num_threads + (num_files % num_threads == 0 ? 0 : 1);
+    auto iterator = filenames.begin();
     
-    std::vector<int> bad_wires_vec1 = {24, 25, 75, 76, 77, 131, 132, 133};
-    std::vector<int> bad_wires_vec2 = {34, 35, 88, 89, 90, 144, 145, 214};
-    std::vector<int> bad_wires_vec3 = {47, 46, 102, 100, 226, 298, 157, 45, 158, 101};
+    for (int i = 0; i < num_threads-1; i++) {
+        auto iterator_end = std::next(iterator, num_files_per_threads);
+        //std::vector<std::string> _filenames(iterator, iterator_end);
 
-    std::map<int,TH1D*> bad_wires_map1 = createMapOfHistoWires(bad_wires_vec1, "Gr1_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
-    std::map<int,TH1D*> bad_wires_map2 = createMapOfHistoWires(bad_wires_vec2, "Gr2_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
-    std::map<int,TH1D*> bad_wires_map3 = createMapOfHistoWires(bad_wires_vec3, "Gr3_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+        threads[i] = std::thread(&SingleThreadRun::run, &others_t[i], std::vector<std::string>(iterator, iterator_end));
 
-    std::map<int, TH1D*> leadingEdgeTimeBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 200, 700);
-    std::map<int,TH1D*>  residual_LRBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
-    
-    /// ---
-    std::vector<TH1D*> H1_all_residual_LR;
-    for (int i = 0; i < 576; i++) {
-        std::vector<int> ids = AhdcUtils::wire2slc(i);
-        int layer = ids[1];
-        int wire = ids[2];
-        std::string name = Form("L%dW%d_residual_LR", layer, wire);
-        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count",i, layer, wire);
-        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
-        H1_all_residual_LR.push_back(h);
+        iterator = iterator_end;
     }
 
-    std::vector<TH1D*> H1_all_leadingEdgeTime;
-    for (int i = 0; i < 576; i++) {
-        std::vector<int> ids = AhdcUtils::wire2slc(i);
-        int layer = ids[1];
-        int wire = ids[2];
-        std::string name = Form("bad_L%dW%d_leadingEdgeTime", layer, wire);
-        std::string title = Form("Num %d, L%dW%d, leadingEdgeTime; leadingEdgeTime (ns); count", i, layer, wire);
-        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, 0, 700);
-        H1_all_leadingEdgeTime.push_back(h);
+    // the current thread processes the rest of the files
+    t.run(std::vector<std::string>(iterator, filenames.end()));
+    
+    // wait for the others threads to join
+    for (auto& thr : threads) {
+        thr.join();
     }
 
-    /// --- Define TTree
-    gInterpreter->GenerateDictionary("Hit;Track;std::vector<Hit>", "vector");
-    TTree *tree = new TTree("tree", "tracks avec hits");
-
-    Track track;
-
-    tree->Branch("track", &track);
-
-    /// --- Start analysis
-    int nfile = 0;
-    long unsigned int nevents =0;
-    long unsigned int nelectrons =0;
-    for (auto file : filenames) {
-        nfile++;
-        printf("> Open file %d/%d : %s\n", nfile, (int) filenames.size(), file.c_str());
-        
-        /// --- Initialise HIPO reader
-        hipo::reader  reader(file.c_str());
-        hipo::dictionary factory;
-        reader.readDictionary(factory);
-
-        /// --- Define banks to be read
-        hipo::bank  recBank(factory.getSchema("REC::Particle"));
-        hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
-        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
-        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
-
-
-        /// --- Loop over events
-        hipo::event event;
-        long unsigned int nevents_per_file = 0;
-
-        while( reader.next()){
-            nevents++;
-            nevents_per_file++;
-
-            // display progress Bar
-            if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
-                progressBar(100.0*nevents_per_file/reader.getEntries());
-            }
-            // load bank content for this event
-            reader.read(event);
-            event.getStructure(recBank);
-            
-            for (int row = 0; row < recBank.getRows(); row++) {
-
-                /// --- select trigger electrons
-                if (recBank.getInt("pid", row) == 11 && recBank.getShort("status", row) < 0){ 
-
-                    double px = recBank.getFloat("px", row) * Units::GeV;
-                    double py = recBank.getFloat("py", row) * Units::GeV;
-                    double pz = recBank.getFloat("pz", row) * Units::GeV;
-                    double p = sqrt(px*px + py*py + pz*pz);
-
-                    // physics kinematics
-                    double scattered_beam_energy = sqrt(p*p + electron_mass*electron_mass);
-                    double nu = beam_energy - scattered_beam_energy;
-                    double theta = acos(pz/p) * Units::rad;
-                    double Q2 = 4*beam_energy*scattered_beam_energy*pow(sin(theta/2),2);
-                    double W2 = pow(deuteron_mass,2) + 2*deuteron_mass*nu - Q2;
-
-                    double phi = atan2(py, px) * Units::rad;
-                    if (phi < 0) phi += 2*M_PI;
-
-                    H1_W2->Fill(W2);
-
-                    if (W2 > W2_min && W2 < W2_max) {
-                        nelectrons++;
-                        /// --- loop over AHDC::adc
-                        event.getStructure(adcBank);
-                        for (int i = 0; i < adcBank.getRows(); i++) {
-                            int layer = adcBank.getByte("layer", i);
-                            int wire  = adcBank.getShort("component", i);
-                            //int adc = adcBank.getInt("ADC", i);
-                            //int wfType = adcBank.getInt("wfType", i);
-
-                            //if (adc < 30) continue;
-                            //if (wfType > 2) continue;
-
-                            int num = AhdcUtils::layer2number(layer);
-
-                            H2_corr_wire_phi[num-1]->Fill(phi / Units::deg, wire);
-                            H2_wire_occupancy->Fill(wire, num);
-                            
-                        } // end loop over adcBank rows
-
-                        /// --- find elastic tracks
-                        event.getStructure(hitBank);
-                        event.getStructure(trackBank);
-                        int track_row = -1; 
-                        for (int t = 0; t < trackBank.getRows(); t++) {
-                            int nhits = trackBank.getInt("n_hits", t);
-                            double track_px = trackBank.getFloat("px", row) * Units::MeV;
-                            double track_py = trackBank.getFloat("py", row) * Units::MeV;
-                            double track_pz = trackBank.getFloat("pz", row) * Units::MeV;
-                            double track_p = sqrt(track_px*track_px + track_py*track_py + track_pz*track_pz);
-                            double track_theta = acos(track_pz/track_p) * Units::rad;
-                            double track_phi = atan2(track_py, track_px) * Units::rad;
-                            if (track_phi < 0) track_phi += 2*M_PI;
-                            double delta_phi = fabs(fabs(phi-track_phi)-M_PI);
-                            if (delta_phi < 20*Units::deg && nhits >= 7){ 
-                                track_row = t;
-                                // fill TTree
-                                track.px = px;
-                                track.py = py;
-                                track.pz = pz;
-                                track.p = track_p;
-                                track.theta = track_theta / Units::deg;
-                                track.phi = track_phi / Units::deg;
-                                track.nhits = trackBank.getInt("n_hits", t);
-
-                                track.electron_p = p;
-                                track.electron_px = px;
-                                track.electron_py = py;
-                                track.electron_pz = pz;
-                                track.electron_theta = theta / Units::deg;
-                                track.electron_phi = phi / Units::deg;
-                                track.hits.clear();
-                                break;
-                            }
-                        } // end loop over track
-
-                        if (track_row < 0) continue;
-                        int trackid = trackBank.getInt("trackid", track_row);
-                        for (int i = 0; i < hitBank.getRows(); i++) {
-
-                            if (trackid != hitBank.getInt("trackid", i)) continue;
-
-                            int layer = 10*hitBank.getByte("superlayer", i) + hitBank.getByte("layer", i);
-                            int wire = hitBank.getInt("wire", i);
-                            double residual_LR = hitBank.getDouble("timeOverThreshold", i); // mm, contains residual LR
-                            
-                            int wireNum = AhdcUtils::slc2wire(1, layer, wire);
-
-                            // all residual_LR
-                            H1_all_residual_LR[wireNum]->Fill(residual_LR);
-                            
-
-                            // bad wires gr 1
-                            auto it1 = bad_wires_map1.find(wireNum);
-                            if (it1 != bad_wires_map1.end()) {
-                                it1->second->Fill(residual_LR);
-                            }
-                            // bad wires gr 2
-                            auto it2 = bad_wires_map2.find(wireNum);
-                            if (it2 != bad_wires_map2.end()) {
-                                it2->second->Fill(residual_LR);
-                            }
-                            // bad wires gr 3
-                            auto it3 = bad_wires_map3.find(wireNum);
-                            if (it3 != bad_wires_map3.end()) {
-                                it3->second->Fill(residual_LR);
-                            }
-
-                            {
-                                auto it = residual_LRBadWires_map.find(wireNum);
-                                if (it != residual_LRBadWires_map.end()) {
-                                    it->second->Fill(residual_LR);
-                                }
-                            }
-
-                            // leadingEdgeTime
-                            int adcRow = hitBank.getShort("id", i) - 1;
-                            double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcRow);
-                            H1_all_leadingEdgeTime[wireNum]->Fill(leadingEdgeTime);
-                            {
-                                auto it = leadingEdgeTimeBadWires_map.find(wireNum);
-                                if (it != leadingEdgeTimeBadWires_map.end()) {
-                                    it->second->Fill(leadingEdgeTime);
-                                }
-                            }
-
-                            // Fill TTree
-                            Hit h;
-                            h.sector = 1;
-                            h.superlayer = layer / 10;
-                            h.layer = layer % 10;
-                            h.component = wire;
-                            h.wireNum = wireNum;
-                            h.adc = hitBank.getInt("adc", i);
-                            h.time = hitBank.getDouble("time", i);
-                            h.residual_LR = residual_LR;
-                            h.residual = hitBank.getDouble("residual", i);
-                            track.hits.push_back(h);
-
-                        } // end loop over hits
-
-                        tree->Fill();
-
-                        double vz = trackBank.getFloat("z", track_row) * Units::mm;
-                        H1_track_vz->Fill(vz);
-                        for (int i = 0; i < adcBank.getRows(); i++) {
-                            int layer = adcBank.getByte("layer", i);
-                            int wire  = adcBank.getShort("component", i);
-                            //int adc = adcBank.getInt("ADC", i);
-                            //int wfType = adcBank.getInt("wfType", i);
-
-                            //if (adc < 30) continue;
-                            //if (wfType > 2) continue;
-
-                            int num = AhdcUtils::layer2number(layer);
-
-                            // vzInf
-                            if (vz > vzInf_min && vz < vzInf_max) {
-                                H2_corr_wire_phi_vzInf[num-1]->Fill(phi / Units::deg, wire);
-                                H2_wire_occupancy_vzInf->Fill(wire, num);
-                            }
-                            // vzSup
-                            if (vz > vzSup_min && vz < vzSup_max) {
-                                H2_corr_wire_phi_vzSup[num-1]->Fill(phi / Units::deg, wire);
-                                H2_wire_occupancy_vzSup->Fill(wire, num);
-                            }
-                        } // end loop over adc
-
-                        break; // we only select one electron per event
-                    } // end cut on W2 to select elastics
-
-                } // end selection of trigger electrons
-
-            } // end loop over rec particle
-
-        } // end loop over events for this file
-        printf("\033[34m nevents : %ld \033[0m \n", nevents);
-
-
-    } // end loop over input files
+    // now merge execution
+    for (auto & ti : others_t) {
+        t.merge(ti);
+    }
 
     
 
-    /// Store histograms
+    /// --- Output
     TFile *f = new TFile(output.c_str(), "RECREATE");
     
     
-    H1_W2->Write("W2");
-    showCuts(H1_W2, W2_min, W2_max)->Write("W2_showing_elastic_limits");
+    t.H1_W2->Write("W2");
+    showCuts(t.H1_W2, t.W2_min, t.W2_max)->Write("W2_showing_elastic_limits");
 
-    H1_track_vz->Write("track_vz");
-    showCuts(H1_track_vz, vzInf_min, vzInf_max)->Write("track_vzInf_limits");
-    showCuts(H1_track_vz, vzSup_min, vzSup_max)->Write("track_vzSup_limits");
+    t.H1_track_vz->Write("track_vz");
+    showCuts(t.H1_track_vz, t.vzInf_min, t.vzInf_max)->Write("track_vzInf_limits");
+    showCuts(t.H1_track_vz, t.vzSup_min, t.vzSup_max)->Write("track_vzSup_limits");
 
-    save_wire_versus_phi_plots(H2_corr_wire_phi, H2_wire_occupancy)->Write("wire_disposition_all_in_one");
-    save_wire_versus_phi_plots(H2_corr_wire_phi_vzInf, H2_wire_occupancy_vzInf)->Write("wire_disposition_all_in_one_vzInf");
-    save_wire_versus_phi_plots(H2_corr_wire_phi_vzSup, H2_wire_occupancy_vzSup)->Write("wire_disposition_all_in_one_vzSup");
+    save_wire_versus_phi_plots(t.H2_corr_wire_phi, t.H2_wire_occupancy)->Write("wire_disposition_all_in_one");
+    save_wire_versus_phi_plots(t.H2_corr_wire_phi_vzInf, t.H2_wire_occupancy_vzInf)->Write("wire_disposition_all_in_one_vzInf");
+    save_wire_versus_phi_plots(t.H2_corr_wire_phi_vzSup, t.H2_wire_occupancy_vzSup)->Write("wire_disposition_all_in_one_vzSup");
 
     // Others
-    xyPlotBadWires(all_bad_wires, fixed_wires)->Write("xy_view_of_bad_wires");
+    xyPlotBadWires(t.all_bad_wires, t.fixed_wires)->Write("xy_view_of_bad_wires");
 
-    saveResidualLRBadWiresGroup(bad_wires_map1, "residual_LR_bad_wires_gr_1.pdf")->Write("residual_LR_bad_wires_gr_1");
-    saveResidualLRBadWiresGroup(bad_wires_map2, "residual_LR_bad_wires_gr_2.pdf")->Write("residual_LR_bad_wires_gr_2");
-    saveResidualLRBadWiresGroup(bad_wires_map3, "residual_LR_bad_wires_gr_3.pdf")->Write("residual_LR_bad_wires_gr_3");
+    saveResidualLRBadWiresGroup(t.bad_wires_map1, "residual_LR_bad_wires_gr_1.pdf")->Write("residual_LR_bad_wires_gr_1");
+    saveResidualLRBadWiresGroup(t.bad_wires_map2, "residual_LR_bad_wires_gr_2.pdf")->Write("residual_LR_bad_wires_gr_2");
+    saveResidualLRBadWiresGroup(t.bad_wires_map3, "residual_LR_bad_wires_gr_3.pdf")->Write("residual_LR_bad_wires_gr_3");
 
-    save_all_wires_histos(H1_all_residual_LR, f, "all_wires_residual_LR");
-    save_all_wires_histos(H1_all_leadingEdgeTime, f, "all_wires_leadingEdgeTime");
+    save_all_wires_histos(t.H1_all_residual_LR, f, "all_wires_residual_LR");
+    save_all_wires_histos(t.H1_all_leadingEdgeTime, f, "all_wires_leadingEdgeTime");
 
-    saveMappedHistos(leadingEdgeTimeBadWires_map, f, "all_bad_wires_leadingEdgeTime");
-    saveMappedHistos(residual_LRBadWires_map, f, "all_bad_wires_residual_LR");
+    saveMappedHistos(t.leadingEdgeTimeBadWires_map, f, "all_bad_wires_leadingEdgeTime");
+    saveMappedHistos(t.residual_LRBadWires_map, f, "all_bad_wires_residual_LR");
 
-    plot_t0_distribution(f, all_bad_wires);
-
-    //tree->Write();
-
+    plot_t0_distribution(f, t.all_bad_wires);
 
     f->Close();
-    printf("nb elastic electrons : %ld\n", nelectrons);
+    printf("nb elastic electrons : %ld\n", t.nelectrons);
     printf("File created : %s\n", output.c_str());
 
     /// --- end of the program
@@ -774,3 +510,304 @@ TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* 
 //# From the wire swap study we found that bad wires have a very large t0. And for those that we managed to swap, they had a good t0. Assuming that the fit was not good, we set their t0 to the mean of the other wires
 //# Sector Layer Component t0 dt0 extra1 extra2 chi2ndf
 // t_{0} versus wire , run 22712, timestamp : May 04, 2026
+
+SingleThreadRun::SingleThreadRun () {
+
+    H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
+    H1_track_vz = new TH1D("track_vz", "track vz; vz (cm); count", 100, -24, 20);
+
+    H2_corr_wire_phi = generate_corr_wire_phi("");
+    H2_corr_wire_phi_vzInf = generate_corr_wire_phi("_vzInf");
+    H2_corr_wire_phi_vzSup = generate_corr_wire_phi("_vzSup");
+
+    H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy->SetStats(false);
+    H2_wire_occupancy_vzInf = new TH2D("wire_occupancy_vzInf", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzInf->SetStats(false);
+    H2_wire_occupancy_vzSup = new TH2D("wire_occupancy_vzSup", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzSup->SetStats(false);
+
+    bad_wires_map1 = createMapOfHistoWires(bad_wires_vec1, "Gr1_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    bad_wires_map2 = createMapOfHistoWires(bad_wires_vec2, "Gr2_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    bad_wires_map3 = createMapOfHistoWires(bad_wires_vec3, "Gr3_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+
+    leadingEdgeTimeBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 200, 700);
+    residual_LRBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+
+    for (int i = 0; i < 576; i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(i);
+        int layer = ids[1];
+        int wire = ids[2];
+        std::string name = Form("L%dW%d_residual_LR", layer, wire);
+        std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count",i, layer, wire);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        H1_all_residual_LR.push_back(h);
+    }
+
+    for (int i = 0; i < 576; i++) {
+        std::vector<int> ids = AhdcUtils::wire2slc(i);
+        int layer = ids[1];
+        int wire = ids[2];
+        std::string name = Form("bad_L%dW%d_leadingEdgeTime", layer, wire);
+        std::string title = Form("Num %d, L%dW%d, leadingEdgeTime; leadingEdgeTime (ns); count", i, layer, wire);
+        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, 0, 700);
+        H1_all_leadingEdgeTime.push_back(h);
+    }
+
+    /// --- Stats
+    nfiles = 0;
+    nevents = 0;
+    nelectrons = 0;
+
+}
+
+SingleThreadRun::~SingleThreadRun () {
+    delete H1_W2;
+    delete H1_track_vz;
+    delete H2_wire_occupancy;
+    delete H2_wire_occupancy_vzInf;
+    delete H2_wire_occupancy_vzSup;
+
+    delete_histo_vector(H2_corr_wire_phi);
+    delete_histo_vector(H2_corr_wire_phi_vzInf);
+    delete_histo_vector(H2_corr_wire_phi_vzSup);
+
+    delete_map(bad_wires_map1);
+    delete_map(bad_wires_map2);
+    delete_map(bad_wires_map3);
+    delete_map(leadingEdgeTimeBadWires_map);
+    delete_map(residual_LRBadWires_map);
+
+    delete_histo_vector(H1_all_residual_LR);
+    delete_histo_vector(H1_all_leadingEdgeTime);
+    
+}
+
+void SingleThreadRun::add_map_histo(std::map<int,TH1D*> & map_dest, const std::map<int,TH1D*> & map_src) {
+    for (const auto& [wireNum, h] : map_src) {
+        
+        auto it = map_dest.find(wireNum);
+
+        if (it != map_dest.end()) {
+            it->second->Add(h);
+        }
+    }
+}
+
+void SingleThreadRun::merge(const SingleThreadRun & t) {
+    this->H1_W2->Add(t.H1_W2);
+    this->H1_track_vz->Add(t.H1_track_vz);
+    this->H2_wire_occupancy->Add(t.H2_wire_occupancy);
+    this->H2_wire_occupancy_vzInf->Add(t.H2_wire_occupancy_vzInf);
+    this->H2_wire_occupancy_vzSup->Add(t.H2_wire_occupancy_vzSup);
+
+    add_map_histo(this->bad_wires_map1, t.bad_wires_map1);
+    add_map_histo(this->bad_wires_map2, t.bad_wires_map2);
+    add_map_histo(this->bad_wires_map3, t.bad_wires_map3);
+
+    add_map_histo(this->leadingEdgeTimeBadWires_map, t.leadingEdgeTimeBadWires_map);
+    add_map_histo(this->residual_LRBadWires_map, t.residual_LRBadWires_map);
+
+    add_histo_vector(this->H2_corr_wire_phi, t.H2_corr_wire_phi);
+    add_histo_vector(this->H2_corr_wire_phi_vzInf, t.H2_corr_wire_phi_vzInf);
+    add_histo_vector(this->H2_corr_wire_phi_vzSup, t.H2_corr_wire_phi_vzSup);
+
+    add_histo_vector(this->H1_all_residual_LR, t.H1_all_residual_LR);
+    add_histo_vector(this->H1_all_leadingEdgeTime, t.H1_all_leadingEdgeTime);
+
+    /// --- Stats
+    this->nfiles += t.nfiles;
+    this->nelectrons += t.nelectrons;
+    this->nevents += t.nevents;
+
+}
+
+void SingleThreadRun::run(std::vector<std::string> filenames) {
+    int nfile = 0;
+    long unsigned int nevents =0;
+    long unsigned int nelectrons =0;
+    for (auto file : filenames) {
+        nfile++;
+        printf("> Open file %d/%d : %s\n", nfile, (int) filenames.size(), file.c_str());
+        
+        /// --- Initialise HIPO reader
+        hipo::reader  reader(file.c_str());
+        hipo::dictionary factory;
+        reader.readDictionary(factory);
+
+        /// --- Define banks to be read
+        hipo::bank  recBank(factory.getSchema("REC::Particle"));
+        hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
+        hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
+        hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
+
+
+        /// --- Loop over events
+        hipo::event event;
+        long unsigned int nevents_per_file = 0;
+
+        while( reader.next()){
+            nevents++;
+            nevents_per_file++;
+
+            // display progress Bar
+            if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
+                progressBar(100.0*nevents_per_file/reader.getEntries());
+            }
+            // load bank content for this event
+            reader.read(event);
+            event.getStructure(recBank);
+            
+            for (int row = 0; row < recBank.getRows(); row++) {
+
+                /// --- select trigger electrons
+                if (recBank.getInt("pid", row) == 11 && recBank.getShort("status", row) < 0){ 
+
+                    double px = recBank.getFloat("px", row) * Units::GeV;
+                    double py = recBank.getFloat("py", row) * Units::GeV;
+                    double pz = recBank.getFloat("pz", row) * Units::GeV;
+                    double p = sqrt(px*px + py*py + pz*pz);
+
+                    // physics kinematics
+                    double scattered_beam_energy = sqrt(p*p + electron_mass*electron_mass);
+                    double nu = beam_energy - scattered_beam_energy;
+                    double theta = acos(pz/p) * Units::rad;
+                    double Q2 = 4*beam_energy*scattered_beam_energy*pow(sin(theta/2),2);
+                    double W2 = pow(deuteron_mass,2) + 2*deuteron_mass*nu - Q2;
+
+                    double phi = atan2(py, px) * Units::rad;
+                    if (phi < 0) phi += 2*M_PI;
+
+                    H1_W2->Fill(W2);
+
+                    if (W2 > W2_min && W2 < W2_max) {
+                        nelectrons++;
+                        /// --- loop over AHDC::adc
+                        event.getStructure(adcBank);
+                        for (int i = 0; i < adcBank.getRows(); i++) {
+                            int layer = adcBank.getByte("layer", i);
+                            int wire  = adcBank.getShort("component", i);
+                            //int adc = adcBank.getInt("ADC", i);
+                            //int wfType = adcBank.getInt("wfType", i);
+
+                            //if (adc < 30) continue;
+                            //if (wfType > 2) continue;
+
+                            int num = AhdcUtils::layer2number(layer);
+
+                            H2_corr_wire_phi[num-1]->Fill(phi / Units::deg, wire);
+                            H2_wire_occupancy->Fill(wire, num);
+                            
+                        } // end loop over adcBank rows
+
+                        /// --- find elastic tracks
+                        event.getStructure(hitBank);
+                        event.getStructure(trackBank);
+                        int track_row = -1; 
+                        for (int t = 0; t < trackBank.getRows(); t++) {
+                            int nhits = trackBank.getInt("n_hits", t);
+                            double track_px = trackBank.getFloat("px", row) * Units::MeV;
+                            double track_py = trackBank.getFloat("py", row) * Units::MeV;
+                            double track_pz = trackBank.getFloat("pz", row) * Units::MeV;
+                            double track_p = sqrt(track_px*track_px + track_py*track_py + track_pz*track_pz);
+                            double track_theta = acos(track_pz/track_p) * Units::rad;
+                            double track_phi = atan2(track_py, track_px) * Units::rad;
+                            if (track_phi < 0) track_phi += 2*M_PI;
+                            double delta_phi = fabs(fabs(phi-track_phi)-M_PI);
+                            if (delta_phi < 20*Units::deg && nhits >= 7){ 
+                                track_row = t;
+                                break;
+                            }
+                        } // end loop over track
+
+                        if (track_row < 0) continue;
+                        int trackid = trackBank.getInt("trackid", track_row);
+                        for (int i = 0; i < hitBank.getRows(); i++) {
+
+                            if (trackid != hitBank.getInt("trackid", i)) continue;
+
+                            int layer = 10*hitBank.getByte("superlayer", i) + hitBank.getByte("layer", i);
+                            int wire = hitBank.getInt("wire", i);
+                            double residual_LR = hitBank.getDouble("timeOverThreshold", i); // mm, contains residual LR
+                            
+                            int wireNum = AhdcUtils::slc2wire(1, layer, wire);
+
+                            // all residual_LR
+                            H1_all_residual_LR[wireNum]->Fill(residual_LR);
+                            
+
+                            // bad wires gr 1
+                            auto it1 = bad_wires_map1.find(wireNum);
+                            if (it1 != bad_wires_map1.end()) {
+                                it1->second->Fill(residual_LR);
+                            }
+                            // bad wires gr 2
+                            auto it2 = bad_wires_map2.find(wireNum);
+                            if (it2 != bad_wires_map2.end()) {
+                                it2->second->Fill(residual_LR);
+                            }
+                            // bad wires gr 3
+                            auto it3 = bad_wires_map3.find(wireNum);
+                            if (it3 != bad_wires_map3.end()) {
+                                it3->second->Fill(residual_LR);
+                            }
+
+                            {
+                                auto it = residual_LRBadWires_map.find(wireNum);
+                                if (it != residual_LRBadWires_map.end()) {
+                                    it->second->Fill(residual_LR);
+                                }
+                            }
+
+                            // leadingEdgeTime
+                            int adcRow = hitBank.getShort("id", i) - 1;
+                            double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcRow);
+                            H1_all_leadingEdgeTime[wireNum]->Fill(leadingEdgeTime);
+                            {
+                                auto it = leadingEdgeTimeBadWires_map.find(wireNum);
+                                if (it != leadingEdgeTimeBadWires_map.end()) {
+                                    it->second->Fill(leadingEdgeTime);
+                                }
+                            }
+
+                        } // end loop over hits
+
+                        double vz = trackBank.getFloat("z", track_row) * Units::mm;
+                        H1_track_vz->Fill(vz);
+                        for (int i = 0; i < adcBank.getRows(); i++) {
+                            int layer = adcBank.getByte("layer", i);
+                            int wire  = adcBank.getShort("component", i);
+                            //int adc = adcBank.getInt("ADC", i);
+                            //int wfType = adcBank.getInt("wfType", i);
+
+                            //if (adc < 30) continue;
+                            //if (wfType > 2) continue;
+
+                            int num = AhdcUtils::layer2number(layer);
+
+                            // vzInf
+                            if (vz > vzInf_min && vz < vzInf_max) {
+                                H2_corr_wire_phi_vzInf[num-1]->Fill(phi / Units::deg, wire);
+                                H2_wire_occupancy_vzInf->Fill(wire, num);
+                            }
+                            // vzSup
+                            if (vz > vzSup_min && vz < vzSup_max) {
+                                H2_corr_wire_phi_vzSup[num-1]->Fill(phi / Units::deg, wire);
+                                H2_wire_occupancy_vzSup->Fill(wire, num);
+                            }
+                        } // end loop over adc
+
+                        break; // we only select one electron per event
+                    } // end cut on W2 to select elastics
+
+                } // end selection of trigger electrons
+
+            } // end loop over rec particle
+
+        } // end loop over events for this file
+        printf("\033[34m nevents : %ld \033[0m \n", nevents);
+
+
+    } // end loop over input files
+}
+
