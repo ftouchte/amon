@@ -84,32 +84,24 @@ int main(int argc, char const *argv[]) {
     std::vector<std::string> filenames = OPT.GetValues("-i");
     std::string output = OPT.GetValue("-o");
 
-    SingleThreadRun t;
-
     /// --- Parallel computing
-    int num_threads = 50;
-    std::vector<std::thread> threads(num_threads-1);
-    std::vector<SingleThreadRun> others_t(num_threads-1);
+    int num_threads = std::min(50, (int) filenames.size());
+    std::vector<std::vector<std::string>> filenames_per_threads = divide_files(filenames, num_threads);
+
+    std::vector<std::thread> threads(num_threads);
+    std::vector<SingleThreadRun> workers(num_threads);
 
     printf("Running with %d threads...\n", num_threads);
 
     // progress bar 
     std::thread progreassBarThread(SingleThreadRun::concurrentProgressBar, filenames.size());
-
-    int num_files = filenames.size();
-    int num_files_per_threads = num_files / num_threads + (num_files % num_threads == 0 ? 0 : 1);
-    auto iterator = filenames.begin();
     
-    for (int i = 0; i < num_threads-1; i++) {
-        auto iterator_end = std::next(iterator, num_files_per_threads);
+    for (int i = 0; i < num_threads; i++) {
 
-        threads[i] = std::thread(&SingleThreadRun::run, &others_t[i], std::vector<std::string>(iterator, iterator_end));
+        printf("thread %d : nb. files %d \n", i, (int) filenames_per_threads[i].size());
+        threads[i] = std::thread(&SingleThreadRun::run, &workers[i], filenames_per_threads[i]);
 
-        iterator = iterator_end;
     }
-
-    // the current thread processes the rest of the files
-    t.run(std::vector<std::string>(iterator, filenames.end()));
     
     // wait for the others threads to join
     for (auto& thr : threads) {
@@ -117,8 +109,9 @@ int main(int argc, char const *argv[]) {
     }
     progreassBarThread.join();
 
+    SingleThreadRun t;
     // now merge execution
-    for (auto & ti : others_t) {
+    for (auto & ti : workers) {
         t.merge(ti);
     }
 
@@ -638,7 +631,7 @@ void SingleThreadRun::run(std::vector<std::string> filenames) {
     for (auto file : filenames) {
         nfiles++;
         SingleThreadRun::shared_num_processed_files++;
-        //printf("> Open file %d/%d : %s\n", nfiles, (int) filenames.size(), file.c_str());
+        // printf("> thread %d , Open file %d/%d : %s\n", id, nfiles, (int) filenames.size(), file.c_str());
         
         /// --- Initialise HIPO reader
         hipo::reader  reader(file.c_str());
@@ -832,4 +825,16 @@ void SingleThreadRun::concurrentProgressBar(int val_max) {
     int val = SingleThreadRun::shared_num_processed_files.load();
     std::string text = Form(" ( file %d / %d)", val, val_max);
     progressBar(100, text);
+}
+
+std::vector<std::vector<std::string>> divide_files(std::vector<std::string> filenames, int num_threads) {
+    std::vector<std::vector<std::string>> res(num_threads);
+    size_t file_id = 0;
+    int thread_id = 0;
+    while (file_id < filenames.size()) {
+        thread_id = file_id % num_threads;
+        res[thread_id].push_back(filenames[file_id]);
+        file_id++;
+    }
+    return res;
 }

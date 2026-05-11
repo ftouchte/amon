@@ -23,6 +23,7 @@ void saveMappedHistos(std::map<int, TH1D*> map, TFile* file, const char * name);
 std::map<int, TH1D*> createMapOfHistoWires(std::vector<int> bad_wires, const char * name, const char* title, int nbins, double xmin, double xmax);
 std::vector<TH2D*> generate_corr_wire_phi(const char* tag);
 TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* H2_wire_occupancy);
+std::vector<std::vector<std::string>> divide_files(std::vector<std::string> filenames, int num_threads);
 
 
 struct Hit {
