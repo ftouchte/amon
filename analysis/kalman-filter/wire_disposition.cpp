@@ -49,18 +49,6 @@
 #include "AhdcDetector.h"
 #include "AhdcCCDB.h"
 
-
-void progressBar(int state, int bar_length = 100);
-TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup);
-TCanvas* xyPlotBadWires(std::vector<int> & bad_wires, std::vector<int> & fixed_wires);
-TCanvas* saveResidualLRBadWiresGroup(std::map<int, TH1D*> map_gr1, const char *name = nullptr);
-void save_all_wires_histos(std::vector<TH1D*> histos, TFile* file, const char * name);
-void plot_t0_distribution(TFile* file, std::vector<int> bad_wires);
-void saveMappedHistos(std::map<int, TH1D*> map, TFile* file, const char * name);
-std::map<int, TH1D*> createMapOfHistoWires(std::vector<int> bad_wires, const char * name, const char* title, int nbins, double xmin, double xmax);
-std::vector<TH2D*> generate_corr_wire_phi(const char* tag);
-TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* H2_wire_occupancy);
-
 /// --- Constants
 //const double beam_energy =  10676.6 * Units::MeV;
 const double beam_energy = 2.23951 * Units::GeV; // incident energy if the electron, GeV
@@ -69,6 +57,20 @@ const double proton_mass = 938.272e-3 * Units::GeV; // energy mass of proton, Ge
 const double helium_mass = 3.73 * Units::GeV; // energy mass of Helium-4, GeV
 const double deuteron_mass = 1.875 * Units::GeV; // energy mass of Deuterium, GeV
 
+
+int SingleThreadRun::counter = 0;
+std::atomic<int> SingleThreadRun::shared_num_processed_files{0};
+
+
+/**
+ * @brief The histogram's definitions and the code to process event can be changed in the class SingleThreadRun and its method run()
+ * 
+ * For each new histogram, the user is required to ensure to complete the Constructor (for initialisation), the Destructor and the merge() method
+ * 
+ * @param argc 
+ * @param argv 
+ * @return int 
+ */
 int main(int argc, char const *argv[]) {
 
     /// --- start timer
@@ -85,9 +87,14 @@ int main(int argc, char const *argv[]) {
     SingleThreadRun t;
 
     /// --- Parallel computing
-    int num_threads = 10;
+    int num_threads = 50;
     std::vector<std::thread> threads(num_threads-1);
     std::vector<SingleThreadRun> others_t(num_threads-1);
+
+    printf("Running with %d threads...\n", num_threads);
+
+    // progress bar 
+    std::thread progreassBarThread(SingleThreadRun::concurrentProgressBar, filenames.size());
 
     int num_files = filenames.size();
     int num_files_per_threads = num_files / num_threads + (num_files % num_threads == 0 ? 0 : 1);
@@ -95,7 +102,6 @@ int main(int argc, char const *argv[]) {
     
     for (int i = 0; i < num_threads-1; i++) {
         auto iterator_end = std::next(iterator, num_files_per_threads);
-        //std::vector<std::string> _filenames(iterator, iterator_end);
 
         threads[i] = std::thread(&SingleThreadRun::run, &others_t[i], std::vector<std::string>(iterator, iterator_end));
 
@@ -109,6 +115,7 @@ int main(int argc, char const *argv[]) {
     for (auto& thr : threads) {
         thr.join();
     }
+    progreassBarThread.join();
 
     // now merge execution
     for (auto & ti : others_t) {
@@ -160,21 +167,21 @@ int main(int argc, char const *argv[]) {
 }
 
 
-void progressBar(int state, int bar_length) { // state is a number between 0 and 100
+void progressBar(int state, std::string text) { // state is a number between 0 and 100
     // for the moment the bar length is not variable
-    if (state > bar_length) {return ;}
+    if (state > 100) {return ;}
     printf("\rProgress \033[32m\[");
     for (int i = 0; i <= state; i++) {
         printf("#");
     }
     printf("\033[0m");
-    for (int i = state+1; i < bar_length; i++) {
+    for (int i = state+1; i < 100; i++) {
         printf(".");
     }
     if (state == 100) {
-        printf("\033[32m] \033[1m %d %%\033[0m\n", state);
+        printf("\033[32m] \033[1m %d %%\033[0m %s\n", state, text.c_str());
     } else {
-        printf("] %d %%", state);
+        printf("] %d %% %s", state, text.c_str());
     }
     fflush(stdout);
 }
@@ -513,26 +520,28 @@ TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* 
 
 SingleThreadRun::SingleThreadRun () {
 
-    H1_W2 = new TH1D("W2", "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
-    H1_track_vz = new TH1D("track_vz", "track vz; vz (cm); count", 100, -24, 20);
+    id = counter++;
 
-    H2_corr_wire_phi = generate_corr_wire_phi("");
-    H2_corr_wire_phi_vzInf = generate_corr_wire_phi("_vzInf");
-    H2_corr_wire_phi_vzSup = generate_corr_wire_phi("_vzSup");
+    H1_W2 = new TH1D(make_name_unique("W2").c_str(), "W^{2}; W^{2} (GeV^{2}); count", 100, 3.2, 6);
+    H1_track_vz = new TH1D(make_name_unique("track_vz").c_str(), "track vz; vz (cm); count", 100, -24, 20);
 
-    H2_wire_occupancy = new TH2D("wire_occupancy", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_corr_wire_phi = generate_corr_wire_phi(make_name_unique("").c_str());
+    H2_corr_wire_phi_vzInf = generate_corr_wire_phi(make_name_unique("_vzInf").c_str());
+    H2_corr_wire_phi_vzSup = generate_corr_wire_phi(make_name_unique("_vzSup").c_str());
+
+    H2_wire_occupancy = new TH2D(make_name_unique("wire_occupancy").c_str(), "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
     H2_wire_occupancy->SetStats(false);
-    H2_wire_occupancy_vzInf = new TH2D("wire_occupancy_vzInf", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzInf = new TH2D(make_name_unique("wire_occupancy_vzInf").c_str(), "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
     H2_wire_occupancy_vzInf->SetStats(false);
-    H2_wire_occupancy_vzSup = new TH2D("wire_occupancy_vzSup", "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
+    H2_wire_occupancy_vzSup = new TH2D(make_name_unique("wire_occupancy_vzSup").c_str(), "Wire occupancy; wire; layer", 99, 1, 100, 8, 1, 9);
     H2_wire_occupancy_vzSup->SetStats(false);
 
-    bad_wires_map1 = createMapOfHistoWires(bad_wires_vec1, "Gr1_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
-    bad_wires_map2 = createMapOfHistoWires(bad_wires_vec2, "Gr2_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
-    bad_wires_map3 = createMapOfHistoWires(bad_wires_vec3, "Gr3_bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    bad_wires_map1 = createMapOfHistoWires(bad_wires_vec1, make_name_unique("Gr1_bad_residual_LR").c_str(), "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    bad_wires_map2 = createMapOfHistoWires(bad_wires_vec2, make_name_unique("Gr2_bad_residual_LR").c_str(), "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    bad_wires_map3 = createMapOfHistoWires(bad_wires_vec3, make_name_unique("Gr3_bad_residual_LR").c_str(), "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
 
-    leadingEdgeTimeBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_leadingEdgeTime", "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 200, 700);
-    residual_LRBadWires_map = createMapOfHistoWires(all_bad_wires, "bad_residual_LR", "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
+    leadingEdgeTimeBadWires_map = createMapOfHistoWires(all_bad_wires, make_name_unique("bad_leadingEdgeTime").c_str(), "leadingEdgeTime; leadingEdgeTime (ns); count", 100, 200, 700);
+    residual_LRBadWires_map = createMapOfHistoWires(all_bad_wires, make_name_unique("bad_residual_LR").c_str(), "residul LR; residual LR (mm); count", 100, -2.2, 2.2);
 
     for (int i = 0; i < 576; i++) {
         std::vector<int> ids = AhdcUtils::wire2slc(i);
@@ -540,7 +549,7 @@ SingleThreadRun::SingleThreadRun () {
         int wire = ids[2];
         std::string name = Form("L%dW%d_residual_LR", layer, wire);
         std::string title = Form("Num %d, L%dW%d, residual LR; residual LR (mm); count",i, layer, wire);
-        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, -2.2, 2.2);
+        TH1D* h = new TH1D(make_name_unique(name).c_str(), title.c_str(), 100, -2.2, 2.2);
         H1_all_residual_LR.push_back(h);
     }
 
@@ -550,7 +559,7 @@ SingleThreadRun::SingleThreadRun () {
         int wire = ids[2];
         std::string name = Form("bad_L%dW%d_leadingEdgeTime", layer, wire);
         std::string title = Form("Num %d, L%dW%d, leadingEdgeTime; leadingEdgeTime (ns); count", i, layer, wire);
-        TH1D* h = new TH1D(name.c_str(), title.c_str(), 100, 0, 700);
+        TH1D* h = new TH1D(make_name_unique(name).c_str(), title.c_str(), 100, 0, 700);
         H1_all_leadingEdgeTime.push_back(h);
     }
 
@@ -623,12 +632,13 @@ void SingleThreadRun::merge(const SingleThreadRun & t) {
 }
 
 void SingleThreadRun::run(std::vector<std::string> filenames) {
-    int nfile = 0;
-    long unsigned int nevents =0;
-    long unsigned int nelectrons =0;
+    nfiles = 0;
+    nevents =0;
+    nelectrons =0;
     for (auto file : filenames) {
-        nfile++;
-        printf("> Open file %d/%d : %s\n", nfile, (int) filenames.size(), file.c_str());
+        nfiles++;
+        SingleThreadRun::shared_num_processed_files++;
+        //printf("> Open file %d/%d : %s\n", nfiles, (int) filenames.size(), file.c_str());
         
         /// --- Initialise HIPO reader
         hipo::reader  reader(file.c_str());
@@ -651,9 +661,9 @@ void SingleThreadRun::run(std::vector<std::string> filenames) {
             nevents_per_file++;
 
             // display progress Bar
-            if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
-                progressBar(100.0*nevents_per_file/reader.getEntries());
-            }
+            // if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
+            //     progressBar(100.0*nevents_per_file/reader.getEntries());
+            // }
             // load bank content for this event
             reader.read(event);
             event.getStructure(recBank);
@@ -708,9 +718,9 @@ void SingleThreadRun::run(std::vector<std::string> filenames) {
                             int nhits = trackBank.getInt("n_hits", t);
                             double track_px = trackBank.getFloat("px", row) * Units::MeV;
                             double track_py = trackBank.getFloat("py", row) * Units::MeV;
-                            double track_pz = trackBank.getFloat("pz", row) * Units::MeV;
-                            double track_p = sqrt(track_px*track_px + track_py*track_py + track_pz*track_pz);
-                            double track_theta = acos(track_pz/track_p) * Units::rad;
+                            //double track_pz = trackBank.getFloat("pz", row) * Units::MeV;
+                            //double track_p = sqrt(track_px*track_px + track_py*track_py + track_pz*track_pz);
+                            //double track_theta = acos(track_pz/track_p) * Units::rad;
                             double track_phi = atan2(track_py, track_px) * Units::rad;
                             if (track_phi < 0) track_phi += 2*M_PI;
                             double delta_phi = fabs(fabs(phi-track_phi)-M_PI);
@@ -805,9 +815,21 @@ void SingleThreadRun::run(std::vector<std::string> filenames) {
             } // end loop over rec particle
 
         } // end loop over events for this file
-        printf("\033[34m nevents : %ld \033[0m \n", nevents);
+        //printf("\033[34m nevents : %ld \033[0m \n", nevents);
 
 
     } // end loop over input files
 }
 
+void SingleThreadRun::concurrentProgressBar(int val_max) {
+    while (SingleThreadRun::shared_num_processed_files < val_max) {
+        int val = SingleThreadRun::shared_num_processed_files.load();
+        std::string text = Form(" ( file %d / %d)", val, val_max);
+        progressBar(100.0*val/val_max, text);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // reduce the CPU charge
+    }
+    int val = SingleThreadRun::shared_num_processed_files.load();
+    std::string text = Form(" ( file %d / %d)", val, val_max);
+    progressBar(100, text);
+}

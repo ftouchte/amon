@@ -3,11 +3,27 @@
 
 #include <vector>
 #include <map>
+#include <string>
+#include <atomic>
 
 #include "TH1.h"
 #include "TH2.h"
+#include "TCanvas.h"
+#include "TFile.h"
 
 #include "Units.h"
+
+void progressBar(int state, std::string text = "");
+TCanvas* showCuts(TH1D* h, double lim_inf, double lim_sup);
+TCanvas* xyPlotBadWires(std::vector<int> & bad_wires, std::vector<int> & fixed_wires);
+TCanvas* saveResidualLRBadWiresGroup(std::map<int, TH1D*> map_gr1, const char *name = nullptr);
+void save_all_wires_histos(std::vector<TH1D*> histos, TFile* file, const char * name);
+void plot_t0_distribution(TFile* file, std::vector<int> bad_wires);
+void saveMappedHistos(std::map<int, TH1D*> map, TFile* file, const char * name);
+std::map<int, TH1D*> createMapOfHistoWires(std::vector<int> bad_wires, const char * name, const char* title, int nbins, double xmin, double xmax);
+std::vector<TH2D*> generate_corr_wire_phi(const char* tag);
+TCanvas* save_wire_versus_phi_plots (std::vector<TH2D*> H2_corr_wire_phi, TH2D* H2_wire_occupancy);
+
 
 struct Hit {
     int sector;
@@ -40,6 +56,10 @@ struct Track {
 
 
 struct SingleThreadRun {
+
+    static int counter;
+    static std::atomic<int> shared_num_processed_files;
+    int id;
 
     /// --- Constants
     double W2_min = 3.5 * Units::GeV * Units::GeV;
@@ -108,6 +128,8 @@ struct SingleThreadRun {
         //vec.clear();
     }
 
+    static void concurrentProgressBar(int val_max);
+
 private:
     void add_map_histo(std::map<int,TH1D*> & map_dest, const std::map<int,TH1D*> & map_src);
 
@@ -118,6 +140,16 @@ private:
         }
     }
     
+    /**
+     * @brief Ensure that the ROOT histograms of two different object have different names
+     * 
+     * @param _name 
+     * @return const char* 
+     */
+    std::string make_name_unique(std::string _name) {
+        _name = _name + "id_" + std::to_string(id);
+        return _name;
+    }
 };
 
 #endif
