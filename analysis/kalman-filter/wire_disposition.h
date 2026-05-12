@@ -61,6 +61,7 @@ struct SingleThreadRun {
     static int counter;
     static std::atomic<int> shared_num_processed_files;
     int id;
+    double processing_time = 0;
 
     /// --- Constants
     double W2_min = 3.5 * Units::GeV * Units::GeV;
