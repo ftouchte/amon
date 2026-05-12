@@ -490,7 +490,8 @@ std::vector<TH2D*> generate_corr_wire_phi(const char* tag) {
         int nbWires = AhdcUtils::layerNbWires(layer);
         std::string name = Form("wire_disposition_layer_%d%s", layer, tag);
         std::string title = Form("Wire occupation versus Electron phi (layer %d); #phi_{e} (deg); wire", layer);
-        TH2D* h2 = new TH2D(name.c_str(), title.c_str(), nbWires, 0, 360, nbWires, 1, nbWires+1);
+        //TH2D* h2 = new TH2D(name.c_str(), title.c_str(), nbWires, 0, 360, nbWires, 1, nbWires+1);
+        TH2D* h2 = new TH2D(name.c_str(), title.c_str(), 100, 0, 360, nbWires, 1, nbWires+1);
         h2->SetStats(false);
         H2_corr_wire_phi.push_back(h2);
     }
