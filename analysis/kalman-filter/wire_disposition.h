@@ -67,7 +67,7 @@ struct SingleThreadRun {
     double W2_min = 3.5 * Units::GeV * Units::GeV;
     double W2_max = 3.8 * Units::GeV * Units::GeV;
     double vzInf_min = -20 * Units::cm;
-    double vzInf_max = -10 * Units::cm;
+    double vzInf_max = -15 * Units::cm;
     double vzSup_min = 5 * Units::cm;
     double vzSup_max = 15 * Units::cm;
 
