@@ -98,12 +98,15 @@ int main(int argc, char const *argv[]) {
 
     printf("Running with %d threads...\n", num_threads);
 
+    for (int i = 0; i < num_threads; i++) {
+        printf("thread %d : nb. files %d \n", i, (int) filenames_per_threads[i].size());
+    }
+
     // progress bar 
     std::thread progreassBarThread(SingleThreadRun::concurrentProgressBar, filenames.size());
     
     for (int i = 0; i < num_threads; i++) {
 
-        //printf("thread %d : nb. files %d \n", i, (int) filenames_per_threads[i].size());
         threads[i] = std::thread(&SingleThreadRun::run, &workers[i], filenames_per_threads[i]);
 
     }
@@ -846,10 +849,15 @@ void SingleThreadRun::concurrentProgressBar(int val_max) {
  */
 std::vector<std::vector<std::string>> divide_files(std::vector<std::string> filenames, int num_threads) {
     std::vector<std::vector<std::string>> res(num_threads);
-    size_t file_id = 0;
-    int thread_id = 0;
+    int chunk = filenames.size() / num_threads;
+    for (int thread_id = 0; thread_id < num_threads; thread_id++) {
+        for (int i = 0; i < chunk; i++) {
+            res[thread_id].push_back(filenames[thread_id*chunk + i]);
+        }
+    }
+    size_t file_id = chunk*num_threads;
     while (file_id < filenames.size()) {
-        thread_id = file_id % num_threads;
+        int thread_id = file_id % num_threads;
         res[thread_id].push_back(filenames[file_id]);
         file_id++;
     }
