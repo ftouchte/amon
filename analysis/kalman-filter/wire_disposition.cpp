@@ -77,15 +77,20 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
 
     /// --- Load options
-    fOptions OPT({"-i", "-o", "-v", "-simu"});
+    fOptions OPT({"-i", "-o", "-v", "-simu", "-ncpu"});
     OPT.LoadOptions(argc, argv);
     OPT.Show();
 
     std::vector<std::string> filenames = OPT.GetValues("-i");
     std::string output = OPT.GetValue("-o");
+    std::string ncpu_str = OPT.GetValue("-ncpu");
+    int ncpu = 1;
+    if (ncpu_str.compare("") != 0) {
+        ncpu = std::atoi(ncpu_str.c_str());
+    }
 
     /// --- Parallel computing
-    int num_threads = std::min(50, (int) filenames.size());
+    int num_threads = std::min(ncpu, (int) filenames.size());
     std::vector<std::vector<std::string>> filenames_per_threads = divide_files(filenames, num_threads);
 
     std::vector<std::thread> threads(num_threads);
@@ -98,7 +103,7 @@ int main(int argc, char const *argv[]) {
     
     for (int i = 0; i < num_threads; i++) {
 
-        printf("thread %d : nb. files %d \n", i, (int) filenames_per_threads[i].size());
+        //printf("thread %d : nb. files %d \n", i, (int) filenames_per_threads[i].size());
         threads[i] = std::thread(&SingleThreadRun::run, &workers[i], filenames_per_threads[i]);
 
     }
@@ -113,6 +118,7 @@ int main(int argc, char const *argv[]) {
     // now merge execution
     for (auto & ti : workers) {
         t.merge(ti);
+        printf("Thread id %d  ---> processing time : %lf seconds\n", ti.id, ti.processing_time);
     }
 
     
@@ -625,6 +631,7 @@ void SingleThreadRun::merge(const SingleThreadRun & t) {
 }
 
 void SingleThreadRun::run(std::vector<std::string> filenames) {
+    auto start = std::chrono::high_resolution_clock::now();
     nfiles = 0;
     nevents =0;
     nelectrons =0;
@@ -812,6 +819,9 @@ void SingleThreadRun::run(std::vector<std::string> filenames) {
 
 
     } // end loop over input files
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    processing_time = elapsed.count();
 }
 
 void SingleThreadRun::concurrentProgressBar(int val_max) {
@@ -827,6 +837,13 @@ void SingleThreadRun::concurrentProgressBar(int val_max) {
     progressBar(100, text);
 }
 
+/**
+ * @brief Share the number of files to be process amon the number of working threads
+ * 
+ * @param filenames lists of all files to be processed
+ * @param num_threads number of threads
+ * @return std::vector<std::vector<std::string>> as much std::vector<std::string> as the number of working threads
+ */
 std::vector<std::vector<std::string>> divide_files(std::vector<std::string> filenames, int num_threads) {
     std::vector<std::vector<std::string>> res(num_threads);
     size_t file_id = 0;
