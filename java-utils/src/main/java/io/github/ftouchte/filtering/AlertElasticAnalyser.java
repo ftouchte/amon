@@ -62,8 +62,12 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
                 double px = recBank.getFloat("px", row);
                 double py = recBank.getFloat("py", row);
                 double pz = recBank.getFloat("pz", row);
+                double vx = recBank.getFloat("vx", row);
+                double vy = recBank.getFloat("vy", row);
+                double vz = recBank.getFloat("vz", row);
                 ParticleRow electron_candidate = new ParticleRow(px * Units.GeV, py * Units.GeV, pz * Units.GeV);
                 electron_candidate.SetBankRow(row);
+                electron_candidate.SetVertex(vx, vy, vz);
                 // physics kinematics
                 double scattered_beam_energy = Math.sqrt(Math.pow(electron_candidate.p(Units.GeV),2) + Math.pow(electron_mass,2));
                 double nu = beam_energy - scattered_beam_energy;
@@ -136,7 +140,11 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
                 double px = recBank.getFloat("px", row);
                 double py = recBank.getFloat("py", row);
                 double pz = recBank.getFloat("pz", row);
+                double vx = recBank.getFloat("vx", row);
+                double vy = recBank.getFloat("vy", row);
+                double vz = recBank.getFloat("vz", row);
                 ParticleRow electron_candidate = new ParticleRow(px * Units.GeV, py * Units.GeV, pz * Units.GeV);
+                electron_candidate.SetVertex(vx, vy, vz);
                 // physics kinematics
                 double scattered_beam_energy = Math.sqrt(Math.pow(electron_candidate.p(Units.GeV),2) + Math.pow(electron_mass,2));
                 double nu = beam_energy - scattered_beam_energy;
@@ -179,10 +187,23 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
     }
 
     /**
-     * Return elactic ahdc track. Better use after {@link #IsElastic(DataEvent)}
+     * Return elastic ahdc track. Better use after {@link #IsElastic(DataEvent)}
      */
     public ParticleRow getAhdcTrack() {
         return this.ahdc_track;
+    }
+
+    /**
+     * Return elastic ahdc track. Better use after {@link #IsElastic(DataEvent)} or {@link #hasElasticElectron(DataEvent)}
+     */
+    public ParticleRow getExpectedTrack() {
+        double scattered_beam_energy = Math.sqrt(Math.pow(electron.p(Units.GeV),2) + Math.pow(electron_mass,2));
+        double px1 = -scattered_beam_energy*Math.sin(electron.theta(Units.rad))*Math.cos(electron.phi(Units.rad));
+        double py1 = -scattered_beam_energy*Math.sin(electron.theta(Units.rad))*Math.sin(electron.phi(Units.rad));
+        double pz1 = beam_energy - scattered_beam_energy*Math.cos(electron.theta(Units.rad));
+        ParticleRow particle = new ParticleRow(px1, py1, pz1);
+        particle.SetVertex(electron.vx(), electron.vy(), electron.vz());
+        return particle;
     }
 
     public enum Mode {
