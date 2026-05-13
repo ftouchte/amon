@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# filter elastics events for all file in a given directory
+# filter elastics events for all files in a given directory
 
 path=$1
 
