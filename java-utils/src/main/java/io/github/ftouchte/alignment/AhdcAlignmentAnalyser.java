@@ -59,7 +59,7 @@ import io.github.ftouchte.utils.fOptions;
 
 /**
  * This code is used in parallel of coatjava{branch: ahdc/alignment}. We use coatjva to access the 
- * AHDC geometry and the processEvent() method of some classes.
+ * AHDC geometry and the revisited processEvent() method of some classes.
  * 
  * @note This class contains analysis code ready to used for:
  * - layer alignment
