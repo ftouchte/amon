@@ -224,6 +224,12 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
     private Set<Integer> badWires = new HashSet<>(
         Arrays.asList(24, 25, 34, 35, 46, 47, 75, 76, 77, 88, 89, 90, 100, 102, 131, 132, 133, 140, 143, 144, 145, 146, 157, 165, 167, 196, 198, 214, 228, 369)
     );
+
+    /**
+     * Utility to select event for which at least one track containts a bad wires. The list of bad wires is for now a private attribute of the class.
+     * @param event HIPO event
+     * @return true or false
+     */
     public boolean hasBadWires(DataEvent event) {
         if (this.IsElastic(event)) {
             ParticleRow track = this.getAhdcTrack();
