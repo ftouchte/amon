@@ -12,6 +12,9 @@ public class Histos {
     /** Differences between reconstructed and expected distributions */
     H1F h1_delta_p, h1_delta_theta, h1_delta_phi, h1_delta_vz;
 
+    /** ALERTEngine computing time per event*/
+    H1F h1_computing_time;
+
     /**
      * Constructor. Place to initialise all histograms
      */
@@ -31,6 +34,40 @@ public class Histos {
         h1_delta_theta = new H1F("delta_theta", "delta theta", 100, 0, 180);
         h1_delta_phi = new H1F("delta_phi", "delta phi", 100, 0, 360);
         h1_delta_vz = new H1F("delta_vz", "delta vz", 100, -24, 20);
+
+        h1_computing_time = new H1F("computing_time", "ALERTEngine computing time", 100, 0, 0.5);
+
+
+        /// --- title
+        h1_computing_time.setTitleX("time (ms)");
+        h1_computing_time.setTitleY("count");
+
+        h1_p.setTitleX("p (MeV)");
+        h1_p.setTitleY("count");
+        h1_theta.setTitleX("theta (deg)");
+        h1_theta.setTitleY("count");
+        h1_phi.setTitleX("phi (deg)");
+        h1_phi.setTitleY("count");
+        h1_vz.setTitleX("vz (cm)");
+        h1_vz.setTitleY("count");
+
+        h1_p0.setTitleX("p (MeV)");
+        h1_p0.setTitleY("count");
+        h1_theta0.setTitleX("theta (deg)");
+        h1_theta0.setTitleY("count");
+        h1_phi0.setTitleX("phi (deg)");
+        h1_phi0.setTitleY("count");
+        h1_vz0.setTitleX("vz (cm)");
+        h1_vz0.setTitleY("count");
+
+        h1_delta_p.setTitleX("delta p (MeV)");
+        h1_delta_p.setTitleY("count");
+        h1_delta_theta.setTitleX("delta theta (deg)");
+        h1_delta_theta.setTitleY("count");
+        h1_delta_phi.setTitleX("delta phi (deg)");
+        h1_delta_phi.setTitleY("count");
+        h1_delta_vz.setTitleX("delta vz (cm)");
+        h1_delta_vz.setTitleY("count");
 
     }
 
@@ -56,5 +93,17 @@ public class Histos {
         this.h1_delta_phi.add(histos.h1_delta_phi);
         this.h1_delta_vz.add(histos.h1_delta_vz);
         
+        this.h1_computing_time.add(histos.h1_computing_time);
+
     }
+
+    // to be completed
+    public void print() {
+        System.out.println("Histos:");
+        System.out.printf("Reconstructed  --->  p : %f MeV, theta : %f deg, phi : %f deg , vz : %f cm \n", h1_p.getMean(), h1_theta.getMean(), h1_phi.getMean(), h1_vz.getMean());
+        System.out.printf("Expected       --->  p : %f MeV, theta : %f deg, phi : %f deg , vz : %f cm \n", h1_p0.getMean(), h1_theta0.getMean(), h1_phi0.getMean(), h1_vz0.getMean());
+        System.out.printf("Delta          --->  Dp : %f MeV, Dtheta : %f deg, Dphi : %f deg , Dvz : %f cm \n", h1_delta_p.getMean(), h1_delta_theta.getMean(), h1_delta_phi.getMean(), h1_delta_vz.getMean());
+        System.out.printf("computing time : %f ms\n", h1_computing_time.getMean());
+    }
+    
 }

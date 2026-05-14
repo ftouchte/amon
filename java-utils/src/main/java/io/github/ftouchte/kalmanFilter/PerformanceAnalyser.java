@@ -29,6 +29,7 @@ import io.github.ftouchte.filtering.AlertTrackSelector;
 import io.github.ftouchte.utils.ParticleRow;
 import io.github.ftouchte.utils.Units;
 import io.github.ftouchte.utils.fOptions;
+import kotlin.Unit;
 
 /**
  * Utility to study the perfomance of the Kalman Filter. Especially the dependency of the computing time
@@ -39,38 +40,50 @@ import io.github.ftouchte.utils.fOptions;
 public class PerformanceAnalyser {
     
     /** Number of threads running simultaneously */
-    static int nThreads = 10; // 4
+    int nThreads = 10; // 4
 
     /** Maximum capacity of the queue conataining events */
-    static int queue_capacity = 9000; // 150
+    int queue_capacity = 9000; // 150
 
     /** Frequency of event loggin */
-    static int frequency_of_event_login = 100;
+    int frequency_of_event_login = 100;
 
-    final double clas_alignment = +75; // mm
+    final double clas_alignment = +75 * Units.mm; // mm
 
     int KF_Niter = 40;
     double stepper_size = 0.5; // mm
 
     public static void main(String[] args) {
         /// --- Load inputs from options
-        fOptions options = new fOptions("-i", "-o");
+        fOptions options = new fOptions("-i", "-o", "-ncpu");
         options.LoadOptions(args);
         options.Show();
 
-        ArrayList<String> filenames = options.GetValues("-i");
+        ArrayList<String> inFiles = options.GetValues("-i");
+        String nThreads_str = options.GetValue("-ncpu");
+        int nThreads = 10;
+        if (!nThreads_str.equals("")){
+            nThreads = Integer.parseInt(nThreads_str);
+        }
 
-        PerformanceAnalyser pa = new PerformanceAnalyser();
-        pa.set_KF_Niter(40);
-        pa.set_step_size(0.5);
+        PerformanceAnalyser pfAnalyser = new PerformanceAnalyser();
+        pfAnalyser.set_nThreads(nThreads);
+        // pfAnalyser.set_KF_Niter(40);
+        // pfAnalyser.set_step_size(0.5);
 
-
-        
-
+        // Test 1 : loop over Niter
+        ArrayList<Histos> histos_array = new ArrayList<>(); 
+        for (int i = 1; i < 40; i++) {
+            pfAnalyser.set_KF_Niter(i);
+            Histos h = pfAnalyser.run(inFiles);
+            histos_array.add(h);
+            System.out.println("# KF Niter : " + i);
+            h.print();
+        }
     }
 
 
-    void run(String[] inFiles) {
+    Histos run(ArrayList<String> inFiles) {
 
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -117,6 +130,7 @@ public class PerformanceAnalyser {
                     if (analyser.hasGoodTrack(event)) {
                         ahdcEngine.processDataEvent(event);
                         alertEngine.processDataEvent(event); // the ADC geometry is not relevant in this study
+                        local_histos.h1_computing_time.fill(alertEngine.getComputingTime() / 1_000_000.0); // convert ns to ms
                         // process this event
                         processEvent(event, local_histos, analyser);
                     }
@@ -182,6 +196,8 @@ public class PerformanceAnalyser {
 
         /// --- Histogram analysis to be placed here
         analyseHistos(global_histos);
+
+        return global_histos;
 
     }
 
@@ -251,4 +267,6 @@ public class PerformanceAnalyser {
      * @param _size
      */
     void set_step_size(double _size) {stepper_size = _size;}
+
+    void set_nThreads(int _nThreads) { nThreads = _nThreads;}
 }
