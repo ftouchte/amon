@@ -1,5 +1,7 @@
 package io.github.ftouchte.kalmanFilter;
 
+import java.io.IOException;
+
 import org.jlab.groot.data.H1F;
 
 public class Histos {
@@ -104,6 +106,24 @@ public class Histos {
         System.out.printf("Expected       --->  p : %f MeV, theta : %f deg, phi : %f deg , vz : %f cm \n", h1_p0.getMean(), h1_theta0.getMean(), h1_phi0.getMean(), h1_vz0.getMean());
         System.out.printf("Delta          --->  Dp : %f MeV, Dtheta : %f deg, Dphi : %f deg , Dvz : %f cm \n", h1_delta_p.getMean(), h1_delta_theta.getMean(), h1_delta_phi.getMean(), h1_delta_vz.getMean());
         System.out.printf("computing time : %f ms\n", h1_computing_time.getMean());
+    }
+
+    public void save() throws IOException {
+        Renderer.save_histogram_as_pdf(h1_p, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_theta, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_phi, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_vz, 800, 600);
+
+        Renderer.save_histogram_as_pdf(h1_p0, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_theta0, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_phi0, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_vz0, 800, 600);
+
+        Renderer.save_histogram_as_pdf(h1_delta_p, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_delta_theta, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_delta_phi, 800, 600);
+        Renderer.save_histogram_as_pdf(h1_delta_vz, 800, 600);
+
     }
     
 }

@@ -1,5 +1,6 @@
 package io.github.ftouchte.kalmanFilter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -53,7 +54,7 @@ public class PerformanceAnalyser {
     int KF_Niter = 40;
     double stepper_size = 0.5; // mm
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o", "-ncpu");
         options.LoadOptions(args);
@@ -73,12 +74,13 @@ public class PerformanceAnalyser {
 
         // Test 1 : loop over Niter
         ArrayList<Histos> histos_array = new ArrayList<>(); 
-        for (int i = 1; i < 40; i++) {
+        for (int i = 1; i < 2; i++) {
             pfAnalyser.set_KF_Niter(i);
             Histos h = pfAnalyser.run(inFiles);
             histos_array.add(h);
             System.out.println("# KF Niter : " + i);
             h.print();
+            h.save();
         }
     }
 
