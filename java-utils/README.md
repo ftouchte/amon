@@ -45,6 +45,14 @@ add the dependency in the file `pom.xml`
 </dependency>
 ```
 
+## Find dependencies
+
+```
+# Find the jar files of a specific dependency. Example:
+mvn dependency:build-classpath | grep "xchart"
+```
+
+
 
 
 
