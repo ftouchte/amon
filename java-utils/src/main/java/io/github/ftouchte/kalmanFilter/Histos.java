@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import org.jlab.groot.data.H1F;
 
+import com.itextpdf.text.DocumentException;
+
 public class Histos {
     /** Reconstructed kinematics */
     H1F h1_p, h1_theta, h1_phi, h1_vz;
@@ -108,21 +110,27 @@ public class Histos {
         System.out.printf("computing time : %f ms\n", h1_computing_time.getMean());
     }
 
-    public void save() throws IOException {
+    public void save() throws IOException, DocumentException {
+        
+        Renderer.save_histogram_as_png(h1_p, 800, 600);
+        Renderer.save_histogram_as_png(h1_theta, 800, 600);
+        Renderer.save_histogram_as_png(h1_phi, 800, 600);
+        Renderer.save_histogram_as_png(h1_vz, 800, 600);
+
         Renderer.save_histogram_as_pdf(h1_p, 800, 600);
         Renderer.save_histogram_as_pdf(h1_theta, 800, 600);
         Renderer.save_histogram_as_pdf(h1_phi, 800, 600);
         Renderer.save_histogram_as_pdf(h1_vz, 800, 600);
 
-        Renderer.save_histogram_as_pdf(h1_p0, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_theta0, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_phi0, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_vz0, 800, 600);
+        Renderer.save_histogram_as_png(h1_p0, 800, 600);
+        Renderer.save_histogram_as_png(h1_theta0, 800, 600);
+        Renderer.save_histogram_as_png(h1_phi0, 800, 600);
+        Renderer.save_histogram_as_png(h1_vz0, 800, 600);
 
-        Renderer.save_histogram_as_pdf(h1_delta_p, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_delta_theta, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_delta_phi, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_delta_vz, 800, 600);
+        Renderer.save_histogram_as_png(h1_delta_p, 800, 600);
+        Renderer.save_histogram_as_png(h1_delta_theta, 800, 600);
+        Renderer.save_histogram_as_png(h1_delta_phi, 800, 600);
+        Renderer.save_histogram_as_png(h1_delta_vz, 800, 600);
 
     }
     
