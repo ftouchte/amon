@@ -1,10 +1,13 @@
 package io.github.ftouchte.kalmanFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.jlab.groot.data.H1F;
 
 import com.itextpdf.text.DocumentException;
+
+import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
 
 public class Histos {
     /** Reconstructed kinematics */
@@ -111,26 +114,30 @@ public class Histos {
     }
 
     public void save() throws IOException, DocumentException {
+
+        Renderer.width = 1500;
+        Renderer.height = 1200;
         
-        Renderer.save_histogram_as_png(h1_p, 800, 600);
-        Renderer.save_histogram_as_png(h1_theta, 800, 600);
-        Renderer.save_histogram_as_png(h1_phi, 800, 600);
-        Renderer.save_histogram_as_png(h1_vz, 800, 600);
+        Renderer.save_histogram(h1_p, h1_p.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_theta, h1_theta.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_phi, h1_phi.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_vz, h1_vz.getName(), RendererOutputType.PNG);
 
-        Renderer.save_histogram_as_pdf(h1_p, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_theta, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_phi, 800, 600);
-        Renderer.save_histogram_as_pdf(h1_vz, 800, 600);
+        Renderer.save_histogram(h1_p0, h1_p0.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_theta0, h1_theta0.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_phi0, h1_phi0.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_vz0, h1_vz0.getName(), RendererOutputType.PNG);
 
-        Renderer.save_histogram_as_png(h1_p0, 800, 600);
-        Renderer.save_histogram_as_png(h1_theta0, 800, 600);
-        Renderer.save_histogram_as_png(h1_phi0, 800, 600);
-        Renderer.save_histogram_as_png(h1_vz0, 800, 600);
+        Renderer.save_histogram(h1_delta_p, h1_delta_p.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_delta_theta, h1_delta_theta.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_delta_phi, h1_delta_phi.getName(), RendererOutputType.PNG);
+        Renderer.save_histogram(h1_delta_vz, h1_delta_vz.getName(), RendererOutputType.PNG);
 
-        Renderer.save_histogram_as_png(h1_delta_p, 800, 600);
-        Renderer.save_histogram_as_png(h1_delta_theta, 800, 600);
-        Renderer.save_histogram_as_png(h1_delta_phi, 800, 600);
-        Renderer.save_histogram_as_png(h1_delta_vz, 800, 600);
+        ArrayList<H1F> list = new ArrayList<>();
+        list.add(h1_p);
+        list.add(h1_p0);
+        Renderer.save_overlayed_histogram(list, "combined_histo_p", RendererOutputType.PNG);
+        Renderer.save_overlayed_histogram(list, "combined_histo_p", RendererOutputType.PDF);
 
     }
     
