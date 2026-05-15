@@ -29,6 +29,7 @@ import com.itextpdf.text.DocumentException;
 import io.github.ftouchte.alignment.AhdcWireId;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.filtering.AlertTrackSelector;
+import io.github.ftouchte.filtering.AlertElasticAnalyser.Mode;
 import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
 import io.github.ftouchte.utils.ParticleRow;
 import io.github.ftouchte.utils.Units;
@@ -116,6 +117,7 @@ public class PerformanceAnalyser {
 
                 Histos local_histos = new Histos();
                 AlertElasticAnalyser analyser = new AlertElasticAnalyser();
+                analyser.setFilterMode(Mode.IS_ELASTIC);
 
                 // Config ALERT engine
                 ALERTEngine alertEngine = new ALERTEngine();
@@ -143,7 +145,7 @@ public class PerformanceAnalyser {
 
                     // filter good events
                     if (analyser.hasGoodTrack(event)) {
-                        ahdcEngine.processDataEvent(event);
+                        //ahdcEngine.processDataEvent(event); // running the ahdc engine can modified the order of the trach rows, some tracks may desappear
                         alertEngine.processDataEvent(event); // the ADC geometry is not relevant in this study
                         local_histos.h1_computing_time.fill(alertEngine.getComputingTime() / 1_000_000.0); // convert ns to ms
                         // process this event
@@ -239,6 +241,8 @@ public class PerformanceAnalyser {
 
         // Reconstructed track
         ArrayList<Integer> trackRows = analyser.getAhdcKFTrackRows();
+
+        System.out.println("ntrack rows : " + trackRows.size());
         
         for (int i = 0; i < trackRows.size(); i++) {
             
@@ -251,6 +255,12 @@ public class PerformanceAnalyser {
             double theta = Math.acos(pz/p) * Units.rad;
             double phi   = Math.atan2(py, px) * Units.rad;
             if (phi < 0) phi += 2*Math.PI*Units.rad;
+
+            if (phi < 1*Units.deg)
+                trackBank.show();
+
+            // if (phi > 20*Units.deg)
+            //     trackBank.show();
 
             // Fill histos here
             histos.h1_p.fill(p / Units.MeV);
