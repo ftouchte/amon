@@ -29,6 +29,7 @@ import com.itextpdf.text.DocumentException;
 import io.github.ftouchte.alignment.AhdcWireId;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.filtering.AlertTrackSelector;
+import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
 import io.github.ftouchte.utils.ParticleRow;
 import io.github.ftouchte.utils.Units;
 import io.github.ftouchte.utils.fOptions;
@@ -76,18 +77,28 @@ public class PerformanceAnalyser {
 
         // Test 1 : loop over Niter
         ArrayList<Histos> histos_array = new ArrayList<>(); 
-        for (int i = 1; i < 2; i++) {
+        int Niter_min = 1;
+        int Niter_max = 5;
+        for (int i = Niter_min; i < Niter_max; i++) {
             pfAnalyser.set_KF_Niter(i);
-            Histos h = pfAnalyser.run(inFiles);
+            Histos h = pfAnalyser.run(inFiles, "_KF_Niter_" + i);
             histos_array.add(h);
             System.out.println("# KF Niter : " + i);
             h.print();
             h.save();
         }
+
+        /// --- Output Evolution with Niter
+        ArrayList<H1F> all_h1_p = new ArrayList<>();
+        for (Histos histos : histos_array) {
+            all_h1_p.add(histos.h1_p);
+        }
+        all_h1_p.add(histos_array.get(0).h1_p0); // add expected value
+        Renderer.save_histogram_evolution_with_parameter(all_h1_p, "Momentum evolution with KF Niter", "Momentum_p_versus_KF_Niter", "KF Niter", Niter_min, Niter_max+1, 1, RendererOutputType.PNG);
     }
 
 
-    Histos run(ArrayList<String> inFiles) {
+    Histos run(ArrayList<String> inFiles, String tag) {
 
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -181,7 +192,7 @@ public class PerformanceAnalyser {
         }
 
         /// --- Merge histograms
-        Histos global_histos = new Histos();
+        Histos global_histos = new Histos(tag);
         for (Future<Histos> f : futures) {
             try {
                 Histos local_histos = f.get();
