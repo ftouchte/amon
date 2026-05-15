@@ -12,6 +12,7 @@ import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTitleAnnotation;
+import org.jfree.chart.axis.AxisLabelLocation;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
@@ -20,12 +21,15 @@ import org.jfree.chart.block.BlockContainer;
 import org.jfree.chart.block.ColumnArrangement;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.LookupPaintScale;
 import org.jfree.chart.renderer.xy.XYStepRenderer;
 import org.jfree.chart.title.CompositeTitle;
 import org.jfree.chart.title.LegendTitle;
+import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jlab.groot.data.H1F;
@@ -42,6 +46,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -102,17 +107,21 @@ public class Renderer {
     public static XYSeries create_xy_series(H1F h) {
         double[] xValues = h.getXaxis().getBinCenters();
         double[] xLimits = h.getAxis().getLimits();
-        double[] count = toDoubleArray(h.getData());
+        double[] counts = toDoubleArray(h.getData());
+
+        double count_min = Arrays.stream(counts).min().getAsDouble();
 
         // Dataset
         XYSeries series = new XYSeries(h.getName());
 
+        series.add(xLimits[0], count_min);
         for (int i = 0; i < xValues.length; i++) {
             double lower = xLimits[i];
             double upper = xLimits[i+1];
-            series.add(lower, count[i]);
-            series.add(upper, count[i]);
+            series.add(lower, counts[i]);
+            series.add(upper, counts[i]);
         }
+        series.add(xLimits[xLimits.length-1], count_min);
 
         return series;
     }
@@ -145,11 +154,15 @@ public class Renderer {
     /**
      * Create JFreeChart from dataset (e.g XYSeriesCollection)
      * @param dataset
+     * @param title
+     * @param xtitle
+     * @param ytitle
+     * @param legend ?
      * @return
      */
-    public static JFreeChart create_chart_from_dataset(XYSeriesCollection dataset, String title, String xtitle, String ytitle) {
+    public static JFreeChart create_chart_from_dataset(XYSeriesCollection dataset, String title, String xtitle, String ytitle, boolean legend) {
         // Create chart
-        JFreeChart chart = ChartFactory.createXYLineChart(title, xtitle, ytitle, dataset, PlotOrientation.VERTICAL, true, true, false);
+        JFreeChart chart = ChartFactory.createXYLineChart(title, xtitle, ytitle, dataset, PlotOrientation.VERTICAL, legend, true, false);
 
         return chart;
     }
@@ -254,10 +267,12 @@ public class Renderer {
         // --- Construire la stat box ---
         BlockContainer container = new BlockContainer(new ColumnArrangement());
 
-        TextTitle titleLine   = new TextTitle("Stats", new Font("Monospaced", Font.BOLD, (int) (1.1*basicFontSize())));
-        TextTitle entriesLine = new TextTitle("Entries : " + h.getEntries(),               new Font("Monospaced", Font.PLAIN, (int) basicFontSize()));
-        TextTitle meanLine    = new TextTitle(String.format("Mean    : %.4f", h.getMean()), new Font("Monospaced", Font.PLAIN, (int) basicFontSize()));
-        TextTitle stdLine     = new TextTitle(String.format("Std     : %.4f", h.getRMS()),new Font("Monospaced", Font.PLAIN, (int) basicFontSize()));
+        TextTitle titleLine   = new TextTitle("Stats", new Font("Monospaced", Font.BOLD, (int) (1.1*baseFontSize())));
+        TextTitle entriesLine = new TextTitle("Entries : " + h.getEntries(),               new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
+        TextTitle meanLine    = new TextTitle(String.format("Mean    : %.4f", h.getMean()), new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
+        TextTitle stdLine     = new TextTitle(String.format("Std     : %.4f", h.getRMS()),new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
+
+        System.out.println("h entries : " + h.getEntries());
 
         titleLine.setPosition(RectangleEdge.TOP);
         entriesLine.setPosition(RectangleEdge.TOP);
@@ -302,11 +317,41 @@ public class Renderer {
         height = _height;
     }
 
+    /** Color palette */
+    public static Color[] colorPalette = {Color.BLACK, Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA, Color.CYAN};
+
+    public static void restore_default_colorPalette() {
+        colorPalette = new Color[] {Color.BLACK, Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA, Color.CYAN};
+    }
+
+    /**
+     * Return the n-th color from the color palette. If n is bigger than colorPalette.length,
+     * it returns the color associated with n modulo colorPalette.length
+     * @param n-th 
+     * @return Color
+     */
+    public static Color pickColor(int n) {
+        return colorPalette[n % colorPalette.length];
+    }
+
+    /**
+     * Generate n colors
+     * @param n number of color
+     */
+    public static void generateColorPaletteType1(int n) {
+        Color[] colors = new Color[n];
+        for (int i = 0; i < n; i++) {
+            float hue = (float) i / n; // 0.0 (rouge) → 1.0 (rouge again)
+            colors[i] = Color.getHSBColor(hue, 1.0f, 0.9f);
+        }
+        colorPalette = colors;
+    }
+
     /**
      * Access basi font size scaled with the current dimensions of the charts
      * @return
      */
-    public static float basicFontSize() {
+    public static float baseFontSize() {
         return (float) Math.sqrt(width * height) / 45.0f;
     }
 
@@ -318,19 +363,79 @@ public class Renderer {
      * @throws IOException
      * @throws DocumentException
      */
-    public static void save_overlayed_histogram(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
+    public static void save_overlayed_histograms(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
         if (histos.isEmpty() || histos == null) return;
         XYSeriesCollection dataset = create_dataset(histos);
-        JFreeChart chart = create_chart_from_dataset(dataset, histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY());
+        JFreeChart chart = create_chart_from_dataset(dataset, histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY(), true);
         chart = customize_chart_by_default(chart);
         chart = apply_scalable_fontsize(chart);
+        //chart = apply_scalable_ticksize(chart);
         for (int i = 0; i < histos.size(); i++) {
-            customize_line_rendering(chart, i, null, null);
+            customize_line_rendering(chart, i, pickColor(i), null);
         }
         if (histos.size() == 1) {
+            customize_line_rendering(chart, 0, Color.BLUE, null);
             XYPlot plot = (XYPlot) chart.getPlot();
             plot.addAnnotation(create_stat_box(histos.get(0)));
             chart.getLegend().setVisible(false);
+        }
+        if (outType == RendererOutputType.PNG) {
+            save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
+        }
+        else if (outType == RendererOutputType.PDF) {
+            save_jfreechart_as_pdf(chart, sanitizeFilenameForPDF(filename));
+        }
+    }
+
+    public static JFreeChart display_color_bar(JFreeChart chart, String barName, double lower, double upper, double step) {
+        XYPlot plot = (XYPlot) chart.getPlot();
+        XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
+        int n = dataset.getSeriesCount();
+        
+        // Construire la PaintScale
+        LookupPaintScale paintScale = new LookupPaintScale(0, n, Color.WHITE);
+        for (int i = 0; i < n; i++) {
+            paintScale.add(i, pickColor(i));
+        }
+
+        // Créer la color bar
+        NumberAxis scaleAxis = new NumberAxis(barName);
+        scaleAxis.setRange(lower, upper);
+        scaleAxis.setTickLabelFont(new Font("Times New Roman", Font.PLAIN, (int) baseFontSize()));
+        scaleAxis.setLabelFont(new Font("Times New Roman", Font.BOLD, (int) baseFontSize()));
+        scaleAxis.setTickUnit(new NumberTickUnit(step));
+        //scaleAxis.setLabelLocation(AxisLabelLocation.HIGH_END);
+
+        PaintScaleLegend colorBar = new PaintScaleLegend(paintScale, scaleAxis);
+        colorBar.setPosition(RectangleEdge.LEFT);  // à gauche
+        colorBar.setMargin(new RectangleInsets(10, 5, 10, 5));
+        colorBar.setStripWidth(20);               // largeur de la barre
+        colorBar.setAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
+
+        chart.addSubtitle(colorBar); // ajouter au chart
+
+        return chart;
+
+    }
+
+    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, String title, String filename, String parameterName, double lower, double upper, double step, RendererOutputType outType) throws IOException, DocumentException {
+        // portion of code similar to save_overlayed_histograms()
+        if (histos.isEmpty() || histos == null) return;
+        XYSeriesCollection dataset = create_dataset(histos);
+        JFreeChart chart = create_chart_from_dataset(dataset, title, histos.get(0).getTitleX(), histos.get(0).getTitleY(), false);
+        chart = customize_chart_by_default(chart);
+        chart = apply_scalable_fontsize(chart);
+        //chart = apply_scalable_ticksize(chart);
+        for (int i = 0; i < histos.size(); i++) {
+            customize_line_rendering(chart, i, pickColor(i), null);
+        }
+        if (histos.size() == 1) {
+            customize_line_rendering(chart, 0, Color.BLUE, null);
+            XYPlot plot = (XYPlot) chart.getPlot();
+            plot.addAnnotation(create_stat_box(histos.get(0)));
+            chart.getLegend().setVisible(false);
+        } else {
+            chart = display_color_bar(chart, parameterName, lower, upper, step);
         }
         if (outType == RendererOutputType.PNG) {
             save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
@@ -351,7 +456,7 @@ public class Renderer {
     public static void save_histogram(H1F histo, String filename, RendererOutputType outType) throws IOException, DocumentException {
         ArrayList<H1F> list = new ArrayList<>();
         list.add(histo);
-        save_overlayed_histogram(list, filename, outType);
+        save_overlayed_histograms(list, filename, outType);
     }
 
     /**
@@ -399,7 +504,7 @@ public class Renderer {
         NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
         NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
 
-        float baseFontSize = basicFontSize();
+        float baseFontSize = baseFontSize();
 
         Font titleFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.4));
         Font labelFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.2));
@@ -411,7 +516,36 @@ public class Renderer {
         xAxis.setTickLabelFont(tickFont);
         yAxis.setLabelFont(labelFont);
         yAxis.setTickLabelFont(tickFont);
-        chart.getLegend().setItemFont(new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9)));
+        if (chart.getLegend() != null)
+            chart.getLegend().setItemFont(new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9)));
+
+        return chart;
+    }
+
+    public static JFreeChart apply_scalable_ticksize(JFreeChart chart) {
+        XYPlot plot = (XYPlot) chart.getPlot();
+        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+
+        float baseFontSize = baseFontSize();
+
+        float tickSize      = baseFontSize * 0.8f;
+        float minorTickSize = baseFontSize * 0.4f;
+
+        xAxis.setTickMarkInsideLength(tickSize);
+        xAxis.setTickMarkOutsideLength(0.0f);
+        xAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        xAxis.setMinorTickMarkInsideLength(minorTickSize);
+        xAxis.setMinorTickMarkOutsideLength(0.0f);
+        xAxis.setAxisLineStroke(new BasicStroke(1.5f));
+
+        yAxis.setTickMarkInsideLength(tickSize);
+        yAxis.setTickMarkOutsideLength(0.0f);
+        yAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        yAxis.setMinorTickMarkInsideLength(minorTickSize);
+        yAxis.setMinorTickMarkOutsideLength(0.0f);
+        yAxis.setAxisLineStroke(new BasicStroke(1.5f));
+        
 
         return chart;
     }
