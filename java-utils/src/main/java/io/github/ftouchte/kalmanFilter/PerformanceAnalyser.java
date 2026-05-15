@@ -24,6 +24,8 @@ import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
 
+import com.itextpdf.text.DocumentException;
+
 import io.github.ftouchte.alignment.AhdcWireId;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.filtering.AlertTrackSelector;
@@ -54,7 +56,7 @@ public class PerformanceAnalyser {
     int KF_Niter = 40;
     double stepper_size = 0.5; // mm
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, DocumentException {
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o", "-ncpu");
         options.LoadOptions(args);
