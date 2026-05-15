@@ -268,19 +268,19 @@ public class Renderer {
         BlockContainer container = new BlockContainer(new ColumnArrangement());
 
         TextTitle titleLine   = new TextTitle("Stats", new Font("Monospaced", Font.BOLD, (int) (1.1*baseFontSize())));
-        TextTitle entriesLine = new TextTitle("Entries : " + h.getEntries(),               new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
+        //TextTitle entriesLine = new TextTitle("Entries : " + h.getEntries(),               new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
         TextTitle meanLine    = new TextTitle(String.format("Mean    : %.4f", h.getMean()), new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
         TextTitle stdLine     = new TextTitle(String.format("Std     : %.4f", h.getRMS()),new Font("Monospaced", Font.PLAIN, (int) baseFontSize()));
 
-        System.out.println("h entries : " + h.getEntries());
+        //System.out.println("h entries : " + h.getEntries());
 
         titleLine.setPosition(RectangleEdge.TOP);
-        entriesLine.setPosition(RectangleEdge.TOP);
+        //entriesLine.setPosition(RectangleEdge.TOP);
         meanLine.setPosition(RectangleEdge.TOP);
         stdLine.setPosition(RectangleEdge.TOP);
 
         container.add(titleLine);
-        container.add(entriesLine);
+        //container.add(entriesLine);
         container.add(meanLine);
         container.add(stdLine);
 

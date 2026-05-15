@@ -148,6 +148,7 @@ public class PerformanceAnalyser {
                         //ahdcEngine.processDataEvent(event); // running the ahdc engine can modified the order of the trach rows, some tracks may desappear
                         alertEngine.processDataEvent(event); // the ADC geometry is not relevant in this study
                         local_histos.h1_computing_time.fill(alertEngine.getComputingTime() / 1_000_000.0); // convert ns to ms
+                        //System.out.println("diff time " + alertEngine.getComputingTime() / 1_000_000.0);
                         // process this event
                         processEvent(event, local_histos, analyser);
                     }
@@ -232,6 +233,7 @@ public class PerformanceAnalyser {
         double p0 = expected_track.p(Units.GeV);
         double theta0 = expected_track.theta(Units.rad);
         double phi0 = expected_track.phi(Units.rad);
+        if (phi0 < 0) phi0 += 2*Math.PI*Units.rad;
 
         histos.h1_p0.fill(p0 / Units.MeV);
         histos.h1_theta0.fill(theta0 / Units.deg);
@@ -241,8 +243,6 @@ public class PerformanceAnalyser {
 
         // Reconstructed track
         ArrayList<Integer> trackRows = analyser.getAhdcKFTrackRows();
-
-        System.out.println("ntrack rows : " + trackRows.size());
         
         for (int i = 0; i < trackRows.size(); i++) {
             
@@ -255,12 +255,6 @@ public class PerformanceAnalyser {
             double theta = Math.acos(pz/p) * Units.rad;
             double phi   = Math.atan2(py, px) * Units.rad;
             if (phi < 0) phi += 2*Math.PI*Units.rad;
-
-            if (phi < 1*Units.deg)
-                trackBank.show();
-
-            // if (phi > 20*Units.deg)
-            //     trackBank.show();
 
             // Fill histos here
             histos.h1_p.fill(p / Units.MeV);
