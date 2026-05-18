@@ -53,7 +53,7 @@ public class PerformanceAnalyser {
     /** Frequency of event loggin */
     int frequency_of_event_login = 100;
 
-    final double clas_alignment = +75 * Units.mm; // mm
+    final double clas_alignment = +75; // mm
 
     int KF_Niter = 40;
     double stepper_size = 0.5; // mm
@@ -79,7 +79,7 @@ public class PerformanceAnalyser {
         // Test 1 : loop over Niter
         ArrayList<Histos> histos_array = new ArrayList<>(); 
         int Niter_min = 1;
-        int Niter_max = 5;
+        int Niter_max = 10;
         for (int i = Niter_min; i < Niter_max; i++) {
             pfAnalyser.set_KF_Niter(i);
             Histos h = pfAnalyser.run(inFiles, "_KF_Niter_" + i);
@@ -95,6 +95,7 @@ public class PerformanceAnalyser {
             all_h1_p.add(histos.h1_p);
         }
         all_h1_p.add(histos_array.get(0).h1_p0); // add expected value
+        Renderer.generateColorPaletteType1(Niter_max+1);
         Renderer.save_histogram_evolution_with_parameter(all_h1_p, "Momentum evolution with KF Niter", "Momentum_p_versus_KF_Niter", "KF Niter", Niter_min, Niter_max+1, 1, RendererOutputType.PNG);
     }
 
@@ -226,7 +227,7 @@ public class PerformanceAnalyser {
   
         // Expected track (computed from the lectron kinematics)
         ParticleRow expected_track = analyser.getExpectedTrack();
-        double vz0 = expected_track.vz() / Units.cm;
+        double vz0 = expected_track.vz(); // cm;
         // double px0 = expected_track.px(Units.GeV);
         // double py0 = expected_track.py(Units.GeV);
         // double pz0 = expected_track.pz(Units.GeV);
@@ -251,7 +252,7 @@ public class PerformanceAnalyser {
             double px = trackBank.getFloat("px", track_row) * Units.MeV;
             double py = trackBank.getFloat("py", track_row) * Units.MeV;
             double pz = trackBank.getFloat("pz", track_row) * Units.MeV;
-            double p = Math.sqrt(Math.pow(px, 2)+Math.pow(py, 2)+Math.pow(pz, 2));
+            double p = Math.sqrt(px*px + py*py + pz*pz);
             double theta = Math.acos(pz/p) * Units.rad;
             double phi   = Math.atan2(py, px) * Units.rad;
             if (phi < 0) phi += 2*Math.PI*Units.rad;
@@ -262,10 +263,10 @@ public class PerformanceAnalyser {
             histos.h1_phi.fill(phi / Units.deg);
             histos.h1_vz.fill(vz / Units.cm);
 
-            histos.h1_delta_p.fill(p / Units.MeV - p0 / Units.MeV);
-            histos.h1_delta_theta.fill(theta / Units.deg - theta0 / Units.deg);
-            histos.h1_delta_phi.fill(phi / Units.deg - phi0 / Units.deg);
-            histos.h1_delta_vz.fill(vz / Units.cm - vz0 / Units.cm);
+            histos.h1_delta_p.fill((p0 - p) / Units.MeV);
+            histos.h1_delta_theta.fill((theta0 - theta) / Units.deg);
+            histos.h1_delta_phi.fill((phi0 - phi) / Units.deg);
+            histos.h1_delta_vz.fill((vz0 - vz) / Units.cm);
 
 
         } // end loop over good tracks
