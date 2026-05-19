@@ -2,6 +2,7 @@ package io.github.ftouchte.kalmanFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -9,6 +10,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
@@ -71,32 +74,99 @@ public class PerformanceAnalyser {
             nThreads = Integer.parseInt(nThreads_str);
         }
 
+        String workDir = options.GetValue("-o");
+        if (workDir.equals("")) {
+            System.out.println("\033[1;31m * Please, provide a working directory with the option : -o\033[0m");
+            return;
+        }
+
+        /// --- Start anlysis
         PerformanceAnalyser pfAnalyser = new PerformanceAnalyser();
         pfAnalyser.set_nThreads(nThreads);
         // pfAnalyser.set_KF_Niter(40);
         // pfAnalyser.set_step_size(0.5);
 
-        // Test 1 : loop over Niter
-        ArrayList<Histos> histos_array = new ArrayList<>(); 
+        /// --- KF Niter list
         int Niter_min = 1;
-        int Niter_max = 10;
-        for (int i = Niter_min; i < Niter_max; i++) {
-            pfAnalyser.set_KF_Niter(i);
-            Histos h = pfAnalyser.run(inFiles, "_KF_Niter_" + i);
-            histos_array.add(h);
-            System.out.println("# KF Niter : " + i);
+        int Niter_max = 5;
+        ArrayList<Double> NiterList = new ArrayList<>();
+        for (int i = Niter_min; i <= Niter_max; i++) {
+            NiterList.add(Double.valueOf(i));
+        }
+
+        // /// --- KF stepSize list
+        // double stepSize_min = 0.1;
+        // double stepSize_max = 0.5;
+        // int numStepMinusOne = 9;
+        // ArrayList<Double> stepSizeList = new ArrayList<>();
+        // for (int i = 0; i <= numStepMinusOne; i++) {
+        //     double size = stepSize_min + (stepSize_max-stepSize_min)*i/numStepMinusOne;
+        //     stepSizeList.add(Double.valueOf(size));
+        // }
+        
+        /// --- Loop over iterations
+        ArrayList<Histos> HistosOverIterations = new ArrayList<>(); 
+        for (int i = Niter_min; i <= Niter_max; i++) {
+            int Niter = i;
+            pfAnalyser.set_KF_Niter(Niter);
+            NiterList.add(Double.valueOf(Niter));
+            Histos h = pfAnalyser.run(inFiles, "_KF_Niter_" + Niter);
+
+            // output
+            HistosOverIterations.add(h);
+            System.out.println("# KF Niter : " + Niter);
             h.print();
-            h.save();
+            String outDir = workDir + "/Niter_" + Niter;
+            check_output_dir(outDir);
+            h.save(outDir);
         }
 
         /// --- Output Evolution with Niter
-        ArrayList<H1F> all_h1_p = new ArrayList<>();
-        for (Histos histos : histos_array) {
-            all_h1_p.add(histos.h1_p);
+        String outDir = workDir + "/KF_Niter_evolution";
+        check_output_dir(outDir);
+        ArrayList<String> allHistogramNames = HistosOverIterations.get(0).getListOfHistograms(true);      
+        for (String observable : allHistogramNames) {
+            // llok for histo with the same name
+            ArrayList<H1F> list = new ArrayList<>();
+            for (Histos histos : HistosOverIterations) {
+                String name = observable + histos.getTag();
+                H1F h = histos.map_histo1d.get(name);
+                list.add(h);
+            }
+            // find the reference histogram
+            H1F h_ref = null;
+            String reconstructed = "reconstructed";
+            String expected = "expected";
+            String refName = "";
+            if (observable.startsWith(reconstructed)) {
+                refName = expected + observable.substring(reconstructed.length(), observable.length());
+                
+            }
+            h_ref = HistosOverIterations.get(0).getHistogram1D(refName);
+            
+            // output
+            String title = String.format("Evolution of %s with KF Niter", observable);
+            String filename = title.replace(" ", "_");
+            filename = outDir + "/" + filename;
+            Renderer.generateJetPalette(Niter_max-Niter_min+1);
+            Renderer.save_histogram_evolution_with_parameter(list, h_ref, null, title, filename, "KF Niter", Niter_min, Niter_max, 1, RendererOutputType.PNG);
         }
-        all_h1_p.add(histos_array.get(0).h1_p0); // add expected value
-        Renderer.generateColorPaletteType1(Niter_max+1);
-        Renderer.save_histogram_evolution_with_parameter(all_h1_p, "Momentum evolution with KF Niter", "Momentum_p_versus_KF_Niter", "KF Niter", Niter_min, Niter_max+1, 1, RendererOutputType.PNG);
+
+        /// --- Performance study
+        ArrayList<String> Observables = new ArrayList<>(Arrays.asList("residual", "delta_p", "delta_phi", "delta_theta", "computing_time"));
+        for (String obs : Observables) {
+            ArrayList<Double> Means = new ArrayList<>();
+            ArrayList<Double> Widths = new ArrayList<>();
+            for (Histos histos : HistosOverIterations) {
+                H1F h = histos.getHistogram1D(obs);
+                double mean = h.getMean();
+                double width = h.getRMS();
+                Means.add(Double.valueOf(mean));
+                Widths.add(Double.valueOf(width));
+            }
+        }
+
+
     }
 
 
@@ -268,6 +338,15 @@ public class PerformanceAnalyser {
             histos.h1_delta_phi.fill((phi0 - phi) / Units.deg);
             histos.h1_delta_vz.fill((vz0 - vz) / Units.cm);
 
+            DataBank hitBank = event.getBank("AHDC::hits");
+            int trackid = trackBank.getInt("trackid", track_row);
+            for (int j = 0; j < hitBank.rows(); j++) {
+                if (trackid == hitBank.getInt("trackid", j)) {
+                    double residual = hitBank.getDouble("residual", j); // mm
+                    histos.h1_residual.fill(residual);
+                }
+            }
+
 
         } // end loop over good tracks
     }
@@ -289,4 +368,18 @@ public class PerformanceAnalyser {
     void set_step_size(double _size) {stepper_size = _size;}
 
     void set_nThreads(int _nThreads) { nThreads = _nThreads;}
+
+    static void check_output_dir(String outDir) {
+        if (!Files.exists(Path.of(outDir))) {
+            try {
+                Files.createDirectories(Path.of(outDir));
+                System.out.println("Output directory created and set to : " + outDir);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("This directory already exist.");
+        }
+    }
+
 }

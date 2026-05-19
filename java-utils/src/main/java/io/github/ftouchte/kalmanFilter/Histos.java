@@ -24,7 +24,13 @@ public class Histos {
     /** ALERTEngine computing time per event*/
     H1F h1_computing_time;
 
+    /** Residuals */
+    H1F h1_residual;
+
     Map<String, H1F> map_histo1d = new HashMap<>();
+
+    /** Tag */
+    String tag = "";
 
     /**
      * Constructor. Place to initialise all histograms
@@ -39,6 +45,8 @@ public class Histos {
      */
     public Histos(String tag) {
 
+        this.tag = tag;
+
         h1_p = new H1F("reconstructed_p" + tag, "reconstructed p", 100, 0, 1000);
         h1_theta = new H1F("reconstructed_theta"  + tag, "reconstructed theta", 100, 0, 180);
         h1_phi = new H1F("reconstructed_phi"  + tag, "reconstructed phi", 100, 0, 360);
@@ -47,18 +55,23 @@ public class Histos {
         h1_p0 = new H1F("expected_p"  + tag, "expected p", 100, 0, 1000);
         h1_theta0 = new H1F("expected_theta"  + tag, "expected theta", 100, 0, 180);
         h1_phi0 = new H1F("expected_phi"  + tag, "expected phi", 100, 0, 360);
-        h1_vz0 = new H1F("expected_vz"  + tag, "expected vz", 100, -24, 20);
+        h1_vz0 = new H1F("expected_vz"  + tag, "expected vz", 100, -35, 20);
 
         h1_delta_p = new H1F("delta_p"  + tag, "delta p", 100, -500, 500);
         h1_delta_theta = new H1F("delta_theta"  + tag, "delta theta", 100, -180, 180);
         h1_delta_phi = new H1F("delta_phi"  + tag, "delta phi", 100, -40, 40);
         h1_delta_vz = new H1F("delta_vz"  + tag, "delta vz", 100, -20, 10);
 
-        h1_computing_time = new H1F("computing_time" + tag, "ALERTEngine computing time", 100, 0, 40);
+        h1_computing_time = new H1F("computing_time" + tag, "ALERTEngine computing time", 100, 0, 120);
+
+        h1_residual = new H1F("residual" + tag, "residual", 100, -2.2, 2.2);
 
         /// --- title
         h1_computing_time.setTitleX("time (ms)");
         h1_computing_time.setTitleY("count");
+
+        h1_residual.setTitleX("residual (mm)");
+        h1_residual.setTitleY("count");
 
         h1_p.setTitleX("p (MeV)");
         h1_p.setTitleY("count");
@@ -104,6 +117,7 @@ public class Histos {
         map_histo1d.put(h1_delta_vz.getName(), h1_delta_vz);
         
         map_histo1d.put(h1_computing_time.getName(), h1_computing_time);
+        map_histo1d.put(h1_residual.getName(), h1_residual);
 
     }
 
@@ -114,29 +128,30 @@ public class Histos {
      */
     public void merge(Histos histos) {
 
-        this.h1_p.add(histos.h1_p);
-        this.h1_theta.add(histos.h1_theta);
-        this.h1_phi.add(histos.h1_phi);
-        this.h1_vz.add(histos.h1_vz);
+        // this.h1_p.add(histos.h1_p);
+        // this.h1_theta.add(histos.h1_theta);
+        // this.h1_phi.add(histos.h1_phi);
+        // this.h1_vz.add(histos.h1_vz);
 
-        this.h1_p0.add(histos.h1_p0);
-        this.h1_theta0.add(histos.h1_theta0);
-        this.h1_phi0.add(histos.h1_phi0);
-        this.h1_vz0.add(histos.h1_vz0);
+        // this.h1_p0.add(histos.h1_p0);
+        // this.h1_theta0.add(histos.h1_theta0);
+        // this.h1_phi0.add(histos.h1_phi0);
+        // this.h1_vz0.add(histos.h1_vz0);
 
-        this.h1_delta_p.add(histos.h1_delta_p);
-        this.h1_delta_theta.add(histos.h1_delta_theta);
-        this.h1_delta_phi.add(histos.h1_delta_phi);
-        this.h1_delta_vz.add(histos.h1_delta_vz);
+        // this.h1_delta_p.add(histos.h1_delta_p);
+        // this.h1_delta_theta.add(histos.h1_delta_theta);
+        // this.h1_delta_phi.add(histos.h1_delta_phi);
+        // this.h1_delta_vz.add(histos.h1_delta_vz);
         
-        this.h1_computing_time.add(histos.h1_computing_time);
+        // this.h1_computing_time.add(histos.h1_computing_time);
+        //this.h1_residual.add(histos.h1_residual);
 
-        // for (Map.Entry<String, H1F> entry : histos.map_histo1d.entrySet()) {
-        //     String key = entry.getKey();
-        //     if (this.map_histo1d.containsKey(key)) {
-        //         this.map_histo1d.get(key).add(entry.getValue());
-        //     }
-        // }
+        for (Map.Entry<String, H1F> entry : histos.map_histo1d.entrySet()) {
+            String key = histos.removeTag(entry.getKey()) + tag;
+            if (this.map_histo1d.containsKey(key)) {
+                this.map_histo1d.get(key).add(entry.getValue());
+            }
+        }
 
     }
 
@@ -147,9 +162,11 @@ public class Histos {
         System.out.printf("Expected       --->  p : %f MeV, theta : %f deg, phi : %f deg , vz : %f cm \n", h1_p0.getMean(), h1_theta0.getMean(), h1_phi0.getMean(), h1_vz0.getMean());
         System.out.printf("Delta          --->  Dp : %f MeV, Dtheta : %f deg, Dphi : %f deg , Dvz : %f cm \n", h1_delta_p.getMean(), h1_delta_theta.getMean(), h1_delta_phi.getMean(), h1_delta_vz.getMean());
         System.out.printf("event computing time : %f ms\n", h1_computing_time.getMean());
+        System.out.printf("residuals : %f mm , std dev : %f mm\n", h1_residual.getMean(), h1_residual.getRMS());
+        printListOfHistograms(true);
     }
 
-    public void save() throws IOException, DocumentException {
+    public void save(String outDir) throws IOException, DocumentException {
 
         // Renderer.width = 1500;
         // Renderer.height = 1200;
@@ -172,15 +189,68 @@ public class Histos {
         for (Map.Entry<String, H1F> entry : map_histo1d.entrySet()) {
             String name = entry.getKey();
             H1F h = entry.getValue();
-            Renderer.save_histogram(h, name, RendererOutputType.PNG);
+            Renderer.save_histogram(h, outDir + "/" + name, RendererOutputType.PNG);
         }
 
-        ArrayList<H1F> list = new ArrayList<>();
-        list.add(h1_p);
-        list.add(h1_p0);
-        Renderer.save_overlayed_histograms(list, "combined_histo_p", RendererOutputType.PNG);
-        Renderer.save_overlayed_histograms(list, "combined_histo_p", RendererOutputType.PDF);
+        // ArrayList<H1F> list = new ArrayList<>();
+        // list.add(h1_p);
+        // list.add(h1_p0);
+        // Renderer.save_overlayed_histograms(list, "combined_histo_p", RendererOutputType.PNG);
+        // Renderer.save_overlayed_histograms(list, "combined_histo_p", RendererOutputType.PDF);
 
+    }
+
+    public String getTag() {return tag;}
+
+    public ArrayList<String> getListOfHistograms(boolean tag) {
+        ArrayList<String> list = new ArrayList<>();
+        for (String key : map_histo1d.keySet()) {
+            if (tag) {
+                list.add(removeTag(key));
+            } else {
+                list.add(key);
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Print the list of histogram
+     * @param tag ? do we remove tag for the names
+     */
+    public void printListOfHistograms(boolean tag) {
+        System.out.printf("List of histograms (tag : %s)\n", this.tag);
+        int counter = 0;
+        for (String key : map_histo1d.keySet()) {
+            counter++;
+            if (tag) {
+                System.out.printf("%2d)   %s\n", counter, removeTag(key));
+            } else {
+                System.out.printf("%2d)   %s\n", counter, key);
+            }
+        }
+    }
+
+    /**
+     * Remove the {@link Histos#tag from a name}
+     * @param name 
+     * @return name without the tag (at the end), return the same String if it does not end with the tag
+     */
+    public String removeTag(String name) {
+        if (name.endsWith(tag)) {
+            return name.substring(0, name.length()-tag.length());
+        } else {
+            return name;
+        }
+    }
+
+    /**
+     * Access an histogram from the map by it key (no need to specify the tag)
+     * @param name with or without the tag
+     * @return correcponding H1F hitogram
+     */
+    public H1F getHistogram1D(String name) {
+        return map_histo1d.get(removeTag(name) + tag);
     }
     
 }
