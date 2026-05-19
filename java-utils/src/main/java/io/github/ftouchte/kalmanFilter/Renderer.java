@@ -109,7 +109,8 @@ public class Renderer {
         double[] xLimits = h.getAxis().getLimits();
         double[] counts = toDoubleArray(h.getData());
 
-        double count_min = Arrays.stream(counts).min().getAsDouble();
+        //double count_min = Arrays.stream(counts).min().getAsDouble();
+        double count_min = 0;
 
         // Dataset
         XYSeries series = new XYSeries(h.getName());
@@ -203,8 +204,10 @@ public class Renderer {
         double yMin = dataset.getRangeLowerBound(false);
         double yMax = dataset.getRangeUpperBound(false);
         // Ticks
-        xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
-        yAxis.setTickUnit(new NumberTickUnit((yMax - yMin) / nTicksY));
+        xAxis.setTickUnit(new NumberTickUnit((int) (xMax - xMin) / nTicksX));
+        yAxis.setTickUnit(new NumberTickUnit((int) (yMax - yMin) / nTicksY));
+        yAxis.setAutoRangeIncludesZero(true);  // inclure 0 dans l'auto range
+        yAxis.setLowerBound(0.0);
 
         /// --- Others
         // Ticks vers l'intérieur comme ROOT
@@ -338,11 +341,73 @@ public class Renderer {
      * Generate n colors
      * @param n number of color
      */
-    public static void generateColorPaletteType1(int n) {
+    public static void generateDefaultColorPalette(int n) {
         Color[] colors = new Color[n];
         for (int i = 0; i < n; i++) {
             float hue = (float) i / n; // 0.0 (rouge) → 1.0 (rouge again)
             colors[i] = Color.getHSBColor(hue, 1.0f, 0.9f);
+        }
+        colorPalette = colors;
+    }
+
+    /**
+     * Generate n colors
+     * Jet (bleu → cyan → vert → jaune → rouge) — le classique ROOT/matplotlib
+     * @param n number of color
+     */
+    public static void generateJetPalette(int n) {
+        Color[] colors = new Color[n];
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / (n - 1);
+            float hue = (1.0f - t) * 0.66f; // 0.66 (bleu) → 0.0 (rouge)
+            colors[i] = Color.getHSBColor(hue, 1.0f, 0.9f);
+        }
+        colorPalette = colors;
+    }
+
+    /**
+     * Generate n colors
+     * Turbo (meilleur que Jet pour la lisibilité) — évite le jaune trop clair
+     * @param n number of color
+     */
+    public static void generateTurboPalette(int n) {
+        Color[] colors = new Color[n];
+        for (int i = 0; i < n; i++) {
+            float t = (float) i / (n - 1);
+            float hue        = (1.0f - t) * 0.75f; // violet → rouge
+            float saturation = 0.9f;
+            float brightness = 0.5f + 0.4f * (float) Math.sin(Math.PI * t); // pic au milieu
+            colors[i] = Color.getHSBColor(hue, saturation, brightness);
+        }
+        colorPalette = colors;
+    }
+
+    /**
+     * Generate n colors
+     * Viridis (le meilleur pour publications scientifiques) — violet → bleu → vert → jaune
+     * @param n number of color
+     */
+    public static void generateViridisPalette(int n) {
+        // Points de contrôle RGB du vrai Viridis
+        int[][] ctrl = {
+            { 68,   1,  84},  // violet foncé
+            { 72,  40, 120},  // violet
+            { 59,  82, 139},  // bleu
+            { 33, 145, 140},  // cyan
+            { 50, 180,  90},  // vert moyen  ← remplacer par jaune-vert
+            {180, 220,  50},  // jaune-vert  ← casse la répétition du vert
+            {253, 231,  37}   // jaune
+        };
+        Color[] colors = new Color[n];
+        for (int i = 0; i < n; i++) {
+            float t    = (float) i / (n - 1) * (ctrl.length - 1);
+            int   idx  = (int) t;
+            float frac = t - idx;
+            if (idx >= ctrl.length - 1) idx = ctrl.length - 2;
+            int r = (int)(ctrl[idx][0] + frac * (ctrl[idx+1][0] - ctrl[idx][0]));
+            int g = (int)(ctrl[idx][1] + frac * (ctrl[idx+1][1] - ctrl[idx][1]));
+            int b = (int)(ctrl[idx][2] + frac * (ctrl[idx+1][2] - ctrl[idx][2]));
+            colors[i] = new Color(r, g, b);
         }
         colorPalette = colors;
     }
@@ -387,10 +452,19 @@ public class Renderer {
         }
     }
 
-    public static JFreeChart display_color_bar(JFreeChart chart, String barName, double lower, double upper, double step) {
-        XYPlot plot = (XYPlot) chart.getPlot();
-        XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
-        int n = dataset.getSeriesCount();
+    /**
+     * 
+     * @param chart
+     * @param barName title of the color scale
+     * @param n number of color to be displayed
+     * @param lower value of the axis
+     * @param upper value of the axis
+     * @param step step size to display tick
+     * @return
+     */
+    public static JFreeChart display_color_bar(JFreeChart chart, String barName, int n, double lower, double upper, double step) {
+        //XYPlot plot = (XYPlot) chart.getPlot();
+        //XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
         
         // Construire la PaintScale
         LookupPaintScale paintScale = new LookupPaintScale(0, n, Color.WHITE);
@@ -418,10 +492,17 @@ public class Renderer {
 
     }
 
-    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, String title, String filename, String parameterName, double lower, double upper, double step, RendererOutputType outType) throws IOException, DocumentException {
+    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String filename, String parameterName, double lower, double upper, double step, RendererOutputType outType) throws IOException, DocumentException {
         // portion of code similar to save_overlayed_histograms()
         if (histos.isEmpty() || histos == null) return;
-        XYSeriesCollection dataset = create_dataset(histos);
+        ArrayList<H1F> histos_and_ref = new ArrayList<>();
+        for (H1F h : histos) {
+            histos_and_ref.add(h);
+        }
+        if (h_ref != null){
+            histos_and_ref.add(h_ref);
+        }
+        XYSeriesCollection dataset = create_dataset(histos_and_ref);
         JFreeChart chart = create_chart_from_dataset(dataset, title, histos.get(0).getTitleX(), histos.get(0).getTitleY(), false);
         chart = customize_chart_by_default(chart);
         chart = apply_scalable_fontsize(chart);
@@ -429,13 +510,17 @@ public class Renderer {
         for (int i = 0; i < histos.size(); i++) {
             customize_line_rendering(chart, i, pickColor(i), null);
         }
+        if (h_ref != null) {
+            customize_line_rendering(chart, histos.size(), color_ref != null ? color_ref : Color.BLACK, null);
+        }
         if (histos.size() == 1) {
             customize_line_rendering(chart, 0, Color.BLUE, null);
             XYPlot plot = (XYPlot) chart.getPlot();
             plot.addAnnotation(create_stat_box(histos.get(0)));
-            chart.getLegend().setVisible(false);
+            if (chart.getLegend() != null)
+                chart.getLegend().setVisible(false);
         } else {
-            chart = display_color_bar(chart, parameterName, lower, upper, step);
+            chart = display_color_bar(chart, parameterName, histos.size(), lower, upper, step);
         }
         if (outType == RendererOutputType.PNG) {
             save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
