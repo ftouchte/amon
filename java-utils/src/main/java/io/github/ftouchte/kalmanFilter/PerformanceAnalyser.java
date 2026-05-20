@@ -91,6 +91,7 @@ public class PerformanceAnalyser {
         // int Niter_max = 2;
         int num_Niter = 2;
         //int[] NiterValues = new int[num_Niter];
+        //double[] NiterValues = {1, 2, 10, 40};
         double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
@@ -100,6 +101,7 @@ public class PerformanceAnalyser {
 
         int num_stepSize = 3;
         //double[] stepSizeValues = new double[num_stepSize];
+        //double[] stepSizeValues = {0.3, 0.5, 1};
         double[] stepSizeValues = {0.5, 1};
 
         /// --- Main routine

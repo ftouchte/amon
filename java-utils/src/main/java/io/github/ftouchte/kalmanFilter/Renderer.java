@@ -165,6 +165,13 @@ public class Renderer {
         // Create chart
         JFreeChart chart = ChartFactory.createXYLineChart(title, xtitle, ytitle, dataset, PlotOrientation.VERTICAL, legend, true, false);
 
+        // Default line style and color rendering
+        XYPlot plot = (XYPlot) chart.getPlot();
+        XYStepRenderer renderer = new XYStepRenderer();
+        renderer.setSeriesPaint(0, Color.BLUE); // couleur du contour
+        renderer.setSeriesStroke(0, new BasicStroke(1.5f));
+        plot.setRenderer(renderer);
+
         return chart;
     }
 
@@ -173,7 +180,7 @@ public class Renderer {
      * @param chart working chart
      * @return updated chart
      */
-    public static JFreeChart customize_chart_by_default(JFreeChart chart) {
+    public static JFreeChart apply_default_chart_rendering(JFreeChart chart) {
 
         // Supprimer les ombres et bordures du chart
         chart.setBorderVisible(false);
@@ -211,54 +218,11 @@ public class Renderer {
         yAxis.setTickUnit(new NumberTickUnit((int) (yMax - yMin) / nTicksY));
         yAxis.setAutoRangeIncludesZero(true);  // inclure 0 dans l'auto range
         yAxis.setTickLabelPaint(Color.BLACK);
-        yAxis.setLabelPaint(Color.BLACK);
-
-        /// --- Others
-        // Ticks vers l'intérieur comme ROOT
-        // xAxis.setTickMarksVisible(true);
-        // xAxis.setTickMarkInsideLength(5.0f);   // ticks vers l'intérieur
-        // xAxis.setTickMarkOutsideLength(0.0f);  // pas de ticks vers l'extérieur
-        // xAxis.setAxisLineVisible(true);
-        // xAxis.setAxisLinePaint(Color.BLACK);
-        // xAxis.setAxisLineStroke(new BasicStroke(1.5f));
-
+        yAxis.setLabelPaint(Color.BLACK);  
         
-        // Ticks vers l'intérieur comme ROOT
-        // yAxis.setTickMarksVisible(true);
-        // yAxis.setTickMarkInsideLength(5.0f);
-        // yAxis.setTickMarkOutsideLength(0.0f);
-        // yAxis.setAxisLineVisible(true);
-        // yAxis.setAxisLinePaint(Color.BLACK);
-        // yAxis.setAxisLineStroke(new BasicStroke(1.5f));
+        // control the size
+        chart = apply_scalable_fontsize(chart);
 
-        /// --- Default line style and color rendering
-        XYStepRenderer renderer = new XYStepRenderer();
-        renderer.setSeriesPaint(0, Color.BLUE); // couleur du contour
-        renderer.setSeriesStroke(0, new BasicStroke(1.5f));
-        plot.setRenderer(renderer);
-
-        return chart;
-    }
-
-    /**
-     * Example of code to modify the color or style of the Series (in our case histogram)
-     * @param chart working chart
-     * @param SeriesId Series identifier
-     * @param color
-     * @param stroke linestyle
-     * @return updated chart
-     */
-    public static JFreeChart customize_line_rendering(JFreeChart chart, int SeriesId, Color color, BasicStroke stroke) {
-        XYPlot plot = (XYPlot) chart.getPlot();
-        XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
-        XYStepRenderer renderer = (XYStepRenderer) plot.getRenderer();
-        int nSeries = dataset.getSeriesCount();
-        if (SeriesId < nSeries) {
-            if (color != null)
-                renderer.setSeriesPaint(SeriesId, color);
-            if (stroke != null)
-                renderer.setSeriesStroke(SeriesId, stroke);
-        }
         return chart;
     }
 
@@ -434,17 +398,22 @@ public class Renderer {
      */
     public static void save_overlayed_histograms(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
         if (histos.isEmpty() || histos == null) return;
+        // create chart from dataset
         XYSeriesCollection dataset = create_dataset(histos);
         JFreeChart chart = create_chart_from_dataset(dataset, histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY(), true);
-        chart = customize_chart_by_default(chart);
-        chart = apply_scalable_fontsize(chart);
-        //chart = apply_scalable_ticksize(chart);
+        chart = apply_default_chart_rendering(chart);
+
+        // apply different linestyles
+        XYPlot plot = (XYPlot) chart.getPlot();
+        XYStepRenderer renderer = (XYStepRenderer) plot.getRenderer();
         for (int i = 0; i < histos.size(); i++) {
-            customize_line_rendering(chart, i, pickColor(i), null);
+            renderer.setSeriesPaint(i, pickColor(i));
+            renderer.setSeriesStroke(i, null);
         }
         if (histos.size() == 1) {
-            customize_line_rendering(chart, 0, Color.BLUE, null);
-            XYPlot plot = (XYPlot) chart.getPlot();
+            renderer.setSeriesPaint(0, Color.BLUE);
+            renderer.setSeriesStroke(0, null);
+            // add annotation
             plot.addAnnotation(create_stat_box(histos.get(0)));
             chart.getLegend().setVisible(false);
         }
@@ -457,7 +426,7 @@ public class Renderer {
     }
 
     /**
-     * 
+     * Used by {@link #save_histogram_evolution_with_parameter(ArrayList, H1F, Color, String, String, String, double[], RendererOutputType)}
      * @param chart initial chart
      * @param barName name of the color bar
      * @param values values to be displayed
@@ -543,18 +512,23 @@ public class Renderer {
         }
         XYSeriesCollection dataset = create_dataset(histos_and_ref);
         JFreeChart chart = create_chart_from_dataset(dataset, title, histos.get(0).getTitleX(), histos.get(0).getTitleY(), false);
-        chart = customize_chart_by_default(chart);
-        chart = apply_scalable_fontsize(chart);
-        //chart = apply_scalable_ticksize(chart);
+        chart = apply_default_chart_rendering(chart);
+
+        // apply different linestyles
+        XYPlot plot = (XYPlot) chart.getPlot();
+        XYStepRenderer renderer = (XYStepRenderer) plot.getRenderer();
         for (int i = 0; i < histos.size(); i++) {
-            customize_line_rendering(chart, i, pickColor(i), null);
+            renderer.setSeriesPaint(i, pickColor(i));
+            renderer.setSeriesStroke(i, null);
         }
         if (h_ref != null) {
-            customize_line_rendering(chart, histos.size(), color_ref != null ? color_ref : Color.BLACK, null);
+            renderer.setSeriesPaint(histos.size(), Color.BLACK);
+            renderer.setSeriesStroke(histos.size(), null);
         }
         if (histos.size() == 1) {
-            customize_line_rendering(chart, 0, Color.BLUE, null);
-            XYPlot plot = (XYPlot) chart.getPlot();
+            renderer.setSeriesPaint(0, Color.BLUE);
+            renderer.setSeriesStroke(0, null);
+            // add annotation
             plot.addAnnotation(create_stat_box(histos.get(0)));
             if (chart.getLegend() != null)
                 chart.getLegend().setVisible(false);
@@ -646,6 +620,11 @@ public class Renderer {
         return chart;
     }
 
+    /**
+     * To be improved !!! Do not work well yet
+     * @param chart
+     * @return
+     */
     public static JFreeChart apply_scalable_ticksize(JFreeChart chart) {
         XYPlot plot = (XYPlot) chart.getPlot();
         NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
