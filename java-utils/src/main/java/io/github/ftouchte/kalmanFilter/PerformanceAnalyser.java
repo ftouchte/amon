@@ -1,5 +1,6 @@
 package io.github.ftouchte.kalmanFilter;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +15,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
@@ -92,8 +97,8 @@ public class PerformanceAnalyser {
         // int Niter_max = 2;
         int num_Niter = 2;
         //int[] NiterValues = new int[num_Niter];
-        //double[] NiterValues = {1, 2, 10, 40};
-        double[] NiterValues = {1, 2};
+        double[] NiterValues = {1, 2, 5, 10, 40};
+        //double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
         // double stepSize_min = 0.5;
@@ -102,8 +107,8 @@ public class PerformanceAnalyser {
 
         int num_stepSize = 3;
         //double[] stepSizeValues = new double[num_stepSize];
-        //double[] stepSizeValues = {0.3, 0.5, 1};
-        double[] stepSizeValues = {0.5, 1};
+        double[] stepSizeValues = {0.3, 0.5, 1};
+        //double[] stepSizeValues = {0.5, 1};
 
         /// --- Main routine
         /// --- Loop over Niter
@@ -381,28 +386,63 @@ public class PerformanceAnalyser {
     public static void combine_histos(ArrayList<Histos> collection, String obs, String title, String dir, double[] paramValues, String barName) throws IOException, DocumentException {
             // gather histogram as same name
             ArrayList<H1F> list = new ArrayList<>();
-            for (Histos histos : collection) {
+            XYSeries series_mean = new XYSeries("mean");
+            XYSeries series_width = new XYSeries("rms");
+            for (int i = 0; i < collection.size(); i++) {
+                Histos histos = collection.get(i);
                 String name = obs + histos.getTag();
                 H1F h = histos.getHistogram1D(name);
                 list.add(h);
+
+                // extract mean and rms
+                double mean = h.getMean();
+                double width = h.getRMS();
+                series_mean.add(paramValues[i], mean);
+                series_width.add(paramValues[i], width);
             }
             // find the reference histogram
             H1F h_ref = null;
             String reconstructed = "reconstructed";
             String expected = "expected";
-            String refName = "";
             if (obs.startsWith(reconstructed)) {
-                refName = expected + obs.substring(reconstructed.length(), obs.length());
-                
+                String refName = expected + obs.substring(reconstructed.length(), obs.length());
+                h_ref = collection.get(0).getHistogram1D(refName);
             }
-            h_ref = collection.get(0).getHistogram1D(refName);
             
             // output
             String filename = title.replace(" ", "_");
-            filename = dir + "/" + filename;
+            String histoDir = dir + "/combined_histos";
+            check_output_dir(histoDir);
             Renderer.generateJetPalette(collection.size());
             JFreeChart chart = Renderer.create_histogram_evolution_with_parameter(list, h_ref, null, title, barName, paramValues);
-            Renderer.save_jfreechart(chart, filename, RendererOutputType.PNG);
+            Renderer.save_jfreechart(chart, histoDir + "/" + filename, RendererOutputType.PNG);
+
+            // summary plot : mean
+            String meanDir = dir + "/mean_histos";
+            check_output_dir(meanDir);
+            XYSeriesCollection dataset_mean = new XYSeriesCollection();
+            dataset_mean.addSeries(series_mean);
+            JFreeChart chart_mean = Renderer.create_chart_for_graph(dataset_mean, title, barName, obs);
+            XYPlot plot_mean = (XYPlot)chart_mean.getPlot();
+            XYLineAndShapeRenderer renderer_mean = (XYLineAndShapeRenderer) plot_mean.getRenderer();
+            renderer_mean.setSeriesPaint(0, Color.BLUE);
+            renderer_mean.setSeriesLinesVisible(0, true);
+            renderer_mean.setSeriesShapesVisible(0, true);
+            Renderer.save_jfreechart(chart_mean, meanDir + "/" + filename, RendererOutputType.PNG);
+
+            // summary plot : width
+            String widthDir = dir + "/width_histos";
+            check_output_dir(widthDir);
+            XYSeriesCollection dataset_width = new XYSeriesCollection();
+            dataset_width.addSeries(series_width);
+            JFreeChart chart_width = Renderer.create_chart_for_graph(dataset_width, title, barName, obs);
+            XYPlot plot_width = (XYPlot)chart_width.getPlot();
+            XYLineAndShapeRenderer renderer_with = (XYLineAndShapeRenderer) plot_width.getRenderer();
+            renderer_with.setSeriesPaint(0, Color.BLUE);
+            renderer_with.setSeriesLinesVisible(0, true);
+            renderer_with.setSeriesShapesVisible(0, true);
+            Renderer.save_jfreechart(chart_width, widthDir + "/" + filename, RendererOutputType.PNG);
+
     }
 
     void analyseHistos(Histos histos) {

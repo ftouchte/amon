@@ -19,9 +19,11 @@ import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.block.BlockContainer;
 import org.jfree.chart.block.ColumnArrangement;
+import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.LookupPaintScale;
+import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.renderer.xy.XYStepRenderer;
 import org.jfree.chart.title.CompositeTitle;
 import org.jfree.chart.title.LegendTitle;
@@ -30,6 +32,7 @@ import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.ui.RectangleAnchor;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.RectangleInsets;
+import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jlab.groot.data.H1F;
@@ -683,6 +686,24 @@ public class Renderer {
 
         cb.addTemplate(template, 0, 0);
         document.close();
+    }
+
+    public static JFreeChart create_chart_for_graph(XYDataset dataset, String title, String xtitle, String ytitle) {
+        JFreeChart chart = ChartFactory.createXYLineChart(title, xtitle, ytitle, dataset, PlotOrientation.VERTICAL, true, true, false);
+        XYPlot plot = (XYPlot)chart.getPlot();
+        chart = apply_default_chart_rendering(chart);
+        chart = apply_scalable_fontsize(chart);
+
+        /// Defalt rendering
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        int num_series = plot.getSeriesCount();
+        for (int i = 0; i < num_series; i++) {
+            renderer.setSeriesPaint(i, pickColor(i));
+        }
+        // renderer.setSeriesLinesVisible(0, false);
+        // renderer.setSeriesShapesVisible(1, false);
+        plot.setRenderer(renderer);
+      return chart;
     }
 
     
