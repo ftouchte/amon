@@ -42,6 +42,8 @@ import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
+
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
@@ -227,6 +229,67 @@ public class Renderer {
     }
 
     /**
+     * Default font size based on the dimension of the chart. It will overwirte the previous setting
+     * @param chart
+     * @return updated chart
+     */
+    public static JFreeChart apply_scalable_fontsize(JFreeChart chart) {
+        XYPlot plot = (XYPlot) chart.getPlot();
+        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+
+        float baseFontSize = baseFontSize();
+
+        Font titleFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.4));
+        Font labelFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.2));
+        Font tickFont      = new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize));
+        //Font statFont      = new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9));
+
+        chart.getTitle().setFont(titleFont);
+        xAxis.setLabelFont(labelFont);
+        xAxis.setTickLabelFont(tickFont);
+        yAxis.setLabelFont(labelFont);
+        yAxis.setTickLabelFont(tickFont);
+        if (chart.getLegend() != null)
+            chart.getLegend().setItemFont(new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9)));
+
+        return chart;
+    }
+
+    /**
+     * To be improved !!! Do not work well yet
+     * @param chart
+     * @return
+     */
+    public static JFreeChart apply_scalable_ticksize(JFreeChart chart) {
+        XYPlot plot = (XYPlot) chart.getPlot();
+        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+
+        float baseFontSize = baseFontSize();
+
+        float tickSize      = baseFontSize * 0.8f;
+        float minorTickSize = baseFontSize * 0.4f;
+
+        xAxis.setTickMarkInsideLength(tickSize);
+        xAxis.setTickMarkOutsideLength(0.0f);
+        xAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        xAxis.setMinorTickMarkInsideLength(minorTickSize);
+        xAxis.setMinorTickMarkOutsideLength(0.0f);
+        xAxis.setAxisLineStroke(new BasicStroke(1.5f));
+
+        yAxis.setTickMarkInsideLength(tickSize);
+        yAxis.setTickMarkOutsideLength(0.0f);
+        yAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
+        yAxis.setMinorTickMarkInsideLength(minorTickSize);
+        yAxis.setMinorTickMarkOutsideLength(0.0f);
+        yAxis.setAxisLineStroke(new BasicStroke(1.5f));
+        
+
+        return chart;
+    }
+
+    /**
      * Create stat box for an histogram.
      * 
      * Usage: plot.addAnnotation(create_stat_box(h))
@@ -389,15 +452,15 @@ public class Renderer {
     }
 
     /**
-     * Print out a chart with 1 or more histogram
+     * Superpose one or more histogram
+     * 
+     * The color lines of the histograms are based on the current colorPalette
+     * 
+     * See also : {@link #generateDefaultColorPalette(int)}, {@link #generateJetPalette(int)}, etc...
      * @param histos
-     * @param filename
-     * @param outType
-     * @throws IOException
-     * @throws DocumentException
      */
-    public static void save_overlayed_histograms(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
-        if (histos.isEmpty() || histos == null) return;
+    public static JFreeChart create_overlayed_histograms(ArrayList<H1F> histos) {
+        if (histos.isEmpty() || histos == null) return null;
         // create chart from dataset
         XYSeriesCollection dataset = create_dataset(histos);
         JFreeChart chart = create_chart_from_dataset(dataset, histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY(), true);
@@ -417,16 +480,36 @@ public class Renderer {
             plot.addAnnotation(create_stat_box(histos.get(0)));
             chart.getLegend().setVisible(false);
         }
-        if (outType == RendererOutputType.PNG) {
-            save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
-        }
-        else if (outType == RendererOutputType.PDF) {
-            save_jfreechart_as_pdf(chart, sanitizeFilenameForPDF(filename));
-        }
+        return chart;
+    }
+
+    public static void save_overlayed_histograms(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
+        JFreeChart chart = create_overlayed_histograms(histos);
+        Renderer.save_jfreechart(chart, filename, outType);
     }
 
     /**
-     * Used by {@link #save_histogram_evolution_with_parameter(ArrayList, H1F, Color, String, String, String, double[], RendererOutputType)}
+     * Print out a chart with 1 histogram
+     * @param histo
+     * @param filename
+     * @param outType PNG or PDF
+     * @throws IOException
+     * @throws DocumentException
+     */
+    public static void save_histogram(H1F histo, String filename, RendererOutputType outType) throws IOException, DocumentException {
+        ArrayList<H1F> list = new ArrayList<>();
+        list.add(histo);
+        JFreeChart chart = create_overlayed_histograms(list);
+        Renderer.save_jfreechart(chart, filename, outType);
+    }
+
+    /**
+     * Used by {@link #create_histogram_evolution_with_parameter(ArrayList, H1F, Color, String, String, double[])}
+     * 
+     * The color lines of the histograms are based on the current colorPalette
+     * 
+     * See also : {@link #generateDefaultColorPalette(int)}, {@link #generateJetPalette(int)}, etc...
+     * 
      * @param chart initial chart
      * @param barName name of the color bar
      * @param values values to be displayed
@@ -500,9 +583,18 @@ public class Renderer {
 
     }
 
-    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String filename, String parameterName, double[] values, RendererOutputType outType) throws IOException, DocumentException {
+    /**
+     * Routine to supersimpose histograms of same type varying with the paremeters provided in : values
+     * @param histos list of histograms
+     * @param h_ref reference histogram, can be null
+     * @param color_ref color of the reference histogram, by default it is BLACK
+     * @param title title of the figure
+     * @param parameterName name of the parameter
+     * @param values the parameter values associated to each histograms
+     */
+    public static JFreeChart create_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String parameterName, double[] values) {
         // portion of code similar to save_overlayed_histograms()
-        if (histos.isEmpty() || histos == null) return;
+        if (histos.isEmpty() || histos == null) return null;
         ArrayList<H1F> histos_and_ref = new ArrayList<>();
         for (H1F h : histos) {
             histos_and_ref.add(h);
@@ -522,7 +614,7 @@ public class Renderer {
             renderer.setSeriesStroke(i, null);
         }
         if (h_ref != null) {
-            renderer.setSeriesPaint(histos.size(), Color.BLACK);
+            renderer.setSeriesPaint(histos.size(), color_ref != null ? color_ref : Color.BLACK);
             renderer.setSeriesStroke(histos.size(), null);
         }
         if (histos.size() == 1) {
@@ -535,26 +627,24 @@ public class Renderer {
         } else {
             chart = display_color_bar(chart, parameterName, values);
         }
+        return chart;
+    }
+
+    /**
+     * Save jfreechart as PDF or PNG
+     * @param chart
+     * @param filename
+     * @param outType
+     * @throws IOException
+     * @throws DocumentException
+     */
+    public static void save_jfreechart(JFreeChart chart, String filename, RendererOutputType outType) throws IOException, DocumentException {
         if (outType == RendererOutputType.PNG) {
             save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
         }
         else if (outType == RendererOutputType.PDF) {
             save_jfreechart_as_pdf(chart, sanitizeFilenameForPDF(filename));
         }
-    }
-
-    /**
-     * Print out a chart with 1 histogram
-     * @param histo
-     * @param filename
-     * @param outType
-     * @throws IOException
-     * @throws DocumentException
-     */
-    public static void save_histogram(H1F histo, String filename, RendererOutputType outType) throws IOException, DocumentException {
-        ArrayList<H1F> list = new ArrayList<>();
-        list.add(histo);
-        save_overlayed_histograms(list, filename, outType);
     }
 
     /**
@@ -592,66 +682,7 @@ public class Renderer {
         document.close();
     }
 
-    /**
-     * Default font size based on the dimension of the chart. It will overwirte the previous setting
-     * @param chart
-     * @return updated chart
-     */
-    public static JFreeChart apply_scalable_fontsize(JFreeChart chart) {
-        XYPlot plot = (XYPlot) chart.getPlot();
-        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
-        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
-
-        float baseFontSize = baseFontSize();
-
-        Font titleFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.4));
-        Font labelFont     = new Font("Times New Roman", Font.BOLD,  (int)(baseFontSize * 1.2));
-        Font tickFont      = new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize));
-        //Font statFont      = new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9));
-
-        chart.getTitle().setFont(titleFont);
-        xAxis.setLabelFont(labelFont);
-        xAxis.setTickLabelFont(tickFont);
-        yAxis.setLabelFont(labelFont);
-        yAxis.setTickLabelFont(tickFont);
-        if (chart.getLegend() != null)
-            chart.getLegend().setItemFont(new Font("Times New Roman", Font.PLAIN, (int)(baseFontSize * 0.9)));
-
-        return chart;
-    }
-
-    /**
-     * To be improved !!! Do not work well yet
-     * @param chart
-     * @return
-     */
-    public static JFreeChart apply_scalable_ticksize(JFreeChart chart) {
-        XYPlot plot = (XYPlot) chart.getPlot();
-        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
-        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
-
-        float baseFontSize = baseFontSize();
-
-        float tickSize      = baseFontSize * 0.8f;
-        float minorTickSize = baseFontSize * 0.4f;
-
-        xAxis.setTickMarkInsideLength(tickSize);
-        xAxis.setTickMarkOutsideLength(0.0f);
-        xAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
-        xAxis.setMinorTickMarkInsideLength(minorTickSize);
-        xAxis.setMinorTickMarkOutsideLength(0.0f);
-        xAxis.setAxisLineStroke(new BasicStroke(1.5f));
-
-        yAxis.setTickMarkInsideLength(tickSize);
-        yAxis.setTickMarkOutsideLength(0.0f);
-        yAxis.setTickMarkStroke(new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
-        yAxis.setMinorTickMarkInsideLength(minorTickSize);
-        yAxis.setMinorTickMarkOutsideLength(0.0f);
-        yAxis.setAxisLineStroke(new BasicStroke(1.5f));
-        
-
-        return chart;
-    }
+    
 
 
 
