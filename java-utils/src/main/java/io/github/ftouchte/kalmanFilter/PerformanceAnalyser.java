@@ -87,82 +87,38 @@ public class PerformanceAnalyser {
         // pfAnalyser.set_step_size(0.5);
 
         /// --- KF Niter
-        int Niter_min = 1;
-        int Niter_max = 2;
+        // int Niter_min = 1;
+        // int Niter_max = 2;
+        int num_Niter = 2;
+        //int[] NiterValues = new int[num_Niter];
+        double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
-        double stepSize_min = 0.5;
-        double stepSize_max = 4;
-        int numStepMinusOne = 10;
-        
-        // /// --- Loop over iterations
-        // ArrayList<Histos> HistosOverIterations = new ArrayList<>(); 
-        // for (int i = Niter_min; i <= Niter_max; i++) {
-        //     int Niter = i;
-        //     pfAnalyser.set_KF_Niter(Niter);
-        //     NiterList.add(Double.valueOf(Niter));
-        //     Histos h = pfAnalyser.run(inFiles, "_KF_Niter_" + Niter);
+        // double stepSize_min = 0.5;
+        // double stepSize_max = 4;
+        //int numStepMinusOne = 10;
 
-        //     // output
-        //     HistosOverIterations.add(h);
-        //     System.out.println("# KF Niter : " + Niter);
-        //     h.print();
-        //     String outDir = workDir + "/Niter_" + Niter;
-        //     check_output_dir(outDir);
-        //     h.save(outDir);
-        // }
-
-        // /// --- Output Evolution with Niter
-        // String outDir = workDir + "/KF_Niter_evolution";
-        // check_output_dir(outDir);
-        // ArrayList<String> allHistogramNames = HistosOverIterations.get(0).getListOfHistograms(true);      
-        // for (String observable : allHistogramNames) {
-        //     // llok for histo with the same name
-        //     ArrayList<H1F> list = new ArrayList<>();
-        //     for (Histos histos : HistosOverIterations) {
-        //         String name = observable + histos.getTag();
-        //         H1F h = histos.map_histo1d.get(name);
-        //         list.add(h);
-        //     }
-        //     // find the reference histogram
-        //     H1F h_ref = null;
-        //     String reconstructed = "reconstructed";
-        //     String expected = "expected";
-        //     String refName = "";
-        //     if (observable.startsWith(reconstructed)) {
-        //         refName = expected + observable.substring(reconstructed.length(), observable.length());
-                
-        //     }
-        //     h_ref = HistosOverIterations.get(0).getHistogram1D(refName);
-            
-        //     // output
-        //     String title = String.format("Evolution of %s with KF Niter", observable);
-        //     String filename = title.replace(" ", "_");
-        //     filename = outDir + "/" + filename;
-        //     Renderer.generateJetPalette(Niter_max-Niter_min+1);
-        //     Renderer.save_histogram_evolution_with_parameter(list, h_ref, null, title, filename, "KF Niter", Niter_min, Niter_max, 1, RendererOutputType.PNG);
-        // }
+        int num_stepSize = 3;
+        //double[] stepSizeValues = new double[num_stepSize];
+        double[] stepSizeValues = {0.5, 1};
 
         /// --- Main routine
         /// --- Loop over Niter
         String singleHistoDir = workDir + "/Standalone";
         check_output_dir(singleHistoDir);
         ArrayList<ArrayList<Histos>> HistosCollections = new ArrayList<>();
-        ArrayList<Double> Niter_axis = new ArrayList<>();
-        ArrayList<Double> StepSize_axis = new ArrayList<>();
-        for (int i = Niter_min; i <= Niter_max; i++) {
-            int Niter = i;
+        //for (int i = Niter_min; i <= Niter_max; i++) {
+        for (int i = 0; i < NiterValues.length; i++) {
+            int Niter = (int) NiterValues[i];
             pfAnalyser.set_KF_Niter(Niter);
-            Niter_axis.add(Double.valueOf(Niter));
             String kfDir = singleHistoDir + "/KF_Niter" + Niter;
             check_output_dir(kfDir);
             
             ArrayList<Histos> list = new ArrayList<>();
             /// --- Loop over step size
-            for (int j = 0; j <= numStepMinusOne; j++) {
-                double size = stepSize_min + (stepSize_max-stepSize_min)*j/numStepMinusOne;
+            for (int j = 0; j < stepSizeValues.length; j++) {
+                double size = stepSizeValues[j];
                 pfAnalyser.set_step_size(size);
-                StepSize_axis.add(Double.valueOf(size));
 
                 /// --- Run reconstruction
                 Histos h = pfAnalyser.run(inFiles, String.format("_KF_Niter_%d_stepSize_%.4f", Niter, size));
@@ -186,8 +142,11 @@ public class PerformanceAnalyser {
         /// --- Summary plot : Niter fixed, stepSize varies
         for (int i = 0; i < HistosCollections.size(); i++) {
             ArrayList<Histos> list = extractRow(HistosCollections, i);
-            String title_complement = String.format("with Niter %d and over stepSize", Niter_axis.get(i).intValue());
-            combine_histos(list, Observables, title_complement, projectionNiterFixedDir, stepSize_min, stepSize_max, (stepSize_max-stepSize_min)/ numStepMinusOne, "step size");
+            for (String obs : Observables) {
+                String title = String.format("Evolution of %s with Niter %d over stepSize", obs, (int) NiterValues[i]);
+                // plot comobined histograms
+                combine_histos(list, obs, title, projectionNiterFixedDir, stepSizeValues, "stepSize");
+            }
         }
     
         /// --- Summary plot : stepSize fixed, Niter vary
@@ -195,8 +154,11 @@ public class PerformanceAnalyser {
         check_output_dir(projectionStepSizeFixed);
         for (int j = 0; j < HistosCollections.get(0).size(); j++) {
             ArrayList<Histos> list = extractColumn(HistosCollections, j);
-            String title_complement = String.format("with stepSize %f mm and over Niter", StepSize_axis.get(j).doubleValue());
-            combine_histos(list, Observables, title_complement, projectionStepSizeFixed, Niter_min, Niter_max, 1, "Niter");
+            for (String obs : Observables) {
+                String title = String.format("Evolution of %s with stepSize %.3f over Niter", obs, stepSizeValues[j]);
+                // plot comobined histograms
+                combine_histos(list, obs, title, projectionStepSizeFixed, NiterValues, "Niter");
+            }
         }
 
 
@@ -413,8 +375,7 @@ public class PerformanceAnalyser {
         return list;
     }
 
-    public static void combine_histos(ArrayList<Histos> collection, ArrayList<String> observables, String title_complement, String dir, double lower, double upper, double step, String barName) throws IOException, DocumentException {     
-        for (String obs : observables) {
+    public static void combine_histos(ArrayList<Histos> collection, String obs, String title, String dir, double[] paramValues, String barName) throws IOException, DocumentException {
             // gather histogram as same name
             ArrayList<H1F> list = new ArrayList<>();
             for (Histos histos : collection) {
@@ -434,12 +395,10 @@ public class PerformanceAnalyser {
             h_ref = collection.get(0).getHistogram1D(refName);
             
             // output
-            String title = String.format("Evolution of %s with %s", obs, title_complement);
             String filename = title.replace(" ", "_");
             filename = dir + "/" + filename;
             Renderer.generateJetPalette(collection.size());
-            Renderer.save_histogram_evolution_with_parameter(list, h_ref, null, title, filename, barName, lower, upper, step, RendererOutputType.PNG);
-        }
+            Renderer.save_histogram_evolution_with_parameter(list, h_ref, null, title, filename, barName, paramValues, RendererOutputType.PNG);
     }
 
     void analyseHistos(Histos histos) {

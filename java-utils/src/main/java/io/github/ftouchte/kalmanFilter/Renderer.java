@@ -204,10 +204,14 @@ public class Renderer {
         double yMin = dataset.getRangeLowerBound(false);
         double yMax = dataset.getRangeUpperBound(false);
         // Ticks
-        xAxis.setTickUnit(new NumberTickUnit((int) (xMax - xMin) / nTicksX));
+        xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
+        xAxis.setTickLabelPaint(Color.BLACK);
+        xAxis.setLabelPaint(Color.BLACK);
+        
         yAxis.setTickUnit(new NumberTickUnit((int) (yMax - yMin) / nTicksY));
         yAxis.setAutoRangeIncludesZero(true);  // inclure 0 dans l'auto range
-        yAxis.setLowerBound(0.0);
+        yAxis.setTickLabelPaint(Color.BLACK);
+        yAxis.setLabelPaint(Color.BLACK);
 
         /// --- Others
         // Ticks vers l'intérieur comme ROOT
@@ -454,35 +458,70 @@ public class Renderer {
 
     /**
      * 
-     * @param chart
-     * @param barName title of the color scale
-     * @param n number of color to be displayed
-     * @param lower value of the axis
-     * @param upper value of the axis
-     * @param step step size to display tick
-     * @return
+     * @param chart initial chart
+     * @param barName name of the color bar
+     * @param values values to be displayed
+     * @return updated chart
      */
-    public static JFreeChart display_color_bar(JFreeChart chart, String barName, int n, double lower, double upper, double step) {
+    public static JFreeChart display_color_bar(JFreeChart chart, String barName, double[] values) {
         //XYPlot plot = (XYPlot) chart.getPlot();
         //XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
-        
-        // Construire la PaintScale
-        LookupPaintScale paintScale = new LookupPaintScale(0, n, Color.WHITE);
+        int n = values.length;
+
+        // Crée une échelle de couleurs mappée sur les indices 0 à n
+        // (0 = première couleur, n = dernière) avec blanc comme couleur par défaut
+        // paintScale et scaleAxis ont le même range afin de centrer les labels
+        LookupPaintScale paintScale = new LookupPaintScale(-0.5, n-0.5, Color.WHITE);
+
+        // Associe chaque index i à une couleur pickColor(i)
+        // ex: i=0 → bleu, i=1 → rouge, i=2 → vert
         for (int i = 0; i < n; i++) {
-            paintScale.add(i, pickColor(i));
+            paintScale.add(i-0.5, pickColor(i)); // couleur i commence à i-0.5
         }
 
-        // Créer la color bar
+        // Axe numérique pour la color bar
         NumberAxis scaleAxis = new NumberAxis(barName);
-        scaleAxis.setRange(lower, upper);
-        scaleAxis.setTickLabelFont(new Font("Times New Roman", Font.PLAIN, (int) baseFontSize()));
-        scaleAxis.setLabelFont(new Font("Times New Roman", Font.BOLD, (int) baseFontSize()));
-        scaleAxis.setTickUnit(new NumberTickUnit(step));
-        //scaleAxis.setLabelLocation(AxisLabelLocation.HIGH_END);
+
+        // Centrer les labels par rapport aux couleurs
+        // Décaler les ticks de 0.5 pour qu'ils soient au centre de chaque couleur
+        scaleAxis.setRange(-0.5, n - 0.5); // décale le range de 0.5
+        // Un tick tous les 1 unité → un tick par couleur
+        scaleAxis.setTickUnit(new NumberTickUnit(1));
+        scaleAxis.setTickLabelFont(new Font("Times New Roman", Font.PLAIN, (int) (baseFontSize() * 0.8f)));
+        scaleAxis.setLabelFont(new Font("Times New Roman", Font.BOLD,  (int) (baseFontSize() * 0.9f)));
+
+        // Remplace le format numérique par défaut par un format custom
+        // qui convertit l'index → valeur réelle à afficher
+        scaleAxis.setNumberFormatOverride(new java.text.NumberFormat() {
+
+            // Appelé pour chaque tick : reçoit l'index (0.0, 1.0, 2.0...)
+            // et retourne la vraie valeur à afficher (0.5, 1.0, 2.0...)
+            @Override
+            public StringBuffer format(double number, StringBuffer toAppendTo, java.text.FieldPosition pos) {
+                int idx = (int) Math.round(number); // 0.0 → 0, 1.0 → 1, etc.
+                if (idx >= 0 && idx < values.length) {
+                    toAppendTo.append(values[idx]); // affiche values[0]=0.5, values[1]=1.0, etc.
+                }
+                return toAppendTo;
+            }
+
+            // Même chose pour les entiers (non utilisé ici mais obligatoire)
+            @Override
+            public StringBuffer format(long number, StringBuffer toAppendTo, java.text.FieldPosition pos) {
+                return toAppendTo;
+            }
+
+            // Parse string → number (non utilisé ici mais obligatoire)
+            @Override
+            public Number parse(String source, java.text.ParsePosition parsePosition) {
+                return null;
+            }
+        });
 
         PaintScaleLegend colorBar = new PaintScaleLegend(paintScale, scaleAxis);
         colorBar.setPosition(RectangleEdge.LEFT);  // à gauche
         colorBar.setMargin(new RectangleInsets(10, 5, 10, 5));
+        //colorBar.setMargin(new RectangleInsets(0, 5, 0, 5)); 
         colorBar.setStripWidth(20);               // largeur de la barre
         colorBar.setAxisLocation(AxisLocation.BOTTOM_OR_LEFT);
 
@@ -492,7 +531,7 @@ public class Renderer {
 
     }
 
-    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String filename, String parameterName, double lower, double upper, double step, RendererOutputType outType) throws IOException, DocumentException {
+    public static void save_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String filename, String parameterName, double[] values, RendererOutputType outType) throws IOException, DocumentException {
         // portion of code similar to save_overlayed_histograms()
         if (histos.isEmpty() || histos == null) return;
         ArrayList<H1F> histos_and_ref = new ArrayList<>();
@@ -520,7 +559,7 @@ public class Renderer {
             if (chart.getLegend() != null)
                 chart.getLegend().setVisible(false);
         } else {
-            chart = display_color_bar(chart, parameterName, histos.size(), lower, upper, step);
+            chart = display_color_bar(chart, parameterName, values);
         }
         if (outType == RendererOutputType.PNG) {
             save_jfreechart_as_png(chart, sanitizeFilenameForPNG(filename));
