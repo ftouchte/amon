@@ -13,6 +13,7 @@ import java.util.concurrent.Future;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.jfree.chart.JFreeChart;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
@@ -400,7 +401,8 @@ public class PerformanceAnalyser {
             String filename = title.replace(" ", "_");
             filename = dir + "/" + filename;
             Renderer.generateJetPalette(collection.size());
-            Renderer.save_histogram_evolution_with_parameter(list, h_ref, null, title, filename, barName, paramValues, RendererOutputType.PNG);
+            JFreeChart chart = Renderer.create_histogram_evolution_with_parameter(list, h_ref, null, title, barName, paramValues);
+            Renderer.save_jfreechart(chart, filename, RendererOutputType.PNG);
     }
 
     void analyseHistos(Histos histos) {

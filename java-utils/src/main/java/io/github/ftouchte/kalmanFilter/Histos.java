@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jfree.chart.JFreeChart;
 import org.jlab.groot.data.H1F;
 
 import com.itextpdf.text.DocumentException;
@@ -170,21 +171,6 @@ public class Histos {
 
         // Renderer.width = 1500;
         // Renderer.height = 1200;
-        
-        // Renderer.save_histogram(h1_p, h1_p.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_theta, h1_theta.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_phi, h1_phi.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_vz, h1_vz.getName(), RendererOutputType.PNG);
-
-        // Renderer.save_histogram(h1_p0, h1_p0.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_theta0, h1_theta0.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_phi0, h1_phi0.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_vz0, h1_vz0.getName(), RendererOutputType.PNG);
-
-        // Renderer.save_histogram(h1_delta_p, h1_delta_p.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_delta_theta, h1_delta_theta.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_delta_phi, h1_delta_phi.getName(), RendererOutputType.PNG);
-        // Renderer.save_histogram(h1_delta_vz, h1_delta_vz.getName(), RendererOutputType.PNG);
 
         for (Map.Entry<String, H1F> entry : map_histo1d.entrySet()) {
             String name = entry.getKey();
