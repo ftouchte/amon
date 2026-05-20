@@ -93,18 +93,12 @@ public class PerformanceAnalyser {
         // pfAnalyser.set_step_size(0.5);
 
         /// --- KF Niter
-        // int Niter_min = 1;
-        // int Niter_max = 2;
         int num_Niter = 2;
         //int[] NiterValues = new int[num_Niter];
         double[] NiterValues = {1, 2, 5, 10, 40};
         //double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
-        // double stepSize_min = 0.5;
-        // double stepSize_max = 4;
-        //int numStepMinusOne = 10;
-
         int num_stepSize = 3;
         //double[] stepSizeValues = new double[num_stepSize];
         double[] stepSizeValues = {0.3, 0.5, 1};
