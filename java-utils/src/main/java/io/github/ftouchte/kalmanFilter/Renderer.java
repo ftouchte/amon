@@ -193,14 +193,15 @@ public class Renderer {
         double yMin = dataset.getRangeLowerBound(false);
         double yMax = dataset.getRangeUpperBound(false);
         // Ticks
-        xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
+        //xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
         xAxis.setTickLabelPaint(Color.BLACK);
         xAxis.setLabelPaint(Color.BLACK);
         
-        yAxis.setTickUnit(new NumberTickUnit((int) (yMax - yMin) / nTicksY));
-        yAxis.setAutoRangeIncludesZero(true);  // inclure 0 dans l'auto range
+        //yAxis.setTickUnit(new NumberTickUnit((int) (yMax - yMin) / nTicksY));
+        //yAxis.setTickUnit(new NumberTickUnit((yMax - yMin) / nTicksY));
+        yAxis.setAutoRangeIncludesZero(false);  // inclure 0 dans l'auto range
         yAxis.setTickLabelPaint(Color.BLACK);
-        yAxis.setLabelPaint(Color.BLACK);  
+        yAxis.setLabelPaint(Color.BLACK);
         
         // control the size
         chart = apply_scalable_fontsize(chart);
