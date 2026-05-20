@@ -155,29 +155,6 @@ public class Renderer {
     }
 
     /**
-     * Create JFreeChart from dataset (e.g XYSeriesCollection)
-     * @param dataset
-     * @param title
-     * @param xtitle
-     * @param ytitle
-     * @param legend ?
-     * @return
-     */
-    public static JFreeChart create_chart_from_dataset(XYSeriesCollection dataset, String title, String xtitle, String ytitle, boolean legend) {
-        // Create chart
-        JFreeChart chart = ChartFactory.createXYLineChart(title, xtitle, ytitle, dataset, PlotOrientation.VERTICAL, legend, true, false);
-
-        // Default line style and color rendering
-        XYPlot plot = (XYPlot) chart.getPlot();
-        XYStepRenderer renderer = new XYStepRenderer();
-        renderer.setSeriesPaint(0, Color.BLUE); // couleur du contour
-        renderer.setSeriesStroke(0, new BasicStroke(1.5f));
-        plot.setRenderer(renderer);
-
-        return chart;
-    }
-
-    /**
      * The user can take this piece of code as example to custimize the chart
      * @param chart working chart
      * @return updated chart
@@ -452,7 +429,7 @@ public class Renderer {
     }
 
     /**
-     * Superpose one or more histogram
+     * Draw one or more histogram in a chart
      * 
      * The color lines of the histograms are based on the current colorPalette
      * 
@@ -460,15 +437,22 @@ public class Renderer {
      * @param histos
      */
     public static JFreeChart create_overlayed_histograms(ArrayList<H1F> histos) {
+        /// --- create dataset
         if (histos.isEmpty() || histos == null) return null;
-        // create chart from dataset
         XYSeriesCollection dataset = create_dataset(histos);
-        JFreeChart chart = create_chart_from_dataset(dataset, histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY(), true);
+        
+        /// --- Create XYLineChart
+        JFreeChart chart = ChartFactory.createXYLineChart(histos.get(0).getTitle(), histos.get(0).getTitleX(), histos.get(0).getTitleY(), dataset, PlotOrientation.VERTICAL, false, true, false);
+
+        /// --- Apply default aspect to the chart
         chart = apply_default_chart_rendering(chart);
 
-        // apply different linestyles
+        /// --- Render plot as STEP
+        XYStepRenderer renderer = new XYStepRenderer();
         XYPlot plot = (XYPlot) chart.getPlot();
-        XYStepRenderer renderer = (XYStepRenderer) plot.getRenderer();
+        plot.setRenderer(renderer);
+
+        /// --- Style style and color
         for (int i = 0; i < histos.size(); i++) {
             renderer.setSeriesPaint(i, pickColor(i));
             renderer.setSeriesStroke(i, null);
@@ -478,18 +462,30 @@ public class Renderer {
             renderer.setSeriesStroke(0, null);
             // add annotation
             plot.addAnnotation(create_stat_box(histos.get(0)));
-            chart.getLegend().setVisible(false);
         }
         return chart;
     }
 
+    /**
+     * Superimpose one or more histograms and save them in the specified format.
+     * 
+     * See also {@link {@link #create_overlayed_histograms(ArrayList)}} to customise the rendering
+     * @param histos
+     * @param filename
+     * @param outType
+     * @throws IOException
+     * @throws DocumentException
+     */
     public static void save_overlayed_histograms(ArrayList<H1F> histos, String filename, RendererOutputType outType) throws IOException, DocumentException {
         JFreeChart chart = create_overlayed_histograms(histos);
         Renderer.save_jfreechart(chart, filename, outType);
     }
 
     /**
-     * Print out a chart with 1 histogram
+     * Draw one histogram in a chart and save it in the specified format.
+     * 
+     * See also {@link {@link #create_overlayed_histograms(ArrayList)}} to customise the rendering
+     * 
      * @param histo
      * @param filename
      * @param outType PNG or PDF
@@ -584,7 +580,7 @@ public class Renderer {
     }
 
     /**
-     * Routine to supersimpose histograms of same type varying with the paremeters provided in : values
+     * Draw one or more histograms in a chart. Assuming the histogram vary with a parameter, this routine draw a color bar
      * @param histos list of histograms
      * @param h_ref reference histogram, can be null
      * @param color_ref color of the reference histogram, by default it is BLACK
@@ -593,7 +589,7 @@ public class Renderer {
      * @param values the parameter values associated to each histograms
      */
     public static JFreeChart create_histogram_evolution_with_parameter(ArrayList<H1F> histos, H1F h_ref, Color color_ref, String title, String parameterName, double[] values) {
-        // portion of code similar to save_overlayed_histograms()
+        /// --- create dataset
         if (histos.isEmpty() || histos == null) return null;
         ArrayList<H1F> histos_and_ref = new ArrayList<>();
         for (H1F h : histos) {
@@ -603,15 +599,22 @@ public class Renderer {
             histos_and_ref.add(h_ref);
         }
         XYSeriesCollection dataset = create_dataset(histos_and_ref);
-        JFreeChart chart = create_chart_from_dataset(dataset, title, histos.get(0).getTitleX(), histos.get(0).getTitleY(), false);
+
+        /// --- Create XYLineChart
+        JFreeChart chart = ChartFactory.createXYLineChart(title, histos.get(0).getTitleX(), histos.get(0).getTitleY(), dataset, PlotOrientation.VERTICAL, false, true, false);
+
+        /// --- Apply default aspect to the chart
         chart = apply_default_chart_rendering(chart);
 
-        // apply different linestyles
+        /// --- Render plot as STEP
+        XYStepRenderer renderer = new XYStepRenderer();
         XYPlot plot = (XYPlot) chart.getPlot();
-        XYStepRenderer renderer = (XYStepRenderer) plot.getRenderer();
+        plot.setRenderer(renderer);
+
+        /// --- Style style and color
         for (int i = 0; i < histos.size(); i++) {
-            renderer.setSeriesPaint(i, pickColor(i));
-            renderer.setSeriesStroke(i, null);
+            renderer.setSeriesPaint(i, pickColor(i)); // line color
+            renderer.setSeriesStroke(i, null); // lien style
         }
         if (h_ref != null) {
             renderer.setSeriesPaint(histos.size(), color_ref != null ? color_ref : Color.BLACK);
