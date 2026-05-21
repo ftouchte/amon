@@ -10,23 +10,19 @@ import java.awt.Font;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.annotations.XYAnnotation;
 import org.jfree.chart.annotations.XYTitleAnnotation;
-import org.jfree.chart.axis.AxisLabelLocation;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.block.BlockContainer;
 import org.jfree.chart.block.ColumnArrangement;
-import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.LookupPaintScale;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.renderer.xy.XYStepRenderer;
 import org.jfree.chart.title.CompositeTitle;
-import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.title.PaintScaleLegend;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.chart.ui.RectangleAnchor;
@@ -45,14 +41,10 @@ import com.itextpdf.text.pdf.PdfContentByte;
 import com.itextpdf.text.pdf.PdfTemplate;
 import com.itextpdf.text.pdf.PdfWriter;
 
-import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
-
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
 public class Renderer {
@@ -183,17 +175,17 @@ public class Renderer {
         // axis
         NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
         NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
-        int nTicksX = 10;
-        int nTicksY = 5;
+        // int nTicksX = 10;
+        // int nTicksY = 5;
         // Min/Max X
-        XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
-        double xMin = dataset.getDomainLowerBound(false);
-        double xMax = dataset.getDomainUpperBound(false);
-        // Min/Max Y
-        double yMin = dataset.getRangeLowerBound(false);
-        double yMax = dataset.getRangeUpperBound(false);
-        // Ticks
-        //xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
+        // XYSeriesCollection dataset = (XYSeriesCollection) plot.getDataset();
+        // double xMin = dataset.getDomainLowerBound(false);
+        // double xMax = dataset.getDomainUpperBound(false);
+        // // Min/Max Y
+        // double yMin = dataset.getRangeLowerBound(false);
+        // double yMax = dataset.getRangeUpperBound(false);
+        // // Ticks
+        // //xAxis.setTickUnit(new NumberTickUnit((xMax - xMin) / nTicksX));
         xAxis.setTickLabelPaint(Color.BLACK);
         xAxis.setLabelPaint(Color.BLACK);
         
@@ -205,6 +197,9 @@ public class Renderer {
         
         // control the size
         chart = apply_scalable_fontsize(chart);
+
+        // display grid
+        chart = display_grid(chart);
 
         return chart;
     }
@@ -266,6 +261,36 @@ public class Renderer {
         yAxis.setMinorTickMarkOutsideLength(0.0f);
         yAxis.setAxisLineStroke(new BasicStroke(1.5f));
         
+
+        return chart;
+    }
+
+    /**
+     * Default grid settings
+     * @param chart
+     * @return updated chart
+     */
+    public static JFreeChart display_grid(JFreeChart chart) {
+        XYPlot plot = (XYPlot) chart.getPlot();
+
+        // Grille verticale (axe X)
+        plot.setDomainGridlinesVisible(true);
+        plot.setDomainGridlinePaint(Color.LIGHT_GRAY);
+        
+        // Grille horizontale (axe Y)
+        plot.setRangeGridlinesVisible(true);
+        plot.setRangeGridlinePaint(Color.LIGHT_GRAY);
+
+        // // Dranw continous lines
+        // plot.setDomainGridlineStroke(new BasicStroke(0.5f));
+        // plot.setRangeGridlineStroke(new BasicStroke(0.5f));
+
+        // // Pour une grille en pointillés comme ROOT
+        float[] dash = {4.0f, 4.0f};
+        BasicStroke dashedStroke = new BasicStroke(0.5f, BasicStroke.CAP_BUTT, 
+        BasicStroke.JOIN_MITER, 10.0f, dash, 0.0f);
+        plot.setDomainGridlineStroke(dashedStroke);
+        plot.setRangeGridlineStroke(dashedStroke);
 
         return chart;
     }

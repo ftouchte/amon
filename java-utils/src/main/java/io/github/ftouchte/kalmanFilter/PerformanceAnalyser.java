@@ -95,7 +95,7 @@ public class PerformanceAnalyser {
         /// --- KF Niter
         int num_Niter = 2;
         //int[] NiterValues = new int[num_Niter];
-        double[] NiterValues = {1, 2, 5, 10, 20, 30, 40};
+        double[] NiterValues = {1, 2, 5, 10, 20, 30, 40, 50, 60, 70};
         //double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
