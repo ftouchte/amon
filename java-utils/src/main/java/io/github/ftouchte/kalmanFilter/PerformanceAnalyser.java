@@ -95,20 +95,20 @@ public class PerformanceAnalyser {
         /// --- KF Niter
         int num_Niter = 2;
         //int[] NiterValues = new int[num_Niter];
-        double[] NiterValues = {1, 2, 5, 10, 40};
+        double[] NiterValues = {1, 2, 5, 10, 20, 30, 40};
         //double[] NiterValues = {1, 2};
 
         /// --- KF stepSize
         int num_stepSize = 3;
         //double[] stepSizeValues = new double[num_stepSize];
-        double[] stepSizeValues = {0.3, 0.5, 1};
+        double[] stepSizeValues = {0.3, 0.5, 1, 2};
         //double[] stepSizeValues = {0.5, 1};
 
         /// --- Main routine
         /// --- Loop over Niter
         String singleHistoDir = workDir + "/Standalone";
         check_output_dir(singleHistoDir);
-        ArrayList<ArrayList<Histos>> HistosCollections = new ArrayList<>();
+        ArrayList<ArrayList<Histos>> HistosCollections = new ArrayList<>(); // Niter x stepSize
         //for (int i = Niter_min; i <= Niter_max; i++) {
         for (int i = 0; i < NiterValues.length; i++) {
             int Niter = (int) NiterValues[i];
@@ -163,23 +163,63 @@ public class PerformanceAnalyser {
             }
         }
 
+        /// --- 
+        ArrayList<ArrayList<Histos>> TransposedHistosCollections = new ArrayList<>(); // stepSize x Niter
+        for (int j = 0; j < HistosCollections.get(0).size(); j++) {
+            ArrayList<Histos> list = extractColumn(HistosCollections, j);
+            TransposedHistosCollections.add(list);
+        }
 
+        /// --- Summary plots
+        Renderer.generateJetPalette(TransposedHistosCollections.size());
+        for (String obs : Observables) {
+            XYSeriesCollection dataset_mean = new XYSeriesCollection();
+            XYSeriesCollection dataset_width = new XYSeriesCollection();
+            for (int i = 0; i < TransposedHistosCollections.size(); i++) { // loop over stepSize
+                ArrayList<Histos> list = TransposedHistosCollections.get(i);
+                // create XY series for this oberservable
+                XYSeries series_mean = new XYSeries("stepSize_" + stepSizeValues[i]);
+                XYSeries series_width = new XYSeries("stepSize_" + stepSizeValues[i]);
+                for (int k = 0; k < list.size(); k++) {  // here the stepSize is fixed and each Histos has a different Niter
+                    Histos histos = list.get(k);
+                    H1F h = histos.getHistogram1D(obs);
+                    // extract mean and rms
+                    double mean = h.getMean();
+                    double width = h.getRMS();
+                    series_mean.add(NiterValues[k], mean);
+                    series_width.add(NiterValues[k], width);
+                }
+                dataset_mean.addSeries(series_mean);
+                dataset_width.addSeries(series_width);
+            }
 
+            // summary plot : mean
+            String meanDir = workDir + "/Summary/mean";
+            check_output_dir(meanDir);
+            String title_mean = String.format("Mean %s over Niter and stepSize", obs);
+            JFreeChart chart_mean = Renderer.create_chart_for_graph(dataset_mean, title_mean, "Niter", "mean " + obs);
+            XYPlot plot_mean = (XYPlot)chart_mean.getPlot();
+            String filename_mean = title_mean.replace(" ", "_");
+            XYLineAndShapeRenderer renderer_mean = (XYLineAndShapeRenderer) plot_mean.getRenderer();
+            renderer_mean.setSeriesPaint(0, Color.BLUE);
+            renderer_mean.setSeriesLinesVisible(0, true);
+            renderer_mean.setSeriesShapesVisible(0, true);
+            Renderer.save_jfreechart(chart_mean, meanDir + "/" + filename_mean, RendererOutputType.PNG);
 
-        /// --- Performance study
-        // ArrayList<String> Observables = new ArrayList<>(Arrays.asList("residual", "delta_p", "delta_phi", "delta_theta", "computing_time"));
-        // for (String obs : Observables) {
-        //     ArrayList<Double> Means = new ArrayList<>();
-        //     ArrayList<Double> Widths = new ArrayList<>();
-        //     for (Histos histos : HistosOverIterations) {
-        //         H1F h = histos.getHistogram1D(obs);
-        //         double mean = h.getMean();
-        //         double width = h.getRMS();
-        //         Means.add(Double.valueOf(mean));
-        //         Widths.add(Double.valueOf(width));
-        //     }
-        // }
+            // summary plot : mean
+            String widthDir = workDir + "/Summary/width";
+            check_output_dir(widthDir);
+            String title_width = String.format("Width %s over Niter and stepSize", obs);
+            JFreeChart chart_width = Renderer.create_chart_for_graph(dataset_width, title_width, "Niter", "width " + obs);
+            XYPlot plot_width = (XYPlot)chart_width.getPlot();
+            String filename_width = title_width.replace(" ", "_");
+            XYLineAndShapeRenderer renderer_width = (XYLineAndShapeRenderer) plot_width.getRenderer();
+            renderer_width.setSeriesPaint(0, Color.BLUE);
+            renderer_width.setSeriesLinesVisible(0, true);
+            renderer_width.setSeriesShapesVisible(0, true);
+            Renderer.save_jfreechart(chart_width, widthDir + "/" + filename_width, RendererOutputType.PNG);
 
+        }
 
     }
 
@@ -380,19 +420,11 @@ public class PerformanceAnalyser {
     public static void combine_histos(ArrayList<Histos> collection, String obs, String title, String dir, double[] paramValues, String barName) throws IOException, DocumentException {
             // gather histogram as same name
             ArrayList<H1F> list = new ArrayList<>();
-            XYSeries series_mean = new XYSeries("mean");
-            XYSeries series_width = new XYSeries("rms");
             for (int i = 0; i < collection.size(); i++) {
                 Histos histos = collection.get(i);
                 String name = obs + histos.getTag();
                 H1F h = histos.getHistogram1D(name);
                 list.add(h);
-
-                // extract mean and rms
-                double mean = h.getMean();
-                double width = h.getRMS();
-                series_mean.add(paramValues[i], mean);
-                series_width.add(paramValues[i], width);
             }
             // find the reference histogram
             H1F h_ref = null;
@@ -405,38 +437,11 @@ public class PerformanceAnalyser {
             
             // output
             String filename = title.replace(" ", "_");
-            String histoDir = dir + "/combined_histos";
+            String histoDir = dir + "/" + obs;
             check_output_dir(histoDir);
             Renderer.generateJetPalette(collection.size());
             JFreeChart chart = Renderer.create_histogram_evolution_with_parameter(list, h_ref, null, title, barName, paramValues);
             Renderer.save_jfreechart(chart, histoDir + "/" + filename, RendererOutputType.PNG);
-
-            // summary plot : mean
-            String meanDir = dir + "/mean_histos";
-            check_output_dir(meanDir);
-            XYSeriesCollection dataset_mean = new XYSeriesCollection();
-            dataset_mean.addSeries(series_mean);
-            JFreeChart chart_mean = Renderer.create_chart_for_graph(dataset_mean, title, barName, obs);
-            XYPlot plot_mean = (XYPlot)chart_mean.getPlot();
-            XYLineAndShapeRenderer renderer_mean = (XYLineAndShapeRenderer) plot_mean.getRenderer();
-            renderer_mean.setSeriesPaint(0, Color.BLUE);
-            renderer_mean.setSeriesLinesVisible(0, true);
-            renderer_mean.setSeriesShapesVisible(0, true);
-            Renderer.save_jfreechart(chart_mean, meanDir + "/" + filename, RendererOutputType.PNG);
-
-            // summary plot : width
-            String widthDir = dir + "/width_histos";
-            check_output_dir(widthDir);
-            XYSeriesCollection dataset_width = new XYSeriesCollection();
-            dataset_width.addSeries(series_width);
-            JFreeChart chart_width = Renderer.create_chart_for_graph(dataset_width, title, barName, obs);
-            XYPlot plot_width = (XYPlot)chart_width.getPlot();
-            XYLineAndShapeRenderer renderer_with = (XYLineAndShapeRenderer) plot_width.getRenderer();
-            renderer_with.setSeriesPaint(0, Color.BLUE);
-            renderer_with.setSeriesLinesVisible(0, true);
-            renderer_with.setSeriesShapesVisible(0, true);
-            Renderer.save_jfreechart(chart_width, widthDir + "/" + filename, RendererOutputType.PNG);
-
     }
 
     void analyseHistos(Histos histos) {
@@ -465,9 +470,10 @@ public class PerformanceAnalyser {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else {
-            System.out.println("This directory already exist.");
         }
+        // } else {
+        //     System.out.println("This directory already exist.");
+        // }
     }
 
 }
