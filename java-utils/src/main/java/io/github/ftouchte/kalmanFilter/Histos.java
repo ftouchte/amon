@@ -63,7 +63,7 @@ public class Histos {
         h1_delta_phi = new H1F("delta_phi"  + tag, "delta phi", 100, -40, 40);
         h1_delta_vz = new H1F("delta_vz"  + tag, "delta vz", 100, -20, 10);
 
-        h1_computing_time = new H1F("computing_time" + tag, "ALERTEngine computing time", 100, 0, 120);
+        h1_computing_time = new H1F("computing_time" + tag, "ALERTEngine computing time", 100, 0, 250);
 
         h1_residual = new H1F("residual" + tag, "residual", 100, -2.2, 2.2);
 
