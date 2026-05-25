@@ -48,7 +48,7 @@ public class Histos {
 
         /// h1 residual LR per layers
         for (int i = 0; i < 9; i++) {
-            H1F h = new H1F("residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual LR (layer " + AhdcWireId.number2layer(i) + ")", 100, -1.5, 1.5);
+            H1F h = new H1F("residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual LR (layer " + AhdcWireId.number2layer(i) + ")", 100, -2.2, 2.2);
             h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", residual LR (mm)");
             if (i == 0) h.setTitleX("all layers, residual LR (mm)");
             h.setTitleY("count");
@@ -58,7 +58,7 @@ public class Histos {
 
         /// h1 residual per layers
         for (int i = 0; i < 9; i++) {
-            H1F h = new H1F("residual-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual (layer " + AhdcWireId.number2layer(i) + ")", 100, -1.5, 1.5);
+            H1F h = new H1F("residual-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, "residual (layer " + AhdcWireId.number2layer(i) + ")", 100, -2.2, 2.2);
             h.setTitleX("residual (mm)");
             if (i == 0) h.setTitleX("all layers, residual (mm)");
             h.setTitleY("count");
@@ -68,7 +68,7 @@ public class Histos {
 
         /// h1 residual LR per wires
         for (int i = 0; i < 576; i++) {
-            H1F h = new H1F("residual-LR-wire-" + i + "itr-" + niter, "residual-LR-wire-" + i + "itr-" + niter, 100, -1.5, 1.5);
+            H1F h = new H1F("residual-LR-wire-" + i + "itr-" + niter, "residual-LR-wire-" + i + "itr-" + niter, 100, -2.2, 2.2);
             AhdcWireId id = new AhdcWireId(i);
             h.setTitleX("wire " + i + ", L" + id.layer + "C" + id.component + ", residual LR (mm)");
             h.setTitleY("count");
@@ -78,7 +78,7 @@ public class Histos {
 
         /// h2 corr vz residual LR per layers
         for (int i = 0; i < 9; i++) {
-            H2F h = new H2F("corr-vz-residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, 60, -215, 160, 120, -1.5, 1.5);
+            H2F h = new H2F("corr-vz-residual-LR-layer-" + AhdcWireId.number2layer(i) + "itr-" + niter, 60, -215, 160, 120, -2.2, 2.2);
             h.setTitleX("layer " + AhdcWireId.number2layer(i) + ", vz (mm)");
             if (i == 0) h.setTitleX("all layers, vz(mm)");
             if (i % 3 == 0) h.setTitleY("residual LR (mm)");
@@ -87,7 +87,7 @@ public class Histos {
 
         /// h2 corr vz residual LR per wires
         for (int i = 0; i < 576; i++) {
-            H2F h = new H2F("corr-vz-residual-LR-wire-" + i + "itr-" + niter, 60, -215, 160, 120, -1.5, 1.5);
+            H2F h = new H2F("corr-vz-residual-LR-wire-" + i + "itr-" + niter, 60, -215, 160, 120, -2.2, 2.2);
             AhdcWireId identifier = new AhdcWireId(i);
             h.setTitleX("L" + identifier.layer + "W" + identifier.component +  ", vz (mm)");
             if (i % 3 == 0) h.setTitleY("residual LR (mm)");

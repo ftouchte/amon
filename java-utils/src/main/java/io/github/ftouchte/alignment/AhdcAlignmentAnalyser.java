@@ -107,6 +107,7 @@ public class AhdcAlignmentAnalyser {
                 ALERTEngine alertEngine = new ALERTEngine();
                 alertEngine.init();
                 alertEngine.set_clas_alignement(clas_alignment);
+                alertEngine.setStepSize(stepSize);
                 // AHDC engine
                 AHDCEngine ahdcEngine = new AHDCEngine();
                 ahdcEngine.init();
@@ -351,7 +352,7 @@ public class AhdcAlignmentAnalyser {
         GraphErrors g_wire = new GraphErrors();
         GraphErrors g_wire_cost = new GraphErrors();
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(wireOutDir + "/bilan_residual_LR_iter_" + niter + ".txt"))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(wireOutDir + "/bilan_residual_LR_iter_" + niter + ".csv"))) {
             writer.write("# residual LR per wires");
             writer.write("# tilte (num, sector, layer, component, mean, width, integral, cost");
             writer.newLine();
@@ -361,31 +362,32 @@ public class AhdcAlignmentAnalyser {
 
                 AhdcWireId identifier = new AhdcWireId(i);
                 
-                String line = String.format("%3d   %2d   %2d   %2d   ", i, identifier.sector, identifier.layer, identifier.component);
+                String line = String.format("%3d, %2d, %2d, %2d   ", i, identifier.sector, identifier.layer, identifier.component);
                 
-                double mean = 0;
+                double mean = 0; // do nothing if the fit failed
                 double width = -1;
                 double cost = -1;
                 GraphErrors gr = null;
-                Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "residual LR, wire " + (i+1) + "/576 in analyse_wire_histograms()...");
-                if (fitResult != null) {
-                    CrystalBall cb = fitResult.getFirst();
-                    // System.out.println("* Fit result : residual LR layer " + i);
-                    // cb.print();
-                    gr = fitResult.getSecond();
-                    mean = cb.getMu();
-                    width = cb.getSigma();
-                    cost = cb.getFitCost();
+                if (h.integral() > 1000) {
+                    Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "residual LR, wire " + (i+1) + "/576 in analyse_wire_histograms()...");
+                    if (fitResult != null) {
+                        CrystalBall cb = fitResult.getFirst();
+                        // System.out.println("* Fit result : residual LR layer " + i);
+                        // cb.print();
+                        gr = fitResult.getSecond();
+                        mean = cb.getMu();
+                        width = cb.getSigma();
+                        cost = cb.getFitCost();
 
-                    g_wire.addPoint(i, mean, 0, 0);
-                    g_wire_cost.addPoint(i, cb.getFitCost(), 0, 0);
+                        g_wire.addPoint(i, mean, 0, 0);
+                        g_wire_cost.addPoint(i, cb.getFitCost(), 0, 0);
+                    }
                 }
-
                 // store residual for the current rotation angle                  
                 results.wire_residuals[i] = mean;
-                h.setTitle(String.format("mean : %.5f, width : %.5f, alpha : %.4f -> %.4f deg", mean, width, results.wire_angles_start[i], results.wire_angles_end[i]));
+                h.setTitle(String.format("mean : %.5f, width : %.5f, Dalpha : %.4f deg", mean, width, results.wire_angles[i]));
                 
-                line += String.format("%f   %f   %f   %f", mean, width, h.integral(), cost);
+                line += String.format("%f, %f, %f, %f", mean, width, h.integral(), cost);
                 writer.write(line);
                 writer.newLine();
 
@@ -962,36 +964,12 @@ public class AhdcAlignmentAnalyser {
     }
 
     static void check_output_dir(String outDir) {
-        if (outDir.equals("")) {
-            System.out.println("Output dir not provided.");
-            String defaultDir = "/w/hallb-scshelf2102/clas12/users/touchte/alignment";
-            System.out.println("Check the existence of the default dir : " + defaultDir);
-            if (Files.exists(Path.of(defaultDir)) && Files.isDirectory(Path.of(defaultDir))) {
-                System.out.println("default directory found");
-                outDir = defaultDir;
-                System.out.println("set output dir to : " + defaultDir);
-            }
-            else {
-                System.out.println("default directory is missing, please provide a output directory using the option -o");
-                return;
-            }
-        } else {
-            if (Files.exists(Path.of(outDir)) && Files.isDirectory(Path.of(outDir))) {
-                System.out.println("Output directory is set to : " + outDir);
-            }
-            else {
-                if (!Files.exists(Path.of(outDir))) {
-                    try {
-                        Files.createDirectories(Path.of(outDir));
-                        System.out.println("Output directory created and set to : " + outDir);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    System.out.println("A file or a repo with the same name already exists. Please provide a new output directory using the option -o");
-                    return;
-                }
-                
+        if (!Files.exists(Path.of(outDir))) {
+            try {
+                Files.createDirectories(Path.of(outDir));
+                System.out.println("Output directory created and set to : " + outDir);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -1128,6 +1106,36 @@ public class AhdcAlignmentAnalyser {
     }
 
     /**
+     * Return the one by one sum of the component sof a and b
+     * @param a array
+     * @param b array
+     * @return new array
+     */
+    static public double[] sum_array(double[] a, double[] b) {
+        if (a.length != b.length) {
+            return null;
+        } else {
+            double[] res = new double[a.length];
+            for (int i = 0; i < a.length; i++) {
+                res[i] = a[i] + b[i];
+            }
+            return res;
+        }
+    }
+
+    /**
+     * Assign the value a to all components of the array v
+     * @param v array
+     * @param a double
+     */
+    static public void assign_value(double[] v, double a) {
+        if (v == null) return ;
+        for (int i = 0; i < v.length; i++) {
+            v[i] = a;
+        }
+    }
+
+    /**
      * Convert a layer by layer results to a wire by wire results. Idea: all the wires belonging to the same layer have the same modification.
      * @param layer_angles
      * @return a vector of 576 double containing the wire values
@@ -1183,32 +1191,21 @@ public class AhdcAlignmentAnalyser {
 
     /**
      * Layer alignment analysis
-     * @param args
-     * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
+     * @param inFiles HIPO files
+     * @param outDir output directory
+     * @param flag_do_fit does KF perform a fit ?
+     * @throws IOException 
      */
-    static void layer_alignment(String[] args, boolean flag_do_fit) {
-
-        /// --- Load inputs from options
-        fOptions options = new fOptions("-i", "-o");
-        options.LoadOptions(args);
-        options.Show();
-
-        /// --- Verify input that files are not empty
-        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
-        if (inFiles.size() == 0) {
-            System.out.println("Please provide inputs files using the option: -i");
-            return;
-        }
-
-        /// --- Check that the output dir exists or create a new one
-        String outDir = options.GetValue("-o");
-        check_output_dir(outDir);
+    static void layer_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
 
         /// --- Define initial geometry according the values in ResultsOverIterations
         AlertDCDetector AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
+
+        check_output_dir(outDir + "/initialConfig");
+        results.save(outDir + "/initialConfig");
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1275,6 +1272,9 @@ public class AhdcAlignmentAnalyser {
                 gr_slopes.get(i).addPoint(niter, results.layer_residuals_slope[i], 0, 0);
                 gr_constants.get(i).addPoint(niter, results.layer_residuals_constant[i], 0, 0);
             }
+
+            /// --- save ResultOverIterations
+            results.save(outDir + "/layers/iter-" + niter);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1439,37 +1439,27 @@ public class AhdcAlignmentAnalyser {
 
     } // end scan ahdc position
 
-
     /**
      * Wire alignment analysis
-     * @param args
-     * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
+     * @param inFiles HIPO files
+     * @param outDir output directory
+     * @param flag_do_fit does KF perform a fit ?
+     * @throws IOException 
      */
-    static void wire_alignment(String[] args, boolean flag_do_fit) {
-
-        /// --- Load inputs from options
-        fOptions options = new fOptions("-i", "-o");
-        options.LoadOptions(args);
-        options.Show();
-
-        /// --- Verify input that files are not empty
-        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
-        if (inFiles.size() == 0) {
-            System.out.println("Please provide inputs files using the option: -i");
-            return;
-        }
-
-        /// --- Check that the output dir exists or create a new one
-        String outDir = options.GetValue("-o");
-        check_output_dir(outDir);
+    static void wire_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
 
         /// --- Define initial geometry according the values in ResultsOverIterations (start from layer alignment)
-        results.wire_angles_start = layerAngles2WireAngles(results.layer_angles_start);
-        results.wire_angles_end   = layerAngles2WireAngles(results.layer_angles_end);
+        results.wire_angles_start = layerAngles2WireAngles(results.layer_angles_start); // not to be changed, based on the layer alignment
+        results.wire_angles_end   = layerAngles2WireAngles(results.layer_angles_end); // not to be changed, based on the layer alignment
         AlertDCDetector AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
+        assign_value(results.wire_angles, 0.0); // is defined with respect to the layer alignment
+        assign_value(results.wire_residuals, 0.0);
+
+        check_output_dir(outDir + "/initialConfig");
+        results.save(outDir + "/initialConfig");
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1530,13 +1520,17 @@ public class AhdcAlignmentAnalyser {
             //printRotationAngles(results, false);
 
             /// --- Update AHDC geometry
-            AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
+            //AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
+            AHDCdet = generateAhdcGeometry(sum_array(results.wire_angles_start, results.wire_angles), sum_array(results.wire_angles_end, results.wire_angles));
 
             ///--- output
             for (int i = 0; i < 8; i++) {
                 gr_slopes.get(i).addPoint(niter, results.wire_residuals_slope[i], 0, 0);
                 gr_constants.get(i).addPoint(niter, results.wire_residuals_constant[i], 0, 0);
             }
+
+            /// --- save ResultOverIterations
+            results.save(outDir + "/wires/iter-" + niter);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1799,23 +1793,57 @@ public class AhdcAlignmentAnalyser {
     }
 
     /** Number of threads running simultaneously */
-    static int nThreads = 60; // 4
+    static int nThreads = 20; // 4
     /** Maximum capacity of the queue conataining events */
     static int queue_capacity = 9000; // 150
 
     /** Frequency of event loggin */
     static int frequency_of_event_login = 100;
 
+    /** Propagator step size */
+    static double stepSize = 2; // mm
+
     /**
      * Uncomment the relevant line to run the analysis
      * 
      * Code to be run: amon/scripts/hipo/run-ahdc-aligner.sh
+     * @throws IOException 
      */
-    public static void main(String[] args) {
-        //scan_ahdc_position(args, false);
-        layer_alignment(args, true);
-        //wire_alignment(args, false);
-    }
+    public static void main(String[] args) throws IOException {
 
+        /// --- Load inputs from options
+        fOptions options = new fOptions("-i", "-o", "-ncpu");
+        options.LoadOptions(args);
+        options.Show();
+
+        /// --- Verify input that files are not empty
+        ArrayList<String> inFiles = verify_files(options.GetValues("-i"));
+        if (inFiles.size() == 0) {
+            System.out.println("Please provide inputs files using the option: -i");
+            return;
+        }
+
+        /// --- Check that the output dir exists or create a new one
+        String outDir = options.GetValue("-o");
+        if (outDir.equals("")) {
+            System.out.println("\033[1;31m * Please, provide a working directory with the option : -o\033[0m");
+            return;
+        }
+        check_output_dir(outDir);
+
+        /// --- Read ncpu
+        String nThreads_str = options.GetValue("-ncpu");
+        if (!nThreads_str.equals("")){
+            AhdcAlignmentAnalyser.nThreads = Integer.parseInt(nThreads_str);
+        }
+
+
+        /// --- Choose the application
+
+
+        //scan_ahdc_position(args, false);
+        //layer_alignment(inFiles, outDir, true);
+        wire_alignment(inFiles, outDir, true);
+    }
 
 }
