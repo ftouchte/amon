@@ -362,7 +362,7 @@ public class AhdcAlignmentAnalyser {
 
                 AhdcWireId identifier = new AhdcWireId(i);
                 
-                String line = String.format("%3d, %2d, %2d, %2d   ", i, identifier.sector, identifier.layer, identifier.component);
+                String line = String.format("%3d, %2d, %2d, %2d,   ", i, identifier.sector, identifier.layer, identifier.component);
                 
                 double mean = 0; // do nothing if the fit failed
                 double width = -1;
