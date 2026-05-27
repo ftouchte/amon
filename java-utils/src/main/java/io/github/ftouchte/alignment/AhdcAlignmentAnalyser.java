@@ -1467,33 +1467,12 @@ public class AhdcAlignmentAnalyser {
         g0.setTitleX("iterations");
         g0.setTitleY("cost");
 
-        ArrayList<GraphErrors> gr_slopes = new ArrayList<>();
-        for (int i = 0; i < 576; i++) {
-            GraphErrors gr = new GraphErrors();
-            //gr.setMarkerSize(0);
-            gr.setMarkerColor(i+1);
-            gr.setLineColor(i+1);
-            gr.setTitleX("iterations");
-            gr.setTitleY("wire slope");
-            gr_slopes.add(gr);
-        }
-
-        ArrayList<GraphErrors> gr_constants = new ArrayList<>();
-        for (int i = 0; i < 576; i++) {
-            GraphErrors gr = new GraphErrors();
-            //gr.setMarkerSize(0);
-            gr.setMarkerColor(i+1);
-            gr.setLineColor(i+1);
-            gr.setTitleX("iterations");
-            gr.setTitleY("wire constant");
-            gr_constants.add(gr);
-        }
-
         /// --- Loop over criteria
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 25) {
+        //while (value > 1*1e-3 && niter < 25) {
+        while (niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1523,12 +1502,6 @@ public class AhdcAlignmentAnalyser {
             //AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
             AHDCdet = generateAhdcGeometry(sum_array(results.wire_angles_start, results.wire_angles), sum_array(results.wire_angles_end, results.wire_angles));
 
-            ///--- output
-            for (int i = 0; i < 8; i++) {
-                gr_slopes.get(i).addPoint(niter, results.wire_residuals_slope[i], 0, 0);
-                gr_constants.get(i).addPoint(niter, results.wire_residuals_constant[i], 0, 0);
-            }
-
             /// --- save ResultOverIterations
             results.save(outDir + "/wires/iter-" + niter);
 
@@ -1537,21 +1510,6 @@ public class AhdcAlignmentAnalyser {
         c0.draw(g0);
         c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
         System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
-
-        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
-        EmbeddedCanvas c2 = new EmbeddedCanvas(1200, 900);
-        for (int i = 0; i < 576; i++) {
-            if (i == 0) {
-                c1.draw(gr_slopes.get(i), "P");
-                c2.draw(gr_constants.get(i), "P");
-            } else {
-                c1.draw(gr_slopes.get(i), "same P");
-                c2.draw(gr_constants.get(i), "same P");
-            }
-        }
-
-        c1.save(outDir + "/summary-wire-slopes-over-iterations.pdf");
-        c2.save(outDir + "/summary-wire-constants-over-iterations.pdf");
 
     }
 
