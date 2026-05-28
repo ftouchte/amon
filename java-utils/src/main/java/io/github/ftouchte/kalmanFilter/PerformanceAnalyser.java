@@ -50,6 +50,10 @@ import kotlin.Unit;
  * with the propagation stepper size and the number of iteration
  * 
  * The parallelization of this code is inspired by the one of io.github.ftouchte.alignment.AhdcAlignmentAnalyser.run()
+ * 
+ * 
+ * Usage: 
+ * time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-kalman-filter-performance-analyser.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-9.hipo -ncpu 20 -o $PWD > logger.txt 2<&1
  */
 public class PerformanceAnalyser {
     

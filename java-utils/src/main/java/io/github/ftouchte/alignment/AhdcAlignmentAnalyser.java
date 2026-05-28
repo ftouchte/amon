@@ -1812,6 +1812,9 @@ public class AhdcAlignmentAnalyser {
         //scan_ahdc_position(args, false);
         //layer_alignment(inFiles, outDir, true);
         wire_alignment(inFiles, outDir, true);
+
+        // usage
+        // time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-ahdc-aligner.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-834.hipo -o /lustre24/expphy/volatile/clas12/touchte/new-alignment/wire_alignment_following -ncpu 60 > logger.txt 2>&1
     }
 
 }
