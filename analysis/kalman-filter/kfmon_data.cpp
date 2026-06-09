@@ -342,6 +342,8 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_delta_vz_without_atof = new TH1D("delta_vz_without_atof", "#Delta vz = vz^{(electron)} - vz^{(AHDC track)}; #Delta vz (cm); #count", 100, -20, 10);
     TH1D* H1_track_theta_with_atof = new TH1D("track_theta_with_atof", "#theta ; #theta (deg); count", 50, 0, 180);
     TH1D* H1_track_theta_without_atof = new TH1D("track_theta_without_atof", "#theta ; #theta (deg); count", 50, 0, 180);
+    TH1D* H1_track_theta_good_delta_vz = new TH1D("track_theta_good_delta_vz  within #pm 1 cm of the peak", "#theta ; #theta (deg); count", 50, 0, 180);
+    TH2D* H2_track_theta_vs_delta_vz = new TH2D("track_theta_vs_delta_vz", "track theta vs #Delta vz; #Delta vz; track theta (deg)",  50, -10, -2, 50, 20, 160);
     TH1D* H1_track_atof_region = new TH1D("track_atof_region", "ATOF region ; region; count", 4, 0, 4);
 
     TH1D* H1_track_atof_s2_sigma_z = new TH1D("H1_track_atof_s2_sigma_z", "#sigma_{z} ; #sigma_{z} (cm); count", 100, 2.95, 3.8);
@@ -608,6 +610,10 @@ int main(int argc, char const *argv[]) {
                     H2_corr_vz[0]->Fill(electron.vz, 0.1*ahdc_track.vz); // cm
                     H1_delta_vz[0]->Fill(electron.vz-0.1*ahdc_track.vz); // cm
                     H1_delta_phi[0]->Fill(delta_phi);
+                    if (fabs(fabs(electron.vz-0.1*ahdc_track.vz)-7.5) < 1) {
+                        H1_track_theta_good_delta_vz->Fill(ahdc_track.theta);
+                    }
+                    H2_track_theta_vs_delta_vz->Fill(electron.vz-0.1*ahdc_track.vz, ahdc_track.theta);
                     // 1D
                     H1_track_pT[0]->Fill(pTt);
                     H1_track_phi[0]->Fill(ahdc_track.phi);
@@ -961,6 +967,8 @@ int main(int argc, char const *argv[]) {
     H1_track_theta[0]->Write("h1_track_theta");
     H1_track_theta_with_atof->Write("h1_track_theta_with_atof");
     H1_track_theta_without_atof->Write("h1_track_theta_without_atof");
+    H1_track_theta_good_delta_vz->Write("h1_track_theta_good_delta_vz");
+    H2_track_theta_vs_delta_vz->Write("h2_track_theta_vs_delta_vz");
     H1_electron_pT[0]->Write("h1_electron_pT");
     H1_electron_phi[0]->Write("h1_electron_phi");
     H1_electron_theta[0]->Write("h1_electron_theta");
