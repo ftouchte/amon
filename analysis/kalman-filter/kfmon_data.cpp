@@ -214,16 +214,6 @@ int main(int argc, char const *argv[]) {
         H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_41", "residual_LR per layer 41; residual_LR (mm); count", 50, -3, 3));
         H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_42", "residual_LR per layer 42; residual_LR (mm); count", 50, -3, 3));
         H1_residual_LR_per_layer.push_back(new TH1D("track_residual_LR_layer_51", "residual_LR per layer 51; residual_LR (mm); count", 50, -3, 3));
-    std::vector<TH1D*> H1_residual_phi_LR_per_layer;
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_all", "residual_phi_LR (all); residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_11", "residual_phi_LR per layer 11; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_21", "residual_phi_LR per layer 21; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_22", "residual_phi_LR per layer 22; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_31", "residual_phi_LR per layer 31; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_32", "residual_phi_LR per layer 32; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_41", "residual_phi_LR per layer 41; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_42", "residual_phi_LR per layer 42; residual_phi_LR (deg); count", 50, -8, 8));
-        H1_residual_phi_LR_per_layer.push_back(new TH1D("track_residual_phi_LR_layer_51", "residual_phi_LR per layer 51; residual_phi_LR (deg); count", 50, -8, 8));
     std::vector<TH1D*> H1_residual_per_wire;
     for (int i = 0; i < 576; i++) {
         int sector, layer, component;
@@ -288,26 +278,6 @@ int main(int argc, char const *argv[]) {
         H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_41", "residual_LR per layer 41; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
         H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_42", "residual_LR per layer 42; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
         H2_corr_residual_LR_per_layer_phi.push_back(new TH2D("track_residual_LR_layer_phi_51", "residual_LR per layer 51; phi (deg); residual_LR (mm)",  50, 0, 360, 50, -3, 3));
-    std::vector<TH2D*> H2_corr_residual_phi_LR_per_layer_vz;
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_all", "residual_phi_LR (all); vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_11", "residual_phi_LR per layer 11; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_21", "residual_phi_LR per layer 21; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_22", "residual_phi_LR per layer 22; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_31", "residual_phi_LR per layer 31; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_32", "residual_phi_LR per layer 32; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_41", "residual_phi_LR per layer 41; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_42", "residual_phi_LR per layer 42; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_vz.push_back(new TH2D("track_residual_phi_LR_layer_vz_51", "residual_phi_LR per layer 51; vz (cm); residual_phi_LR (deg)",  50, -25, 20, 50, -8, 8));
-    std::vector<TH2D*> H2_corr_residual_phi_LR_per_layer_phi;
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_all", "residual_phi_LR (all); phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_11", "residual_phi_LR per layer 11; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_21", "residual_phi_LR per layer 21; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_22", "residual_phi_LR per layer 22; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_31", "residual_phi_LR per layer 31; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_32", "residual_phi_LR per layer 32; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_41", "residual_phi_LR per layer 41; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_42", "residual_phi_LR per layer 42; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
-        H2_corr_residual_phi_LR_per_layer_phi.push_back(new TH2D("track_residual_phi_LR_layer_phi_51", "residual_phi_LR per layer 51; phi (deg); residual_phi_LR (deg)",  50, 0, 360, 50, -8, 8));
     std::vector<TH2D*> H2_time2distance;
         H2_time2distance.push_back(new TH2D("corr_t2d_all", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
         H2_time2distance.push_back(new TH2D("corr_t2d_deuteron", "time2distance;time (ns); distance (mm)", 100, 0, 320, 100, 0, 4));
@@ -553,7 +523,7 @@ int main(int argc, char const *argv[]) {
                         if (hitBank.getInt("trackid", hitRow) == trackid) {
                             int adcRow = hitBank.get("id", hitRow)-1;
                             H1_track_residual[0]->Fill(hitBank.get("residual", hitRow));
-                            H1_track_residual_LR[0]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                            H1_track_residual_LR[0]->Fill(hitBank.get("residual_LR", hitRow));
                             H2_corr_residual_ADC[0]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_time[0]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                             H2_corr_residual_vz[0]->Fill(0.1*ahdc_track.vz, hitBank.get("residual", hitRow)); // cm, mm
@@ -569,8 +539,7 @@ int main(int argc, char const *argv[]) {
                             int layer = 10*hitBank.get("superlayer", hitRow) + hitBank.get("layer", hitRow);
                             int component = hitBank.get("wire", hitRow);
                             double residual = hitBank.get("residual", hitRow);
-                            double residual_LR = hitBank.get("timeOverThreshold", hitRow);
-                            double residual_phi_LR = hitBank.get("time", hitRow)*180/M_PI;
+                            double residual_LR = hitBank.get("residual_LR", hitRow);
                             H1_residual_per_wire[slc2wire(1,layer,component)]->Fill(residual);
                             H2_corr_residual_per_wire_vz[slc2wire(1,layer,component)]->Fill(0.1*ahdc_track.vz, residual);
                             H1_residual_LR_per_wire[slc2wire(1,layer,component)]->Fill(residual_LR);
@@ -581,24 +550,17 @@ int main(int argc, char const *argv[]) {
                             //all
                             H1_residual_per_layer[0]->Fill(residual);
                             H1_residual_LR_per_layer[0]->Fill(residual_LR);
-                            H1_residual_phi_LR_per_layer[0]->Fill(residual_LR);
                             H2_corr_residual_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual);
                             H2_corr_residual_per_layer_phi[0]->Fill(ahdc_track.phi,residual);
                             H2_corr_residual_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_LR);
                             H2_corr_residual_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_LR);
-                            H2_corr_residual_phi_LR_per_layer_vz[0]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
-                            H2_corr_residual_phi_LR_per_layer_phi[0]->Fill(ahdc_track.phi,residual_phi_LR);
                             // par layer
                             H1_residual_per_layer[layer2number(layer)]->Fill(residual);
                             H1_residual_LR_per_layer[layer2number(layer)]->Fill(residual_LR);
-                            H1_residual_phi_LR_per_layer[layer2number(layer)]->Fill(residual_phi_LR);
                             H2_corr_residual_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual);
                             H2_corr_residual_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual);
                             H2_corr_residual_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_LR);
                             H2_corr_residual_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_LR);
-                            H2_corr_residual_phi_LR_per_layer_vz[layer2number(layer)]->Fill(0.1*ahdc_track.vz,residual_phi_LR);
-                            H2_corr_residual_phi_LR_per_layer_phi[layer2number(layer)]->Fill(ahdc_track.phi,residual_phi_LR);
-
                         }
                     }
                     H1_prepid[0]->Fill(map_pid[prepid]);
@@ -635,7 +597,7 @@ int main(int argc, char const *argv[]) {
                             if (hitBank.getInt("trackid", hitRow) == trackid) {
                                 int adcRow = hitBank.get("id", hitRow)-1;
                                 H1_track_residual[1]->Fill(hitBank.get("residual", hitRow));
-                                H1_track_residual_LR[1]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                                H1_track_residual_LR[1]->Fill(hitBank.get("residual_LR", hitRow));
                                 H2_corr_residual_ADC[1]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
                                 H2_corr_residual_time[1]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                                 H2_corr_residual_vz[1]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
@@ -678,7 +640,7 @@ int main(int argc, char const *argv[]) {
                             if (hitBank.getInt("trackid", hitRow) == trackid) {
                                 int adcRow = hitBank.get("id", hitRow)-1;
                                 H1_track_residual[2]->Fill(hitBank.get("residual", hitRow));
-                                H1_track_residual_LR[2]->Fill(hitBank.get("timeOverThreshold", hitRow));
+                                H1_track_residual_LR[2]->Fill(hitBank.get("residual_LR", hitRow));
                                 H2_corr_residual_ADC[2]->Fill(adcBank.get("ADC", adcRow), hitBank.get("residual", hitRow));
                                 H2_corr_residual_time[2]->Fill(hitBank.get("time", hitRow), hitBank.get("residual", hitRow));
                                 H2_corr_residual_vz[2]->Fill(ahdc_track.vz, hitBank.get("residual", hitRow));
@@ -984,9 +946,6 @@ int main(int argc, char const *argv[]) {
     writeHistoVector(H1_residual_LR_per_layer, all_dir, "ALL_H1_residual_LR_per_layer");
     writeHistoVector(H2_corr_residual_LR_per_layer_vz, all_dir, "ALL_H2_corr_residual_LR_per_layer_vz");
     writeHistoVector(H2_corr_residual_LR_per_layer_phi, all_dir, "ALL_H2_corr_residual_LR_per_layer_phi");
-    writeHistoVector(H1_residual_phi_LR_per_layer, all_dir, "ALL_H1_residual_phi_LR_per_layer");
-    writeHistoVector(H2_corr_residual_phi_LR_per_layer_vz, all_dir, "ALL_H2_corr_residual_phi_LR_per_layer_vz");
-    writeHistoVector(H2_corr_residual_phi_LR_per_layer_phi, all_dir, "ALL_H2_corr_residual_phi_LR_per_layer_phi");
     
     // for (auto h: H1_residual_per_layer) {
     //     h->Write(h->GetName());
@@ -1001,19 +960,10 @@ int main(int argc, char const *argv[]) {
     // for (auto h: H1_residual_LR_per_layer) {
     //     h->Write(h->GetName());
     // }
-    // for (auto h: H1_residual_phi_LR_per_layer) {
-    //     h->Write(h->GetName());
-    // }
     // for (auto h: H2_corr_residual_LR_per_layer_vz) {
     //     h->Write(h->GetName());
     // }
     // for (auto h: H2_corr_residual_LR_per_layer_phi) {
-    //     h->Write(h->GetName());
-    // }
-    // for (auto h: H2_corr_residual_phi_LR_per_layer_vz) {
-    //     h->Write(h->GetName());
-    // }
-    // for (auto h: H2_corr_residual_phi_LR_per_layer_phi) {
     //     h->Write(h->GetName());
     // }
     processLayer1DHistos(H1_residual_per_layer, all_dir, "H1_residual_per_layer", "residual");
