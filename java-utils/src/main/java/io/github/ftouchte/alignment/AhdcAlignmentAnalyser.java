@@ -28,7 +28,7 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.Pair;
-
+import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
@@ -47,7 +47,9 @@ import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
+import org.jlab.service.atof.ATOFEngine;
 
+import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.filtering.AlertTrackSelector;
 import io.github.ftouchte.fitting.CrystalBall;
@@ -86,7 +88,7 @@ public class AhdcAlignmentAnalyser {
      * @param flag_run_wire_alignment a flag to prevent fitting of wire by wire histograms due to statistics limitation
      * @param flag_do_fit perform a KF fit or do a simple propagation
      */
-    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, AlertDCDetector AHDCdet, double clas_alignment, boolean flag_run_wire_alignment, boolean flag_do_fit) {
+    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, double clas_alignment, boolean flag_run_wire_alignment, boolean flag_do_fit) {
         
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -100,32 +102,43 @@ public class AhdcAlignmentAnalyser {
 
         for (int i = 0; i < nThreads; i++) {
             futures.add(pool.submit(() -> {
-                System.out.println("\033[1;32m **** Create new thread : " + Thread.currentThread().getName() + " \033[0m");
                 Histos local_histos = new Histos(niter);
-                AlertTrackSelector analyser = new AlertElasticAnalyser();
-                // ALERT engine
-                ALERTEngine alertEngine = new ALERTEngine();
-                alertEngine.init();
-                alertEngine.set_clas_alignement(clas_alignment);
-                alertEngine.setStepSize(stepSize);
-                // AHDC engine
-                AHDCEngine ahdcEngine = new AHDCEngine();
-                ahdcEngine.init();
+                try {    
+                    System.out.println("\033[1;32m **** Create new thread : " + Thread.currentThread().getName() + " \033[0m");
+                    AlertTrackSelector analyser = new AlertElasticAnalyser();
 
-                int nevents = 0;
+                    // AHDC engine
+                    AHDCEngine ahdcEngine = new AHDCEngine();
+                    ahdcEngine.init();
+                    ahdcEngine.detectorChanged(22712);
 
-                while (true) {
-                    DataEvent event = queue.take();
+                    // ALERT engine
+                    ALERTEngine alertEngine = new ALERTEngine();
+                    alertEngine.init();
+                    alertEngine.detectorChanged(22712); // generate the geometry from the ccdb for this run number
+                    alertEngine.set_clas_alignment(clas_alignment);
+                    alertEngine.setStepSize(stepSize);
+                    alertEngine.set_KF_Niter(1);
 
-                    nevents++;
-                    if (nevents % frequency_of_event_login == 0) {
-                        System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
+                    int nevents = 0;
+
+                    while (true) {
+                        DataEvent event = queue.take();
+
+                        nevents++;
+                        //if (nevents % frequency_of_event_login == 0) {
+                            System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
+                        //}
+                    
+                        if (event == EVT_POISON) break;
+
+                        fill_histos(local_histos, event, analyser, alertEngine, ahdcEngine, flag_do_fit);
+
                     }
-                
-                    if (event == EVT_POISON) break;
-
-                    fill_histos(local_histos, event, AHDCdet, analyser, alertEngine, ahdcEngine, flag_do_fit);
-
+                } catch (Throwable t) {
+                    System.err.println("\033[1;31m WORKER EXCEPTION/ERROR: \033[0m");
+                    t.printStackTrace();
+                    throw t; // Throwable peut être re-lancé directement
                 }
 
                 return local_histos;
@@ -871,18 +884,19 @@ public class AhdcAlignmentAnalyser {
     }
 
 
-    static void fill_histos(Histos histos, DataEvent event, AlertDCDetector AHDCdet, AlertTrackSelector analyser, ALERTEngine alertEngine, AHDCEngine ahdcEngine, boolean flag_do_fit) {
+    static void fill_histos(Histos histos, DataEvent event, AlertTrackSelector analyser, ALERTEngine alertEngine, AHDCEngine ahdcEngine, boolean flag_do_fit) {
         //if (analyser.hasElasticElectron(event)) {
         if (analyser.hasGoodTrack(event)) {
             // // Retrieve the kinematics of the electron
             // ParticleRow electron = analyser.getElectron();
 
             // Run engine to fill the residual_LR
-            ahdcEngine.processDataEvent(event);
+            ahdcEngine.processDataEventUser(event);
             if (flag_do_fit) {
-                alertEngine.processDataEvent(event, AHDCdet);
+                alertEngine.processDataEventUser(event);
             } else {
-                alertEngine.processDataEventProjOnly(event, AHDCdet);
+                //alertEngine.processDataEventProjOnly(event, AHDCdet);
+                
             }
             
 
@@ -1099,11 +1113,11 @@ public class AhdcAlignmentAnalyser {
    * @param _wire_angles_end rotation to be applied to the end of the AHDC wires
    * @return AHDC geometry
    */
-    static AlertDCDetector generateAhdcGeometry(double[] _wire_angles_start, double[] _wire_angles_end) {
-        AlertDCFactory factory = new AlertDCFactory();
-        factory.setWireCorrectionAngles(_wire_angles_start, _wire_angles_end);
-        return factory.createDetectorCLAS(new DatabaseConstantProvider());
-    }
+    // static AlertDCDetector generateAhdcGeometry(double[] _wire_angles_start, double[] _wire_angles_end) {
+    //     AlertDCFactory factory = new AlertDCFactory();
+    //     factory.setWireCorrectionAngles(_wire_angles_start, _wire_angles_end);
+    //     return factory.createDetectorCLAS(new DatabaseConstantProvider());
+    // }
 
     /**
      * Return the one by one sum of the component sof a and b
@@ -1195,14 +1209,15 @@ public class AhdcAlignmentAnalyser {
      * @param outDir output directory
      * @param flag_do_fit does KF perform a fit ?
      * @throws IOException 
+     * @throws InterruptedException 
      */
-    static void layer_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException {
+    static void layer_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
 
         /// --- Define initial geometry according the values in ResultsOverIterations
-        AlertDCDetector AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
+        //AlertDCDetector AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
         check_output_dir(outDir + "/initialConfig");
         results.save(outDir + "/initialConfig");
@@ -1246,7 +1261,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75, false, flag_do_fit);
+            run(niter, results, inFiles, outDir, +75, false, flag_do_fit);
 
             // running criteria
             value = 0;
@@ -1265,7 +1280,7 @@ public class AhdcAlignmentAnalyser {
             printRotationAngles(results, false);
 
             /// --- Update AHDC geometry
-            AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
+            //AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
             ///--- output
             for (int i = 0; i < 8; i++) {
@@ -1273,8 +1288,9 @@ public class AhdcAlignmentAnalyser {
                 gr_constants.get(i).addPoint(niter, results.layer_residuals_constant[i], 0, 0);
             }
 
-            /// --- save ResultOverIterations
-            results.save(outDir + "/layers/iter-" + niter);
+            /// --- save ResultOverIterations and update ccdb table for the new geometry
+            //results.save(outDir + "/layers/iter-" + niter);
+            results.save(outDir + "/layers/iter-" + niter, CCDB_TYPE.LAYER);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1374,7 +1390,10 @@ public class AhdcAlignmentAnalyser {
                 // run iteration
                 System.out.println("\033[1;32m ########### Start iteration : " + niter + "\033[0m clas_alignment : " + clas_alignment);
 
-                run(niter, results, inFiles, outDir, AHDCdet, clas_alignment, false, flag_do_fit);
+                //run(niter, results, inFiles, outDir, AHDCdet, clas_alignment, false, flag_do_fit);
+                // we will not be able to run the code in this condition
+                // need to adapt the doLayerRotations to rely on a sqlite file
+                // let fix layer and wire alignmpent first
 
                 // running criteria
                 value = 0;
@@ -1452,12 +1471,12 @@ public class AhdcAlignmentAnalyser {
         ResultsOverIterations results = new ResultsOverIterations();
 
         /// --- Define initial geometry according the values in ResultsOverIterations (start from layer alignment)
-        results.wire_angles_start = layerAngles2WireAngles(results.layer_angles_start); // not to be changed, based on the layer alignment
-        results.wire_angles_end   = layerAngles2WireAngles(results.layer_angles_end); // not to be changed, based on the layer alignment
-        AlertDCDetector AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
-        //assign_value(results.wire_angles, 0.0); // is defined with respect to the layer alignment
-        results.wire_angles = init_wire_angles(); // read last alignment from values save in wire_angles.txt
-        assign_value(results.wire_residuals, 0.0);
+        // results.wire_angles_start = layerAngles2WireAngles(results.layer_angles_start); // not to be changed, based on the layer alignment
+        // results.wire_angles_end   = layerAngles2WireAngles(results.layer_angles_end); // not to be changed, based on the layer alignment
+        // //AlertDCDetector AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
+        // //assign_value(results.wire_angles, 0.0); // is defined with respect to the layer alignment
+        // results.wire_angles = init_wire_angles(); // read last alignment from values save in wire_angles.txt
+        // assign_value(results.wire_residuals, 0.0);
 
         check_output_dir(outDir + "/initialConfig");
         results.save(outDir + "/initialConfig");
@@ -1480,7 +1499,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, AHDCdet, +75, true, flag_do_fit);
+            run(niter, results, inFiles, outDir, +75, true, flag_do_fit);
 
             // running criteria
             value = 0;
@@ -1501,7 +1520,7 @@ public class AhdcAlignmentAnalyser {
 
             /// --- Update AHDC geometry
             //AHDCdet = generateAhdcGeometry(results.wire_angles_start, results.wire_angles_end);
-            AHDCdet = generateAhdcGeometry(sum_array(results.wire_angles_start, results.wire_angles), sum_array(results.wire_angles_end, results.wire_angles));
+            //AHDCdet = generateAhdcGeometry(sum_array(results.wire_angles_start, results.wire_angles), sum_array(results.wire_angles_end, results.wire_angles));
 
             /// --- save ResultOverIterations
             results.save(outDir + "/wires/iter-" + niter);
@@ -1776,8 +1795,9 @@ public class AhdcAlignmentAnalyser {
      * 
      * Code to be run: amon/scripts/hipo/run-ahdc-aligner.sh
      * @throws IOException 
+     * @throws InterruptedException 
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         /// --- Load inputs from options
         fOptions options = new fOptions("-i", "-o", "-ncpu");
@@ -1810,8 +1830,8 @@ public class AhdcAlignmentAnalyser {
 
 
         //scan_ahdc_position(args, false);
-        //layer_alignment(inFiles, outDir, true);
-        wire_alignment(inFiles, outDir, true);
+        layer_alignment(inFiles, outDir, true);
+        //wire_alignment(inFiles, outDir, true);
 
         // usage
         // time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-ahdc-aligner.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-834.hipo -o /lustre24/expphy/volatile/clas12/touchte/new-alignment/wire_alignment_following -ncpu 60 > logger.txt 2>&1
