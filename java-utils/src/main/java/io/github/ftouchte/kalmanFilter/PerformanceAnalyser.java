@@ -251,7 +251,7 @@ public class PerformanceAnalyser {
                 // Config ALERT engine
                 ALERTEngine alertEngine = new ALERTEngine();
                 alertEngine.init();
-                alertEngine.set_clas_alignement(clas_alignment);
+                alertEngine.set_clas_alignment(clas_alignment);
                 alertEngine.set_KF_Niter(KF_Niter);
                 alertEngine.setStepSize(stepper_size);
                 
