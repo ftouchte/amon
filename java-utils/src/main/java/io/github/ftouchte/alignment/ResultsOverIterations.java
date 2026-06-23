@@ -113,31 +113,56 @@ public class ResultsOverIterations {
     }
 
     public enum CCDB_TYPE {
-        LAYER,
-        WIRE
+        LAYER, // update the layer angles
+        WIRE, // update the wire angles
+        T2D, // update the tim2distance
+        SAVE // save the current state of the ccdb
     }
     
     public void save(String outDir, CCDB_TYPE ccdb) throws IOException, InterruptedException {
-        save(outDir);
+        //save(outDir);
         if (ccdb == CCDB_TYPE.LAYER) {
             ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_layer.sh", outDir + "/layer_angles.txt");
+            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.inheritIO();
             Process process = pb.start();
             int exitCode = process.waitFor();
             System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;31m * CCDB updated...\033[0m");
+            System.out.println("\033[1;32m * CCDB updated...\033[0m");
         }
         else if (ccdb == CCDB_TYPE.WIRE) {
             ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_wire.sh", outDir + "/wire_angles.txt");
+            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.inheritIO();
             Process process = pb.start();
             int exitCode = process.waitFor();
             System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;31m * CCDB updated...\033[0m");
+            System.out.println("\033[1;32m * CCDB updated...\033[0m");
+        }
+        else if (ccdb == CCDB_TYPE.T2D) {
+            System.out.println("Try to update the T2D ccdb");
+            ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_layer_t2d.sh", outDir + "/time2distance.txt");
+            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.inheritIO();
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+            System.out.println("Script exited with code: " + exitCode);
+            System.out.println("\033[1;32m * CCDB updated...\033[0m");
+        }
+        else if (ccdb == CCDB_TYPE.SAVE) {
+            ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/save_ccdb.sh", outDir);
+            Process process = pb.start();
+            int exitCode = process.waitFor();
+            System.out.println("Script exited with code: " + exitCode);
+            System.out.println("\033[1;32m * CCDB saved...\033[0m");
         }
     }
 
+    public static String CCDB_CONNECTION = "sqlite:////volatile/clas12/touchte/new-alignment/test_new_approach_layer/ccdb_2026-05-24.sqlite";
+
     public static void execute_cmd(String shell, String cmd) throws InterruptedException, IOException {
         ProcessBuilder pb = new ProcessBuilder(shell, "-c", cmd);
-        pb.environment().put("CCDB_CONNECTION", "sqlite:////work/clas12/users/touchte/ccdb_2026-05-24.sqlite");
+        pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
         pb.inheritIO();
         Process process = pb.start();
         int exitCode = process.waitFor();  // attend la fin de l'exécution
