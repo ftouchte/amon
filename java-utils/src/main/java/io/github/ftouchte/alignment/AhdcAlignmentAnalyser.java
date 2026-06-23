@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
@@ -28,12 +29,10 @@ import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.util.Pair;
-import org.jlab.clas.swimtools.MagFieldsEngine;
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 import org.jlab.geom.detector.alert.AHDC.AlertDCDetector;
 import org.jlab.geom.detector.alert.AHDC.AlertDCFactory;
 import org.jlab.geom.detector.alert.AHDC.AlertDCWire;
-import org.jlab.geom.detector.alert.AHDC.AlertDCWireIdentifier;
 import org.jlab.groot.data.GraphErrors;
 import org.jlab.groot.data.H1F;
 import org.jlab.groot.data.H2F;
@@ -47,7 +46,6 @@ import org.jlab.jnp.hipo4.data.SchemaFactory;
 import org.jlab.jnp.hipo4.io.HipoReader;
 import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
-import org.jlab.service.atof.ATOFEngine;
 
 import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
@@ -118,7 +116,7 @@ public class AhdcAlignmentAnalyser {
                     alertEngine.detectorChanged(22712); // generate the geometry from the ccdb for this run number
                     alertEngine.set_clas_alignment(clas_alignment);
                     alertEngine.setStepSize(stepSize);
-                    alertEngine.set_KF_Niter(1);
+                    alertEngine.set_KF_Niter(25);
 
                     int nevents = 0;
 
@@ -126,9 +124,9 @@ public class AhdcAlignmentAnalyser {
                         DataEvent event = queue.take();
 
                         nevents++;
-                        //if (nevents % frequency_of_event_login == 0) {
+                        if (nevents % frequency_of_event_login == 0) {
                             System.out.println("\033[1;32m > " + Thread.currentThread().getName() + " : \033[0m" + nevents + " events");
-                        //}
+                        }
                     
                         if (event == EVT_POISON) break;
 
@@ -197,6 +195,11 @@ public class AhdcAlignmentAnalyser {
 
         /// --- Stop parallelizer
         pool.shutdown();
+        try {
+            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS); // attend que tous les threads finissent
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         /// --- Analyse histograms per layer
         analyse_layer_histograms(global_histos, outDir, niter, results);
@@ -647,7 +650,7 @@ public class AhdcAlignmentAnalyser {
         }
         c2.save(layerOutDir + "/time2distance_iter_" + niter + ".pdf");
         System.out.println("time2distance_LR_iter_" + niter + ".pdf created");
-        save_time2distance(t2d_params_list, layerOutDir + "/ccdb_time2distance_iter_" + niter + ".txt");
+        save_time2distance(t2d_params_list, layerOutDir + "/time2distance.txt");
 
     }
 
@@ -926,7 +929,7 @@ public class AhdcAlignmentAnalyser {
                     if (trackid == hitBank.getInt("trackid", j)) {
                         int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
                         double residual = hitBank.getDouble("residual", j); // mm
-                        double residual_LR = hitBank.getDouble("timeOverThreshold", j); // mm, residual_LR stocked here for dev purpose
+                        double residual_LR = hitBank.getDouble("residual_LR", j); // mm, residual_LR stocked here for dev purpose
                         int component = hitBank.getInt("wire", j);
                         AhdcWireId wireId = new AhdcWireId(1, layer, component);
                         double time = hitBank.getDouble("time", j);
@@ -1150,21 +1153,6 @@ public class AhdcAlignmentAnalyser {
     }
 
     /**
-     * Convert a layer by layer results to a wire by wire results. Idea: all the wires belonging to the same layer have the same modification.
-     * @param layer_angles
-     * @return a vector of 576 double containing the wire values
-     */
-    static public double[] layerAngles2WireAngles(double[] layer_angles) {
-        double[] wire_angles = new double[576];
-        for (int i = 0; i < 576; i++) {
-            AlertDCWireIdentifier identifier = new AlertDCWireIdentifier(i);
-            int num = AlertDCWireIdentifier.layer2number(identifier.getLayerId())-1;
-            wire_angles[i] = layer_angles[num];
-        }
-        return wire_angles;
-    }
-
-    /**
      * Inverse operation of {@link #doLayerRotations(AlertDCDetector, double[])}
      * @param AHDCdet AHDC detector to be rotated
      * @param layer_angles rotation angles for the layers
@@ -1291,6 +1279,107 @@ public class AhdcAlignmentAnalyser {
             /// --- save ResultOverIterations and update ccdb table for the new geometry
             //results.save(outDir + "/layers/iter-" + niter);
             results.save(outDir + "/layers/iter-" + niter, CCDB_TYPE.LAYER);
+
+        } // end loop over criteria / nb iterations
+        EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
+        c0.draw(g0);
+        c0.save(outDir + "/summary-cost-estimation-over-iterations.pdf");
+        System.out.println(outDir + "/summary-cost-estimation-over-iterations.pdf");
+
+        EmbeddedCanvas c1 = new EmbeddedCanvas(1200, 900);
+        EmbeddedCanvas c2 = new EmbeddedCanvas(1200, 900);
+        for (int i = 0; i < 8; i++) {
+            if (i == 0) {
+                c1.draw(gr_slopes.get(i), "P");
+                c2.draw(gr_constants.get(i), "P");
+            } else {
+                c1.draw(gr_slopes.get(i), "same P");
+                c2.draw(gr_constants.get(i), "same P");
+            }
+        }
+
+        c1.save(outDir + "/summary-layer-slopes-over-iterations.pdf");
+        c2.save(outDir + "/summary-layer-constants-over-iterations.pdf");
+
+    }
+
+    /**
+     * Time2distance calibration
+     * @param inFiles HIPO files
+     * @param outDir output directory
+     * @param flag_do_fit does KF perform a fit ?
+     * @throws IOException 
+     * @throws InterruptedException 
+     */
+    static void time2distance_calibration(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+
+        // --- Results over iterations
+        ResultsOverIterations results = new ResultsOverIterations();
+
+        check_output_dir(outDir + "/initialConfig");
+        results.save(outDir + "/initialConfig", CCDB_TYPE.SAVE);
+
+        /// --- Global observables
+        GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
+        g0.setTitle("(1/N) #sqrt{#Sum (residual LR)^2}");
+        g0.setTitleX("iterations");
+        g0.setTitleY("cost");
+
+        ArrayList<GraphErrors> gr_slopes = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("layer slope");
+            gr_slopes.add(gr);
+        }
+
+        ArrayList<GraphErrors> gr_constants = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            GraphErrors gr = new GraphErrors();
+            //gr.setMarkerSize(0);
+            gr.setMarkerColor(i+1);
+            gr.setLineColor(i+1);
+            gr.setTitleX("iterations");
+            gr.setTitleY("layer constant");
+            gr_constants.add(gr);
+        }
+
+        /// --- Loop over criteria
+        int niter = 0;
+        double value = 1e10;
+        //while (niter < 12) {
+        while (niter < 20) {
+            niter++;
+            // run iteration
+            System.out.println("\033[1;32m ################################ \033[0m");
+            System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
+            System.out.println("\033[1;32m ################################ \033[0m");
+
+            run(niter, results, inFiles, outDir, +75, false, flag_do_fit);
+
+            // running criteria
+            value = 0;
+            int N = 0;
+            for (int i = 0; i < results.layer_residuals.length; i++) {
+                value += Math.pow(results.layer_residuals[i], 2);
+                N++;
+            }
+            value = Math.sqrt(value) / N;
+            g0.addPoint(niter, value, 0, 0);
+            System.out.println("\033[1;31m =======> convergence criteria : " + value + "\033[0m");
+
+            ///--- output
+            for (int i = 0; i < 8; i++) {
+                gr_slopes.get(i).addPoint(niter, results.layer_residuals_slope[i], 0, 0);
+                gr_constants.get(i).addPoint(niter, results.layer_residuals_constant[i], 0, 0);
+            }
+
+            /// --- save ResultOverIterations and update ccdb table for the new geometry
+            //results.save(outDir + "/layers/iter-" + niter);
+            results.save(outDir + "/layers/iter-" + niter, CCDB_TYPE.T2D);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1647,7 +1736,8 @@ public class AhdcAlignmentAnalyser {
         double t1 = 1.0/(1.0 + Math.exp(-(time - t1_x0)/t1_width));
         double t2 = 1.0/(1.0 + Math.exp(-(time - t2_x0)/t2_width));
 
-        return p1*(1.0 - t1) + t1*(1.0 - t2)*p2 + t1*t2*p3;
+        //return p1*(1.0 - t1) + t1*(1.0 - t2)*p2 + t1*t2*p3;
+        return p1*(1.0 - t1) + t1*(1.0 - t2)*p2 + t2*p3;
     }
 
     /**
@@ -1770,14 +1860,6 @@ public class AhdcAlignmentAnalyser {
         }
     }
 
-    public static double[] init_wire_angles() {        
-        double[] angles = new double[] { 0.180238, -0.087256, 0.001388, -0.042363, -0.029129, -0.202375, -0.291095, -0.201840, 0.153373, 0.123595, -0.207536, -0.257800, -0.121601, -0.118932, -0.633338, -0.608746, -0.693197, -0.517546, -0.277988, -0.288354, -0.429231, -0.350570, -0.439083, -0.330516, -0.060558, -0.350635, -0.247460, -0.239749, -0.007365, -0.204881, -0.150925, -0.255474, 0.158597, 0.044722, 0.157197, 0.114726, 0.089410, -0.017771, -0.124955, 0.019248, 0.312794, 0.157477, 0.206463, 0.323785, 0.283682, 0.000000, 0.149995, -0.274556, 0.215308, 0.169380, 0.031476, 0.050661, 0.041158, -0.032990, -0.053908, -0.024300, 0.089090, 0.134910, 0.044278, -0.103657, 0.023600, -0.046385, -0.122503, -0.221958, 0.158014, 0.085378, -0.029092, 0.155955, 0.076803, 0.134632, 0.014016, -0.087667, -0.091624, 0.012724, 0.080375, 0.153725, 0.119936, 0.003370, -0.138606, -0.143680, -0.083342, -0.251615, -0.062462, -0.079090, -0.126109, -0.128865, -0.090421, -0.096423, -0.231726, -0.256706, -0.312430, -0.201552, -0.096022, -0.109636, 0.027303, -0.247940, -0.219786, -0.336971, -0.380836, -0.449072, -0.527366, 0.000000, 0.127689, 0.194117, 0.156798, -0.033372, 0.047678, -0.119907, -0.186700, -0.237871, -0.168682, 0.008320, 0.033579, 0.153580, -0.045292, -0.019894, -0.003427, -0.078157, -0.113415, -0.052910, 0.174238, 0.064756, 0.177311, 0.132886, 0.240256, 0.136966, 0.168935, -0.043796, 0.034083, 0.049823, 0.147482, 0.141908, 0.053448, 0.098623, -0.103644, -0.001589, -0.109746, -0.205785, -0.184763, -0.125900, 0.011215, 0.025544, 0.021384, -0.201228, -0.279600, -0.252516, -0.414524, -0.175058, -0.132013, -0.097260, -0.123428, -0.166722, -0.290247, -0.402451, -0.467095, -0.524990, -0.453609, -0.337806, 0.000000, -0.232887, -0.003979, 0.067316, 0.119627, -0.124690, -0.053768, -0.246917, 0.204777, -0.153454, -0.216455, -0.391377, -0.396174, -0.388795, -0.176403, 0.088253, 0.074541, -0.074420, -0.070701, -0.080702, -0.183786, -0.101816, -0.192046, -0.196533, -0.334344, -0.258529, -0.168430, -0.198494, -0.094069, -0.095624, -0.141576, -0.112678, -0.031765, -0.053358, -0.335571, -0.309574, -0.366772, -0.232958, -0.089780, 0.232523, 0.083659, 0.053385, -0.099572, 0.045171, -0.004610, -0.053339, -0.001811, -0.159770, -0.334319, -0.187145, -0.087600, 0.122108, 0.169066, 0.221896, 0.119826, -0.010600, 0.014533, -0.016818, -0.033049, -0.118924, -0.148207, -0.075087, -0.090144, -0.014910, 0.162155, -0.050782, 0.030996, 0.000000, -0.133533, 0.107458, -0.114769, -0.267369, -0.703469, -0.330800, -0.079006, -0.098854, -0.036599, 0.000000, -0.072248, 0.023634, -0.237526, -0.146249, -0.231463, -0.274613, -0.358812, -0.317017, -0.123768, 0.119626, 0.079613, -0.142997, 0.016363, -0.116624, -0.094944, -0.017051, -0.237343, -0.120078, -0.276024, -0.282452, -0.216420, -0.217624, 0.083676, -0.022693, -0.093156, 0.000575, 0.030950, -0.113986, -0.166291, -0.309335, -0.307967, -0.210269, -0.086377, 0.239905, 0.124074, -0.032547, 0.077938, 0.004905, 0.002577, 0.022758, -0.125593, -0.148961, -0.236508, -0.182173, 0.016482, 0.114464, 0.220386, 0.222863, 0.015961, 0.148732, 0.066283, -0.101348, -0.035728, -0.210013, -0.205074, -0.268258, -0.131974, 0.101752, -0.037464, 0.011701, 0.045682, -0.042912, 0.010422, 0.005502, -0.259356, -0.488225, -0.603838, 0.128232, 0.027052, -0.024117, -0.083664, -0.058461, -0.125485, -0.124672, -0.168305, -0.196478, -0.244832, -0.271505, -0.046556, -0.082512, -0.038573, 0.069441, -0.038590, 0.031916, -0.018534, -0.065561, -0.087690, -0.058063, -0.016763, -0.113348, -0.125413, -0.162396, -0.149726, -0.076589, 0.010521, 0.091019, -0.030059, 0.073693, 0.029376, -0.029835, -0.045736, -0.051919, -0.070833, -0.050593, -0.082224, -0.193733, -0.184468, 0.013600, 0.008696, 0.050376, 0.071682, 0.026746, 0.036137, -0.017591, -0.009230, -0.051856, -0.158522, -0.128332, 0.220056, -0.079012, -0.152784, -0.112462, -0.030977, 0.041850, -0.001586, -0.021724, -0.070854, 0.000000, 0.081408, 0.019199, -0.018358, -0.009409, -0.008339, -0.114102, -0.211094, -0.201030, -0.060019, -0.078352, -0.032054, -0.032913, -0.033808, -0.040825, -0.007051, -0.058725, -0.147384, -0.111615, -0.189802, -0.194545, -0.201475, -0.259462, -0.204840, -0.140999, -0.062296, -0.023617, -0.024326, 0.027296, -0.023400, -0.105328, 0.003588, -0.111584, -0.142520, -0.104553, -0.185600, -0.162839, -0.238968, -0.189402, -0.073866, -0.000406, -0.020925, 0.029648, -0.000858, -0.033938, -0.020088, -0.060765, -0.107926, -0.063642, -0.117391, -0.140318, -0.148142, -0.274882, -0.218898, -0.097457, -0.064098, -0.034669, -0.059345, -0.054637, -0.071026, -0.130668, -0.050524, -0.075264, -0.199327, -0.143610, -0.129047, -0.182046, -0.175322, -0.024870, -0.033865, 0.008164, 0.025074, 0.014702, 0.026273, -0.051490, -0.101714, -0.028871, -0.099651, -0.231586, -0.161632, -0.148092, -0.143917, -0.080047, -0.014779, 0.062282, 0.038012, -0.005877, -0.022957, 0.032608, 0.038333, 0.060128, 0.024865, 0.026454, -0.020330, -0.092629, -0.155052, -0.104962, -0.041266, -0.008957, 0.027076, 0.005217, 0.079694, 0.025080, -0.010575, -0.009769, 0.016864, -0.007966, -0.008598, -0.121966, -0.109917, -0.289435, -0.223877, -0.088252, -0.053549, -0.599886, -0.031422, -0.031624, 0.013756, 0.229118, 0.094241, 0.092090, 0.200287, 0.204989, 0.060916, -0.016056, 0.001329, -0.025642, -0.033406, -0.172103, -0.177303, -0.227045, -0.274484, -0.278570, -0.194213, -0.057955, 0.155973, 0.044134, 0.051799, -0.027899, 0.160925, -0.060526, 0.066264, -0.009962, 0.053243, -0.105134, -0.134521, -0.145447, -0.224284, -0.232291, -0.208224, -0.086493, 0.124503, 0.139709, 0.121059, 0.256480, -0.074083, 0.221930, 0.211307, 0.286029, -0.012874, -0.055892, -0.095651, -0.221615, -0.276412, -0.225604, -0.165362, -0.079387, 0.039101, 0.112292, 0.140916, 0.021517, 0.024883, -0.069321, 0.008531, -0.128963, 0.057838, -0.134620, -0.134338, -0.304938, -0.244561, -0.300007, -0.283616, -0.252606, -0.146060, -0.111512, 0.027536, -0.006602, -0.031124, -0.053205, -0.083376, 0.039186, -0.164027, -0.164083, -0.268777, -0.108545, -0.335918, -0.265597, -0.178149, -0.239373, -0.240916, -0.033418, 0.045270, 0.048583, -0.126048, -0.148010, -0.160392, -0.005449, -0.114536, -0.162953, -0.112101, -0.414443, -0.613544, -0.442908 };
-        if (angles.length == 576) {
-            return angles;
-        } else {
-            return null;
-        }
-    }
 
     /** Number of threads running simultaneously */
     static int nThreads = 20; // 4
@@ -1830,8 +1912,9 @@ public class AhdcAlignmentAnalyser {
 
 
         //scan_ahdc_position(args, false);
-        layer_alignment(inFiles, outDir, true);
+        //layer_alignment(inFiles, outDir, true);
         //wire_alignment(inFiles, outDir, true);
+        time2distance_calibration(inFiles, outDir, true);
 
         // usage
         // time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-ahdc-aligner.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-834.hipo -o /lustre24/expphy/volatile/clas12/touchte/new-alignment/wire_alignment_following -ncpu 60 > logger.txt 2>&1
