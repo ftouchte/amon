@@ -3,9 +3,11 @@ package io.github.ftouchte.alignment;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
-import org.jlab.geom.base.ConstantProvider;
+
+import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
 
 /**
  * The alignment procedure is made over iterations. This class is used
@@ -19,6 +21,7 @@ public class ResultsOverIterations {
         DatabaseConstantProvider cp = new DatabaseConstantProvider(run, variation);
         cp.loadTable("/geometry/alert/ahdc/layer_alignment");
 		cp.loadTable("/geometry/alert/ahdc/wire_alignment");
+        cp.loadTable("/calibration/alert/ahdc/time_to_distance_wire");
 
         // Fill layer angles
         for (int i = 0; i < 8; i++) {
@@ -38,6 +41,31 @@ public class ResultsOverIterations {
             wire_angles[i] = cp.getDouble("/geometry/alert/ahdc/wire_alignment/rotZ", i);
             wire_residuals[i] = 0;
         }
+
+        time2distance = new ArrayList<>();
+        for (int i = 0; i < 576; i++) {
+            double[] params = {
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p1_int", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p1_slope", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p2_int", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p2_slope", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p3_int", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/p3_slope", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/t1_x0", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/t1_width", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/t2_x0", i),
+                cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/t2_width", i)
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/z0", i),
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/z1", i),
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/z2", i),
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/extra1", i),
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/extra2", i),
+                // cp.getDouble("/calibration/alert/ahdc/time_to_distance_wire/chi2ndf", i)
+            };
+            time2distance.add(params);
+        }
+
+        cp.disconnect();
     }
     
     // layers
@@ -73,107 +101,118 @@ public class ResultsOverIterations {
     public double[] wire_residuals_slope    = new double[576];
     public double[] wire_residuals_constant = new double[576];
 
-
-    public void save(String outDir) throws IOException {
-        // layer alignment
-        {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/layer_angles.txt"));
-            writer.write("# computed layer angles for the next iteration");
-            writer.newLine();
-            writer.write("# sector, layer, upstream_rotZ, downstream_rotZ");
-            writer.newLine();
-            for (int i = 0; i < 8; i++) {
-                int sector = 1;
-                int layer = AhdcWireId.number2layer(i+1);
-                String line = String.format("%2d   %2d   %f   %f", sector, layer, layer_angles_start[i], layer_angles_end[i]);
-                writer.write(line);
-                writer.newLine();
-            }
-            writer.close();
-        }
-
-        // wire alignment
-        {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/wire_angles.txt"));
-            writer.write("# computed wire angles for the next iteration");
-            writer.newLine();
-            writer.write("# sector, layer, wire, rotZ");
-            writer.newLine();
-            for (int i = 0; i < 576; i++) {
-                AhdcWireId identifier = new AhdcWireId(i);
-                int sector = 1;
-                int layer = identifier.layer;
-                int wire = identifier.component;
-                String line = String.format("%2d   %2d   %2d   %f", sector, layer, wire, wire_angles[i]);
-                writer.write(line);
-                writer.newLine();
-            }
-            writer.close();
-        }
-    }
+    // --------------
+    // time2distance
+    // --------------
+    public ArrayList<double[]> time2distance = null;
 
     public enum CCDB_TYPE {
         LAYER, // update the layer angles
         WIRE, // update the wire angles
         T2D, // update the tim2distance
-        SAVE // save the current state of the ccdb
+    }
+
+    public void save_layer_angles_to_file(String outDir) throws IOException, InterruptedException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/layer_angles.txt"));
+        writer.write("# computed layer angles for the next iteration");
+        writer.newLine();
+        writer.write("# sector, layer, upstream_rotZ, downstream_rotZ");
+        writer.newLine();
+        for (int i = 0; i < 8; i++) {
+            int sector = 1;
+            int layer = AhdcWireId.number2layer(i+1);
+            String line = String.format("%2d   %2d   %f   %f", sector, layer, layer_angles_start[i], layer_angles_end[i]);
+            writer.write(line);
+            writer.newLine();
+        }
+        writer.close();
+    }
+
+    public void save_wire_angles_to_file(String outDir) throws IOException, InterruptedException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/wire_angles.txt"));
+        writer.write("# computed wire angles for the next iteration");
+        writer.newLine();
+        writer.write("# sector, layer, wire, rotZ");
+        writer.newLine();
+        for (int i = 0; i < 576; i++) {
+            AhdcWireId identifier = new AhdcWireId(i);
+            int sector = 1;
+            int layer = identifier.layer;
+            int wire = identifier.component;
+            String line = String.format("%2d   %2d   %2d   %f", sector, layer, wire, wire_angles[i]);
+            writer.write(line);
+            writer.newLine();
+        }
+        writer.close();
+    }
+
+    public void save_time2distance_to_file(String outDir) throws IOException, InterruptedException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/time2distance.txt"));
+        writer.write("# parameters: (p1_int, p1_slope, p2_int, p2_slope, p3_int, p3_slope, t1_x0, t1_width, t2_x0, t2_width, z0, z1, z2, extra1, extra2, chi2ndf)");
+        writer.newLine();
+        writer.newLine();
+        for (int i = 0; i < 576; i++) {
+            AhdcWireId identifier = new AhdcWireId(i);
+            double[] p = time2distance.get(i);
+            String line = String.format("%2d   %2d   %2d", identifier.sector, identifier.layer, identifier.component);
+            for (int j = 0; j < p.length; j++)
+                line += "   " + p[j];
+            line += "   0.0 0.0 0.0 0.0 0.0 0.0"; // extra parameters
+            writer.write(line);
+            writer.newLine();
+        }
+        writer.close();
     }
     
-    public void save(String outDir, CCDB_TYPE ccdb) throws IOException, InterruptedException {
-        //save(outDir);
+    public void update_ccdb(String outDir, CCDB_TYPE ccdb) throws IOException, InterruptedException {
+        String ccdb_env = System.getenv("CCDB_CONNECTION");
         if (ccdb == CCDB_TYPE.LAYER) {
+            // Create file
+            save_layer_angles_to_file(outDir);
+            // Update the CCDB
             ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_layer.sh", outDir + "/layer_angles.txt");
-            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.environment().put("CCDB_CONNECTION", ccdb_env);
             pb.inheritIO();
             Process process = pb.start();
             int exitCode = process.waitFor();
-            System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;32m * CCDB updated...\033[0m");
+            System.out.println("Script exited with code: " + exitCode + "  <--- layer table updated");
         }
         else if (ccdb == CCDB_TYPE.WIRE) {
+            // Create file
+            save_wire_angles_to_file(outDir);
+            // Update CCDB
             ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_wire.sh", outDir + "/wire_angles.txt");
-            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.environment().put("CCDB_CONNECTION", ccdb_env);
             pb.inheritIO();
             Process process = pb.start();
             int exitCode = process.waitFor();
-            System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;32m * CCDB updated...\033[0m");
+            System.out.println("Script exited with code: " + exitCode + "  <--- wire table updated");
         }
         else if (ccdb == CCDB_TYPE.T2D) {
+            // Create file
+            save_time2distance_to_file(outDir);
+            // Update CCDB
             System.out.println("Try to update the T2D ccdb");
             ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/update_ccdb_layer_t2d.sh", outDir + "/time2distance.txt");
-            pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
+            pb.environment().put("CCDB_CONNECTION", ccdb_env);
             pb.inheritIO();
             Process process = pb.start();
             int exitCode = process.waitFor();
-            System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;32m * CCDB updated...\033[0m");
-        }
-        else if (ccdb == CCDB_TYPE.SAVE) {
-            ProcessBuilder pb = new ProcessBuilder("bash", "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/save_ccdb.sh", outDir);
-            Process process = pb.start();
-            int exitCode = process.waitFor();
-            System.out.println("Script exited with code: " + exitCode);
-            System.out.println("\033[1;32m * CCDB saved...\033[0m");
+            System.out.println("Script exited with code: " + exitCode + "  <--- time2distance table updated");
         }
     }
 
-    public static String CCDB_CONNECTION = "sqlite:////volatile/clas12/touchte/new-alignment/test_new_approach_layer/ccdb_2026-05-24.sqlite";
-
-    public static void execute_cmd(String shell, String cmd) throws InterruptedException, IOException {
-        ProcessBuilder pb = new ProcessBuilder(shell, "-c", cmd);
-        pb.environment().put("CCDB_CONNECTION", CCDB_CONNECTION);
-        pb.inheritIO();
-        Process process = pb.start();
-        int exitCode = process.waitFor();  // attend la fin de l'exécution
-        System.out.println("Exit code: " + exitCode + "    (cmd: " + cmd + ")"); // 0 = succès
-    }
-
-    public static void main(String[] args) throws IOException, InterruptedException {
-        execute_cmd("bash", "ccdb dump /geometry/alert/ahdc/layer_alignment");
-        ResultsOverIterations res = new ResultsOverIterations();
-        String outDir = "/w/hallb-scshelf2102/clas12/users/touchte/data/simu";
-        res.save(outDir);
+    /**
+     * Make a screenshot of the layer_angles, wire_angles and time2distance_wire tables
+     * <p> Create the files layer_angles.txt, wire_angles.txt, time2distance.txt in the given directory </p>
+     * @param outDir
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public void screenshot(String outDir) throws IOException, InterruptedException {
+        save_layer_angles_to_file(outDir);
+        save_wire_angles_to_file(outDir);
+        save_time2distance_to_file(outDir);
     }
     
 }
