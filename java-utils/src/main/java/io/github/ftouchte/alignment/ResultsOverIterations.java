@@ -7,8 +7,6 @@ import java.util.ArrayList;
 
 import org.jlab.detector.calib.utils.DatabaseConstantProvider;
 
-import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
-
 /**
  * The alignment procedure is made over iterations. This class is used
  * to store informations over iterations.
