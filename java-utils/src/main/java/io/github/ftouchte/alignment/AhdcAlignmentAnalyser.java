@@ -618,9 +618,10 @@ public class AhdcAlignmentAnalyser {
 
             // Fit
             GraphErrors func = null;
+            double[] initialValues = results.time2distance.get(AhdcWireId.number2layer(Math.max(i, 1))); // use the t2d of the wire 1 in the corresponding layer as initialization; if i = 0 (integrated over all wire), initialize with layer 11
 
             try {
-                double[] fittedParameters = fit_time2distance(xData, yData);
+                double[] fittedParameters = fit_time2distance(xData, yData, initialValues);
                 int Npts = 1000;
                 double tmin = 0;
                 double tmax = 250;
@@ -845,9 +846,10 @@ public class AhdcAlignmentAnalyser {
 
             // Fit
             GraphErrors func = null;
+            double[] initialValues = results.time2distance.get(i); // use the actual t2d values to initialise the fit
 
             try {
-                double[] fittedParameters = fit_time2distance(xData, yData);
+                double[] fittedParameters = fit_time2distance(xData, yData, initialValues);
                 int Npts = 1000;
                 double tmin = 0;
                 double tmax = 250;
@@ -1749,9 +1751,10 @@ public class AhdcAlignmentAnalyser {
      * Return the parameters of the time2distance used by by {@link #eval_t2d(double, double[])}
      * @param xData
      * @param yData
+     * @param initialValues
      * @return
      */
-    public static double[] fit_time2distance(double[] xData, double[] yData) {
+    public static double[] fit_time2distance(double[] xData, double[] yData, double[] initialValues) {
 
         // --- Compute a new vector yDataModelled acoording to the model
         MultivariateJacobianFunction model = new MultivariateJacobianFunction() {
@@ -1822,7 +1825,7 @@ public class AhdcAlignmentAnalyser {
 
         // from ccdb
         //double[] initialValues = {-0.735266, 	0.1015123, 	-0.025992, 	0.0171851, 	2.312859, 	-0.0070255, 	-4.344386, 	5.362382, 	259.71963, 	112.34450};
-        double[] initialValues = {0, 0.02, 1, 0.02, 2, 0.005, 10, 1, 100, 5};
+        //double[] initialValues = {0, 0.02, 1, 0.02, 2, 0.005, 10, 1, 100, 5};
 
         /// --- least square problem to solve : yDataModelled should be close to yData
         LeastSquaresProblem problem = new LeastSquaresBuilder().
