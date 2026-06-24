@@ -105,15 +105,19 @@ public class AhdcAlignmentAnalyser {
                     System.out.println("\033[1;32m **** Create new thread : " + Thread.currentThread().getName() + " \033[0m");
                     AlertTrackSelector analyser = new AlertElasticAnalyser();
 
-                    // AHDC engine
+                    // Engines
                     AHDCEngine ahdcEngine = new AHDCEngine();
-                    ahdcEngine.init();
-                    ahdcEngine.detectorChanged(22712);
+                    ALERTEngine alertEngine = new ALERTEngine();
+
+                    // init ccdb and geometry
+                    synchronized (CCDB_LOCK) {
+                        ahdcEngine.init();
+                        ahdcEngine.detectorChanged(22712);
+                        alertEngine.init();
+                        alertEngine.detectorChanged(22712);
+                    }
 
                     // ALERT engine
-                    ALERTEngine alertEngine = new ALERTEngine();
-                    alertEngine.init();
-                    alertEngine.detectorChanged(22712); // generate the geometry from the ccdb for this run number
                     alertEngine.set_clas_alignment(clas_alignment);
                     alertEngine.setStepSize(stepSize);
                     alertEngine.set_KF_Niter(25);
@@ -650,7 +654,7 @@ public class AhdcAlignmentAnalyser {
         }
         c2.save(layerOutDir + "/time2distance_iter_" + niter + ".pdf");
         System.out.println("time2distance_LR_iter_" + niter + ".pdf created");
-        save_time2distance(t2d_params_list, layerOutDir + "/time2distance.txt");
+        save_time2distance(t2d_params_list, results);
 
     }
 
@@ -1208,7 +1212,7 @@ public class AhdcAlignmentAnalyser {
         //AlertDCDetector AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
 
         check_output_dir(outDir + "/initialConfig");
-        results.save(outDir + "/initialConfig");
+        results.screenshot(outDir + "/initialConfig");
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1278,7 +1282,7 @@ public class AhdcAlignmentAnalyser {
 
             /// --- save ResultOverIterations and update ccdb table for the new geometry
             //results.save(outDir + "/layers/iter-" + niter);
-            results.save(outDir + "/layers/iter-" + niter, CCDB_TYPE.LAYER);
+            results.update_ccdb(outDir + "/layers/iter-" + niter, CCDB_TYPE.LAYER);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1317,7 +1321,7 @@ public class AhdcAlignmentAnalyser {
         ResultsOverIterations results = new ResultsOverIterations();
 
         check_output_dir(outDir + "/initialConfig");
-        results.save(outDir + "/initialConfig", CCDB_TYPE.SAVE);
+        results.screenshot(outDir + "/initialConfig");
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1351,7 +1355,7 @@ public class AhdcAlignmentAnalyser {
         int niter = 0;
         double value = 1e10;
         //while (niter < 12) {
-        while (niter < 20) {
+        while (niter < 3) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1379,7 +1383,7 @@ public class AhdcAlignmentAnalyser {
 
             /// --- save ResultOverIterations and update ccdb table for the new geometry
             //results.save(outDir + "/layers/iter-" + niter);
-            results.save(outDir + "/layers/iter-" + niter, CCDB_TYPE.T2D);
+            results.update_ccdb(outDir + "/layers/iter-" + niter, CCDB_TYPE.T2D);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1553,8 +1557,9 @@ public class AhdcAlignmentAnalyser {
      * @param outDir output directory
      * @param flag_do_fit does KF perform a fit ?
      * @throws IOException 
+     * @throws InterruptedException 
      */
-    static void wire_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException {
+    static void wire_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
@@ -1568,7 +1573,7 @@ public class AhdcAlignmentAnalyser {
         // assign_value(results.wire_residuals, 0.0);
 
         check_output_dir(outDir + "/initialConfig");
-        results.save(outDir + "/initialConfig");
+        results.screenshot(outDir + "/initialConfig");
 
         /// --- Global observables
         GraphErrors g0 = new GraphErrors("sum-squared-resisual-LR-over-iteration");
@@ -1612,7 +1617,7 @@ public class AhdcAlignmentAnalyser {
             //AHDCdet = generateAhdcGeometry(sum_array(results.wire_angles_start, results.wire_angles), sum_array(results.wire_angles_end, results.wire_angles));
 
             /// --- save ResultOverIterations
-            results.save(outDir + "/wires/iter-" + niter);
+            results.update_ccdb(outDir + "/wires/iter-" + niter, CCDB_TYPE.WIRE);
 
         } // end loop over criteria / nb iterations
         EmbeddedCanvas c0 = new EmbeddedCanvas(1200, 900);
@@ -1838,25 +1843,16 @@ public class AhdcAlignmentAnalyser {
 
     }
 
-    public static void save_time2distance(ArrayList<double[]> layer_list, String filename) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filename))) {
-            // loop over layer
-            writer.write("# parameters: (p1_int, p1_slope, p2_int, p2_slope, p3_int, p3_slope, t1_x0, t1_width, t2_x0, t2_width, z0, z1, z2, extra1, extra2, chi2ndf)");
-            writer.newLine();
-            writer.newLine();
-            for (int i = 0; i < 576; i++) {
-                AhdcWireId identifier = new AhdcWireId(i);
-                double[] p = layer_list.get(AhdcWireId.layer2number(identifier.layer));
-                String line = String.format("%2d   %2d   %2d", identifier.sector, identifier.layer, identifier.component);
-                for (int j = 0; j < p.length; j++)
-                    line += "   " + p[j];
-                line += "   0.0 0.0 0.0 0.0 0.0 0.0";
-                writer.write(line);
-                writer.newLine();
-                } 
-        } catch (IOException e) {
-            System.err.println("Failure : save time2distance in a txt");
-            e.printStackTrace();
+    /**
+     * Update the list of wire time2distance parameters in {@link ResultsOverIterations} based on the list of fit paramenters obtained layer by layer
+     * @param layer_list list of parameters layer by layer, the first entry is integrated over all layer
+     * @param results is a {@link ResultsOverIterations}
+     */
+    public static void save_time2distance(ArrayList<double[]> layer_list, ResultsOverIterations results) {
+        for (int i = 0; i < 576; i++) {
+            AhdcWireId identifier = new AhdcWireId(i);
+            double[] p = layer_list.get(AhdcWireId.layer2number(identifier.layer));
+            results.time2distance.set(i, p);
         }
     }
 
@@ -1871,6 +1867,10 @@ public class AhdcAlignmentAnalyser {
 
     /** Propagator step size */
     static double stepSize = 2; // mm
+
+    /** Used as a mutex for concurrent access */
+    static final Object CCDB_LOCK = new Object();
+
 
     /**
      * Uncomment the relevant line to run the analysis
@@ -1907,9 +1907,21 @@ public class AhdcAlignmentAnalyser {
             AhdcAlignmentAnalyser.nThreads = Integer.parseInt(nThreads_str);
         }
 
+        /// --- Read CCDB path
+        String ccdb = System.getenv("CCDB_CONNECTION");
+        if (ccdb == null) {
+            System.out.println("Please define the env variable : CCDB_CONNECTION");
+            return;
+        } else {
+            if (ccdb.equals("mysql://clas12reader@clasdb-farm.jlab.org/clas12") 
+                || ccdb.equals("mysql://clas12writer:geom3try@clasdb.jlab.org/clas12")) {
+                System.out.println("\033[31;1mPlease set CCDB_CONNECTION to a sqlite file. \033[0m Eg. sqlite:///[/path2file.sqlite]");
+                System.out.println("  ...The code will try to write new tables in the CCDB. It is a safety measure to prevent using clas12reader or clas12writer.");
+                return;
+            }
+        }
 
         /// --- Choose the application
-
 
         //scan_ahdc_position(args, false);
         //layer_alignment(inFiles, outDir, true);
