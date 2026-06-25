@@ -942,20 +942,22 @@ public class AhdcAlignmentAnalyser {
                         double doca = hitBank.getDouble("doca", j);
                         double distance = doca - residual;
 
+                        double vz_hit = vz + AhdcWireId.layer2Radius(layer)/Math.tan(Math.toRadians(track_theta_deg));
+
                         // Fill histograms per layers
                         histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
                         histos.h1_residual_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual);
-                        histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz, residual_LR);
+                        histos.h2_corr_vz_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(vz_hit, residual_LR);
                         histos.h2_time2distance_per_layers.get(AhdcWireId.layer2number(layer)).fill(time, distance);
                             // integrated
                         histos.h1_residual_LR_per_layers.get(0).fill(residual_LR);
                         histos.h1_residual_per_layers.get(0).fill(residual);
-                        histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz, residual_LR);
+                        histos.h2_corr_vz_residual_LR_per_layers.get(0).fill(vz_hit, residual_LR);
                         histos.h2_time2distance_per_layers.get(0).fill(time, distance);
 
                         // Fill histos per wires
                         histos.h1_residual_LR_per_wires.get(wireId.num).fill(residual_LR);
-                        histos.h2_corr_vz_residual_LR_per_wires.get(wireId.num).fill(vz, residual_LR);
+                        histos.h2_corr_vz_residual_LR_per_wires.get(wireId.num).fill(vz_hit, residual_LR);
                         histos.h2_time2distance_per_wires.get(wireId.num).fill(time, distance);
 
                         // Fill integrated histos
