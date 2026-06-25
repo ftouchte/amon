@@ -506,8 +506,11 @@ public class AhdcAlignmentAnalyser {
 
             // now fit the graph with a strait line
             WeightedObservedPoints observedPoints = new WeightedObservedPoints();
-            for (int pt = 2; pt < gr_bis.getDataSize(0)-2; pt++) { // the 4 end points are excluded
-                observedPoints.add(gr_bis.getDataX(pt), gr_bis.getDataY(pt));
+            for (int pt = 0; pt < gr_bis.getDataSize(0); pt++) {
+                double x = gr_bis.getDataX(pt);
+                double y = gr_bis.getDataY(pt);
+                if (x > -130 && x < 100)
+                    observedPoints.add(x, y);
             }
             PolynomialCurveFitter polFitter = PolynomialCurveFitter.create(1);
             double[] params = polFitter.fit(observedPoints.toList());
