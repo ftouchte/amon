@@ -1247,8 +1247,7 @@ public class AhdcAlignmentAnalyser {
         /// --- Loop over criteria
         int niter = 0;
         double value = 1e10;
-        //while (niter < 12) {
-        while (value > 1*1e-3 && niter < 25) {
+        while (niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1273,9 +1272,6 @@ public class AhdcAlignmentAnalyser {
             computeNewLayerAngles(results.layer_angles_end, results.layer_residuals_end, 8); // wire end
             printRotationAngles(results, false);
 
-            /// --- Update AHDC geometry
-            //AHDCdet = generateAhdcGeometry(layerAngles2WireAngles(results.layer_angles_start), layerAngles2WireAngles(results.layer_angles_end));
-
             ///--- output
             for (int i = 0; i < 8; i++) {
                 gr_slopes.get(i).addPoint(niter, results.layer_residuals_slope[i], 0, 0);
@@ -1283,7 +1279,6 @@ public class AhdcAlignmentAnalyser {
             }
 
             /// --- save ResultOverIterations and update ccdb table for the new geometry
-            //results.save(outDir + "/layers/iter-" + niter);
             results.update_ccdb(outDir + "/layers/iter-" + niter, CCDB_TYPE.LAYER);
 
         } // end loop over criteria / nb iterations
@@ -1356,8 +1351,7 @@ public class AhdcAlignmentAnalyser {
         /// --- Loop over criteria
         int niter = 0;
         double value = 1e10;
-        //while (niter < 12) {
-        while (niter < 3) {
+        while (niter < 25) {
             niter++;
             // run iteration
             System.out.println("\033[1;32m ################################ \033[0m");
@@ -1384,7 +1378,6 @@ public class AhdcAlignmentAnalyser {
             }
 
             /// --- save ResultOverIterations and update ccdb table for the new geometry
-            //results.save(outDir + "/layers/iter-" + niter);
             results.update_ccdb(outDir + "/layers/iter-" + niter, CCDB_TYPE.T2D);
 
         } // end loop over criteria / nb iterations
@@ -1939,9 +1932,9 @@ public class AhdcAlignmentAnalyser {
         /// --- Choose the application
 
         //scan_ahdc_position(args, false);
-        //layer_alignment(inFiles, outDir, true);
+        layer_alignment(inFiles, outDir, true);
         //wire_alignment(inFiles, outDir, true);
-        time2distance_calibration(inFiles, outDir, true);
+        //time2distance_calibration(inFiles, outDir, true);
 
         // usage
         // time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-ahdc-aligner.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-834.hipo -o /lustre24/expphy/volatile/clas12/touchte/new-alignment/wire_alignment_following -ncpu 60 > logger.txt 2>&1
