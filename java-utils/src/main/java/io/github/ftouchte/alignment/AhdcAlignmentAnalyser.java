@@ -598,8 +598,8 @@ public class AhdcAlignmentAnalyser {
             // Data point to be fit
             ArrayList<Double> xList = new ArrayList<>();
             ArrayList<Double> yList = new ArrayList<>();
-            xList.add(0.0);
-            yList.add(0.0);
+            // xList.add(0.0);
+            // yList.add(0.0);
             for (int pt = 0; pt < gr_bis.getDataSize(0)-2; pt++) { // exclude the 2 end points
                 double x = gr_bis.getDataX(pt);
                 double y = gr_bis.getDataY(pt);
@@ -621,7 +621,7 @@ public class AhdcAlignmentAnalyser {
             double[] initialValues = results.time2distance.get(AhdcWireId.number2layer(Math.max(i, 1))); // use the t2d of the wire 1 in the corresponding layer as initialization; if i = 0 (integrated over all wire), initialize with layer 11
 
             try {
-                double[] fittedParameters = fit_time2distance(xData, yData, initialValues);
+                double[] fittedParameters = fit_time2distance(xData, yData, initialValues.clone());
                 int Npts = 1000;
                 double tmin = 0;
                 double tmax = 250;
@@ -638,7 +638,7 @@ public class AhdcAlignmentAnalyser {
                 System.out.println("Failed to fit time2disatnce: layer " + i);
                 // System.out.println("Error: " + e.getMessage());
                 // e.printStackTrace();
-                t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+                t2d_params_list.add(initialValues.clone());
             }
             
             c2.cd(i);
@@ -777,7 +777,7 @@ public class AhdcAlignmentAnalyser {
             c0.divide(3, 4);
             canvas2.add(c0);
         }
-        //ArrayList<double[]> t2d_params_list = new ArrayList<>();
+        ArrayList<double[]> t2d_params_list = new ArrayList<>();
         for (int i = 0; i < global_histos.h2_time2distance_per_wires.size(); i++) {
             H2F h2_initial = global_histos.h2_time2distance_per_wires.get(i);
             H2F h2 = h2_initial.rebinX(5); // regroup x axis by group of 5 bins
@@ -826,8 +826,8 @@ public class AhdcAlignmentAnalyser {
             // Data point to be fit
             ArrayList<Double> xList = new ArrayList<>();
             ArrayList<Double> yList = new ArrayList<>();
-            xList.add(0.0);
-            yList.add(0.0);
+            // xList.add(0.0);
+            // yList.add(0.0);
             for (int pt = 0; pt < gr_bis.getDataSize(0)-2; pt++) { // exclude the 2 end points
                 double x = gr_bis.getDataX(pt);
                 double y = gr_bis.getDataY(pt);
@@ -849,7 +849,7 @@ public class AhdcAlignmentAnalyser {
             double[] initialValues = results.time2distance.get(i); // use the actual t2d values to initialise the fit
 
             try {
-                double[] fittedParameters = fit_time2distance(xData, yData, initialValues);
+                double[] fittedParameters = fit_time2distance(xData, yData, initialValues.clone());
                 int Npts = 1000;
                 double tmin = 0;
                 double tmax = 250;
@@ -861,12 +861,12 @@ public class AhdcAlignmentAnalyser {
                     double time = tmin + (tmax-tmin)*bin/(Npts-1);
                     func.addPoint(time, eval_t2d(time, fittedParameters), 0, 0);
                 }
-                //t2d_params_list.add(fittedParameters);
+                t2d_params_list.add(fittedParameters);
             } catch (Exception e) {
                 System.out.println("Fail to fit time2disatnce: wire L" + identifier.layer + "W" + identifier.component);
                 // System.out.println("Error: " + e.getMessage());
                 // e.printStackTrace();
-                //t2d_params_list.add(new double[] {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1});
+                t2d_params_list.add(initialValues.clone());
             }
             
             int canvas_num = i / 12; // between 0 and 47
@@ -888,7 +888,7 @@ public class AhdcAlignmentAnalyser {
             canvas2.get(i).save(wireOutDir + String.format("/time2distance_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
             System.out.println(String.format("time2distance_iter_%d_w%d-%d.pdf", niter, 12*i, 12*(i+1)-1));
         }
-        //save_time2distance(t2d_params_list);
+        results.time2distance = t2d_params_list;
 
     }
 
@@ -1800,24 +1800,36 @@ public class AhdcAlignmentAnalyser {
             public RealVector validate(RealVector params) {
                 
                 double[] p = params.toArray();
-                // cf. eval_t2d()
-                p[6] = Math.min(Math.max(p[6], 0), 20); // transition time t1
-                p[8] = Math.min(Math.max(p[8], p[6]), 150); // transition time t2
-                p[7] = Math.min(Math.max(p[7], 1e-2*(1+p[6])), p[6]); // should be small
-                p[9] = Math.min(Math.max(p[9], 1e-2*(1+p[8])), p[8]-p[6]); // should be small
 
-                p[0] = Math.min(Math.max(p[0], 0), 0); // int
-                p[1] = Math.min(Math.max(p[1], 0), 0.025); // slope : 4 mm/ 100 ns
+                // cf. eval_t2d()
+                p[6] = Math.min(Math.max(p[6], 0), 50); // transition time t1
+                p[8] = Math.min(Math.max(p[8], p[6]), 150); // transition time t2
+                p[7] = Math.min(Math.max(p[7], 0.5), 15); // should be small
+                p[9] = Math.min(Math.max(p[9], 0.5), 30); // should be small
+
+                p[0] = Math.min(Math.max(p[0], 0), 0.5); // int
+                p[1] = Math.min(Math.max(p[1], 0), 0.1); // slope : mm / ms
 
                 //double d1 = p[0]+p[1]*p[6];
                 //p[2] = Math.min(Math.max(p[2], 0.9*d1), 1.1*d1);
-                p[2] = Math.min(Math.max(p[2], 0), 2);
-                p[3] = Math.min(Math.max(p[3], 0), 0.03); // slope : 4 mm/ 100 ns
+                p[2] = Math.min(Math.max(p[2], 0), 2.5);
+                p[3] = Math.min(Math.max(p[3], 0), 0.1); // slope : mm / ms
 
                 //double d2 = p[2]+p[3]*p[8];
                 //p[4] = Math.min(Math.max(p[4], 0.9*d2), 1.1*d2); // int
                 p[4] = Math.min(Math.max(p[4], 0), 2.5);
-                p[5] = Math.min(Math.max(p[5], 0), 0.01); // slope : 4 mm/ 100 ns
+                p[5] = Math.min(Math.max(p[5], 0), 0.1); // slope : mm / ms
+
+                // Contrainte de monotonicité : vérifier sur une grille
+                double[] testTimes = {0, 10, 20, 50, 100, 150, 200};
+                for (int i = 1; i < testTimes.length; i++) {
+                    double d_prev = eval_t2d(testTimes[i-1], p);
+                    double d_curr = eval_t2d(testTimes[i],   p);
+                    if (d_curr < d_prev) {
+                        // Ramener vers les valeurs initiales
+                        return new ArrayRealVector(initialValues);
+                    }
+                }
                 
                 return new ArrayRealVector(p);
             }
