@@ -1,3 +1,29 @@
+# Dependencies
+
+One needs to install coatjava and `ahdc/alignment-v?` branch
+
+```shell
+get clone https://github.com/ftouchte/coatjava.git
+cd coatjava
+git checkout ahdc/alignment-v?
+```
+
+Each time the modifications in **jeffersonlab/coatjava:development** will be merge in the `ahdc/alignment-v?` branch, one needs to config the path in the `pom.xml` file
+
+1. Look at the `pom.xml` file
+1. Identify all references to local jar files with `coatjava` in it
+1. Look at the corresponding directory paths and use the file version that is actually installed (it generally results in just changing the version number, e.g moving from 13.0.0 to 14.1.1)
+
+```shell
+# In vim 
+vim pomw.xml
+:%s/13.0.0/14.1.1/g
+
+# After that, in the terminal, in the directory where is located this pom.xml file
+mvn install
+```
+
+
 # Create a project with maven
 
 ```shell
