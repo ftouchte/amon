@@ -147,6 +147,8 @@ public class AhdcAlignmentAnalyser {
             }));
         }
 
+        int nevents = 0;
+
         /// --- Producer
         for (String file : inFiles) {
             // Initialise HIPO reader for the file
@@ -156,8 +158,9 @@ public class AhdcAlignmentAnalyser {
             SchemaFactory factory = reader.getSchemaFactory();
 
 
-            while (reader.hasNext()) {
+            while (reader.hasNext() && nevents < nevents_max) {
                 // load event
+                nevents++;
                 Event event0 = new Event();
                 reader.nextEvent(event0);
                 DataEvent event = new HipoDataEvent(event0, factory);
@@ -1886,18 +1889,20 @@ public class AhdcAlignmentAnalyser {
     /** Used as a mutex for concurrent access */
     static final Object CCDB_LOCK = new Object();
 
+    /** Max number of events to be processed */
+    static double nevents_max = Double.MAX_VALUE;
+
 
     /**
      * Uncomment the relevant line to run the analysis
      * 
-     * Code to be run: amon/scripts/hipo/run-ahdc-aligner.sh
      * @throws IOException 
      * @throws InterruptedException 
      */
     public static void main(String[] args) throws IOException, InterruptedException {
 
         /// --- Load inputs from options
-        fOptions options = new fOptions("-i", "-o", "-ncpu");
+        fOptions options = new fOptions("-i", "-o", "-ncpu", "-nevts");
         options.LoadOptions(args);
         options.Show();
 
@@ -1920,6 +1925,12 @@ public class AhdcAlignmentAnalyser {
         String nThreads_str = options.GetValue("-ncpu");
         if (!nThreads_str.equals("")){
             AhdcAlignmentAnalyser.nThreads = Integer.parseInt(nThreads_str);
+        }
+
+        /// --- Read nevent_max
+        String nevts_str = options.GetValue("-nevts");
+        if (!nevts_str.equals("")){
+            AhdcAlignmentAnalyser.nevents_max = Integer.parseInt(nevts_str);
         }
 
         /// --- Read CCDB path
