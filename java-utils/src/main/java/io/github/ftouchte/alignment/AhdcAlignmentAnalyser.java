@@ -15,6 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.commons.math3.fitting.PolynomialCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoints;
@@ -67,26 +68,22 @@ import io.github.ftouchte.utils.fOptions;
  * - position scan
  */
 public class AhdcAlignmentAnalyser {
-    
-    
-    
 
     /**
      * This the main method. It is used to run an iteration of the alignment procedure.
      * This code uses parallelism to reduce the computing time. The user is invited to
      * manage the parameters : {@link #nThreads} and {@link #queue_capacity}
      * 
-     * 
      * @param niter Iteration number
      * @param results {@link ResultsOverIterations} where to store data over iteration
      * @param inFiles HIPO files containing all events to be processed
      * @param outDir where to store plots
-     * @param AHDCdet current state of the AHDC geometry (after rotation)
      * @param clas_alignment position of the center of CLAS with respect to the center of ALERT. Useful for {@link #scan_ahdc_position(String[])}
-     * @param flag_run_wire_alignment a flag to prevent fitting of wire by wire histograms due to statistics limitation
      * @param flag_do_fit perform a KF fit or do a simple propagation
+     * @param trackSelectorFactory {@link AlertTrackSelector}
+     * @param analysers {@link AhdcAlignmentAnalyser.HistoAnalyser}
      */
-    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, double clas_alignment, boolean flag_run_wire_alignment, boolean flag_do_fit) {
+    static void run(int niter, ResultsOverIterations results, ArrayList<String> inFiles, String outDir, double clas_alignment, boolean flag_do_fit, Supplier<AlertTrackSelector> trackSelectorFactory, HistoAnalyser... analysers) {
         
         /// --- Parallelizer
         BlockingQueue<DataEvent> queue = new ArrayBlockingQueue<>(queue_capacity);
@@ -103,7 +100,7 @@ public class AhdcAlignmentAnalyser {
                 Histos local_histos = new Histos(niter);
                 try {    
                     System.out.println("\033[1;32m **** Create new thread : " + Thread.currentThread().getName() + " \033[0m");
-                    AlertTrackSelector analyser = new AlertElasticAnalyser();
+                    AlertTrackSelector trackSelector = trackSelectorFactory.get();
 
                     // Engines
                     AHDCEngine ahdcEngine = new AHDCEngine();
@@ -134,7 +131,7 @@ public class AhdcAlignmentAnalyser {
                     
                         if (event == EVT_POISON) break;
 
-                        fill_histos(local_histos, event, analyser, alertEngine, ahdcEngine, flag_do_fit);
+                        fill_histos(local_histos, event, trackSelector, alertEngine, ahdcEngine, flag_do_fit);
 
                     }
                 } catch (Throwable t) {
@@ -208,26 +205,31 @@ public class AhdcAlignmentAnalyser {
             e.printStackTrace();
         }
 
-        /// --- Analyse global histograms
-        analyse_global_histograms(global_histos, outDir, niter, results);
+        // /// --- Analyse global histograms
+        // analyse_global_histograms(global_histos, outDir, niter, results);
 
-        /// --- Analyse histograms per layer
-        analyse_layer_histograms(global_histos, outDir, niter, results);
-        analyse_layer_2D_histograms(global_histos, outDir, niter, results);
+        // /// --- Analyse histograms per layer
+        // analyse_layer_histograms(global_histos, outDir, niter, results);
+        // analyse_layer_2D_histograms(global_histos, outDir, niter, results);
 
-        /// --- Analyse histograms per wire
-        if (flag_run_wire_alignment) {
-            analyse_wire_histograms(global_histos, outDir, niter, results);
-            //analyse_wire_2D_histograms(global_histos, outDir, niter, results);
+        // /// --- Analyse histograms per wire
+        // if (flag_run_wire_alignment) {
+        //     analyse_wire_histograms(global_histos, outDir, niter, results);
+        //     //analyse_wire_2D_histograms(global_histos, outDir, niter, results);
+        // }
+
+        /// --- Run whichever analyses were requested
+        for (HistoAnalyser analyser : analysers) {
+            analyser.analyse(global_histos, outDir, niter, results);
         }
         
        
     }
 
     static void analyse_global_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
-        check_output_dir(outDir + "/layers/");
-        String layerOutDir = outDir + "/layers/iter-" + niter;
-        check_output_dir(layerOutDir);
+        check_output_dir(outDir + "/global/");
+        String globalOutDir = outDir + "/global/iter-" + niter;
+        check_output_dir(globalOutDir);
 
         /// track theta
         {
@@ -235,7 +237,7 @@ public class AhdcAlignmentAnalyser {
             double mean = h.getMean();
             double width = h.getRMS();
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            save_histo1D(h, null, layerOutDir + "/track_theta.pdf");
+            save_histo1D(h, null,  globalOutDir + "/track_theta.pdf");
         }
 
         /// track delta phi
@@ -245,7 +247,7 @@ public class AhdcAlignmentAnalyser {
             double width = h.getRMS();
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            save_histo1D(h, null, layerOutDir + "/track_delta_phi.pdf");
+            save_histo1D(h, null,  globalOutDir + "/track_delta_phi.pdf");
         }
 
         /// delta vz
@@ -255,7 +257,7 @@ public class AhdcAlignmentAnalyser {
             double width = h.getRMS();
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            save_histo1D(h, null, layerOutDir + "/track_delta_vz.pdf");
+            save_histo1D(h, null,  globalOutDir + "/track_delta_vz.pdf");
 
             results.mean_delta_vz = mean;
             results.width_delta_vz = width;
@@ -1218,7 +1220,7 @@ public class AhdcAlignmentAnalyser {
      * @throws IOException 
      * @throws InterruptedException 
      */
-    static void layer_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+    static void layer_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit, Supplier<AlertTrackSelector> trackSelectorFactory, HistoAnalyser... analysers) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
@@ -1267,7 +1269,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, +75, false, flag_do_fit);
+            run(niter, results, inFiles, outDir, +75, flag_do_fit, trackSelectorFactory, analysers);
 
             // running criteria
             value = 0;
@@ -1325,7 +1327,7 @@ public class AhdcAlignmentAnalyser {
      * @throws IOException 
      * @throws InterruptedException 
      */
-    static void time2distance_calibration(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+    static void time2distance_calibration(ArrayList<String> inFiles, String outDir, boolean flag_do_fit, Supplier<AlertTrackSelector> trackSelectorFactory, HistoAnalyser... analysers) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
@@ -1371,7 +1373,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, +75, false, flag_do_fit);
+            run(niter, results, inFiles, outDir, +75, flag_do_fit, trackSelectorFactory, analysers);
 
             // running criteria
             value = 0;
@@ -1573,7 +1575,7 @@ public class AhdcAlignmentAnalyser {
      * @throws IOException 
      * @throws InterruptedException 
      */
-    static void new_ahdc_position_scan(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+    static void new_ahdc_position_scan(ArrayList<String> inFiles, String outDir, boolean flag_do_fit, Supplier<AlertTrackSelector> trackSelectorFactory, HistoAnalyser... analysers) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
@@ -1607,7 +1609,7 @@ public class AhdcAlignmentAnalyser {
             // run iteration
             System.out.println("\033[1;32m ########### Start iteration : \033[0m clas_alignment : " + clas_alignment);
 
-            run(0, results, inFiles, outDir, +75, false, flag_do_fit);
+            run(0, results, inFiles, stepDir, +75, flag_do_fit, trackSelectorFactory, analysers);
 
             double mean = results.mean_delta_vz;
             double width = results.width_delta_vz;
@@ -1642,7 +1644,7 @@ public class AhdcAlignmentAnalyser {
      * @throws IOException 
      * @throws InterruptedException 
      */
-    static void wire_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+    static void wire_alignment(ArrayList<String> inFiles, String outDir, boolean flag_do_fit, Supplier<AlertTrackSelector> trackSelectorFactory, HistoAnalyser... analysers) throws IOException, InterruptedException {
 
         // --- Results over iterations
         ResultsOverIterations results = new ResultsOverIterations();
@@ -1676,7 +1678,7 @@ public class AhdcAlignmentAnalyser {
             System.out.println("\033[1;32m # Start iteration : " + niter + "\033[0m");
             System.out.println("\033[1;32m ################################ \033[0m");
 
-            run(niter, results, inFiles, outDir, +75, true, flag_do_fit);
+            run(niter, results, inFiles, outDir, +75, flag_do_fit, trackSelectorFactory, analysers);
 
             // running criteria
             value = 0;
@@ -1970,6 +1972,25 @@ public class AhdcAlignmentAnalyser {
     /** Max number of events to be processed */
     static double nevents_max = Double.MAX_VALUE;
 
+    /**
+     * An interface to encode all histogram analyser
+     * 
+     * <ul>
+     * 
+     * <li> {@link AhdcAlignmentAnalyser#analyse_global_histograms(Histos, String, int, ResultsOverIterations)} </li>
+     * <li> {@link AhdcAlignmentAnalyser#analyse_layer_histograms(Histos, String, int, ResultsOverIterations)} </li>
+     * <li> {@link AhdcAlignmentAnalyser#analyse_layer_2D_histograms(Histos, String, int, ResultsOverIterations)} </li>
+     * <li> {@link AhdcAlignmentAnalyser#analyse_wire_histograms(Histos, String, int, ResultsOverIterations)} </li>
+     * <li> {@link AhdcAlignmentAnalyser#analyse_wire_2D_histograms(Histos, String, int, ResultsOverIterations)} </li>
+     * 
+     * </u>
+     * 
+     */
+    @FunctionalInterface
+    public interface HistoAnalyser {
+        void analyse(Histos histos, String outDir, int niter, ResultsOverIterations results);
+    }
+
 
     /**
      * Uncomment the relevant line to run the analysis
@@ -2026,9 +2047,41 @@ public class AhdcAlignmentAnalyser {
         }
 
         /// --- Choose the application
+        
+        // // 1) Layer alignment
+        // layer_alignment(inFiles, outDir, false,
+        //     AlertElasticAnalyser::new, 
+        //     AhdcAlignmentAnalyser::analyse_global_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_2D_histograms
+        // );
+
+        // // 2) Wire alignment
+        // wire_alignment(inFiles, outDir, false,
+        //     AlertElasticAnalyser::new,
+        //     AhdcAlignmentAnalyser::analyse_global_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_2D_histograms,
+        //     AhdcAlignmentAnalyser::analyse_wire_histograms
+        //     //,AhdcAlignmentAnalyser::analyse_wire_2D_histograms
+        // );
+
+        // // 3) time2distance calibration
+        // time2distance_calibration(inFiles, outDir, false, 
+        //     AlertElasticAnalyser::new,
+        //     AhdcAlignmentAnalyser::analyse_global_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_histograms,
+        //     AhdcAlignmentAnalyser::analyse_layer_2D_histograms
+        // );
+
+        // 4) New ahdc position scan
+        new_ahdc_position_scan(inFiles, outDir, false, 
+            AlertElasticAnalyser::new,
+            AhdcAlignmentAnalyser::analyse_global_histograms
+        );
 
         //scan_ahdc_position(args, false);
-        new_ahdc_position_scan(inFiles, outDir, true);
+        //new_ahdc_position_scan(inFiles, outDir, true);
         //layer_alignment(inFiles, outDir, true);
         //wire_alignment(inFiles, outDir, true);
         //time2distance_calibration(inFiles, outDir, true);
