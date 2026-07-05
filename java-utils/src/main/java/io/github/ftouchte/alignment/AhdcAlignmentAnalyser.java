@@ -2092,7 +2092,7 @@ public class AhdcAlignmentAnalyser {
         // );
 
         // 4) New ahdc position scan
-        new_ahdc_position_scan(inFiles, outDir, false, 
+        new_ahdc_position_scan(inFiles, outDir, true, 
             AlertGoodTrackFinder::new,
             AhdcAlignmentAnalyser::analyse_global_histograms
         );

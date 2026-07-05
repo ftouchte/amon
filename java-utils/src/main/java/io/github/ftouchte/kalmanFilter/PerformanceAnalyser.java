@@ -371,11 +371,11 @@ public class PerformanceAnalyser {
 
 
         // Reconstructed track
-        ArrayList<Integer> trackRows = analyser.getAhdcKFTrackRows();
+        ArrayList<int[]> trackRows = analyser.getAhdcKFTrackRows();
         
         for (int i = 0; i < trackRows.size(); i++) {
-            
-            int track_row = trackRows.get(i);
+            int[] rows = trackRows.get(i);
+            int track_row = rows[1];
             double vz = trackBank.getFloat("z" , track_row) * Units.mm;
             double px = trackBank.getFloat("px", track_row) * Units.MeV;
             double py = trackBank.getFloat("py", track_row) * Units.MeV;

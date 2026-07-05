@@ -87,7 +87,8 @@ public class ElasticEventFilter {
 		Event   outEvent   = new Event();
 
         // Initialiase elastic analyser
-        AlertElasticAnalyser analyser = new AlertElasticAnalyser();
+        //AlertElasticAnalyser analyser = new AlertElasticAnalyser();
+        AlertGoodTrackFinder analyser = new AlertGoodTrackFinder();
 
         // Loop over events
         int counter = 0;
@@ -106,7 +107,8 @@ public class ElasticEventFilter {
 			reader.nextEvent(inEvent);
 
             // Check that the event is an elastic
-            if (analyser.IsElastic(new HipoDataEvent(inEvent, factory))) {
+            if (analyser.hasGoodTrack(new HipoDataEvent(inEvent, factory))) {
+            //if (analyser.IsElastic(new HipoDataEvent(inEvent, factory))) {
             //if (analyser.hasBadWires(new HipoDataEvent(inEvent, factory))) {
                 counter++;
                 // loop over all existing banks in the input file (reader)
