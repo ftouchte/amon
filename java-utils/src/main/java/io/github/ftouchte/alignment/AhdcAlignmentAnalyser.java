@@ -205,6 +205,9 @@ public class AhdcAlignmentAnalyser {
             e.printStackTrace();
         }
 
+        /// --- Analyse global histograms
+        analyse_global_histograms(global_histos, outDir, niter, results);
+
         /// --- Analyse histograms per layer
         analyse_layer_histograms(global_histos, outDir, niter, results);
         analyse_layer_2D_histograms(global_histos, outDir, niter, results);
@@ -216,6 +219,42 @@ public class AhdcAlignmentAnalyser {
         }
         
        
+    }
+
+    static void analyse_global_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
+        check_output_dir(outDir + "/layers/");
+        String layerOutDir = outDir + "/layers/iter-" + niter;
+        check_output_dir(layerOutDir);
+
+        /// track theta
+        {
+            H1F h = global_histos.h1_track_theta;
+            double mean = h.getMean();
+            double width = h.getRMS();
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            save_histo1D(h, null, layerOutDir + "/track_theta.pdf");
+        }
+
+        /// track delta phi
+        {
+            H1F h = global_histos.h1_track_delta_phi;
+            double mean = h.getMean();
+            double width = h.getRMS();
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            save_histo1D(h, null, layerOutDir + "/track_delta_phi.pdf");
+        }
+
+        /// track delta vz
+        {
+            H1F h = global_histos.h1_delta_vz;
+            double mean = h.getMean();
+            double width = h.getRMS();
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            save_histo1D(h, null, layerOutDir + "/track_delta_vz.pdf");
+        }
+
     }
 
     static void analyse_layer_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
@@ -311,46 +350,6 @@ public class AhdcAlignmentAnalyser {
         c2.save(layerOutDir + "/residual_normal_iter_" + niter + ".pdf");
         System.out.println("residual_normal_iter_" + niter + ".pdf created");
 
-        /// track theta
-        {
-            H1F h = global_histos.h1_track_theta;
-            // fit
-            double mean = h.getMean();
-            double width = h.getRMS();
-            GraphErrors gr = null;
-            // Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "track theta in analyse_layer_histograms()...");
-            // if (fitResult != null) {
-            //     CrystalBall cb = fitResult.getFirst();
-            //     // System.out.println("* Fit result : track theta ");
-            //     // cb.print();
-            //     gr = fitResult.getSecond();
-            //     mean = cb.getMu();
-            //     width = cb.getSigma();
-            // }
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            save_histo1D(h, gr, layerOutDir + "/track_theta.pdf");
-        }
-
-        /// track delta phi
-        {
-            H1F h = global_histos.h1_track_delta_phi;
-            // fit
-            double mean = h.getMean();
-            double width = h.getRMS();
-            GraphErrors gr = null;
-            Pair<CrystalBall, GraphErrors> fitResult = fit_with_crystal_ball(h, "track delta phi in analyse_layer_histograms()...");
-            if (fitResult != null) {
-                CrystalBall cb = fitResult.getFirst();
-                // System.out.println("* Fit result : track delta phi");
-                // cb.print();
-                gr = fitResult.getSecond();
-                mean = cb.getMu();
-                width = cb.getSigma();
-            }
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            save_histo1D(h, gr, layerOutDir + "/track_delta_phi.pdf");
-        }
     }
 
     static void analyse_wire_histograms(Histos global_histos, String outDir, int niter, ResultsOverIterations results) {
@@ -972,6 +971,9 @@ public class AhdcAlignmentAnalyser {
                             double delta_phi = track_phi_deg - elastic_electron.phi(Units.deg);
                             delta_phi = Math.abs(delta_phi) - 180; //center at zero
                             histos.h1_track_delta_phi.fill(delta_phi);
+                            
+                            double delta_vz = elastic_electron.vz() - 0.1*vz; // cm
+                            histos.h1_delta_vz.fill(delta_vz);
                         }
 
                     } // end select hits for this trackid

@@ -39,6 +39,9 @@ public class Histos {
     /** Time2Distance per wires */
     ArrayList<H2F> h2_time2distance_per_wires = new ArrayList<>();
 
+    /** Delta vz = (electron vz) - (track vz) */
+    H1F h1_delta_vz;
+
 
     /**
      * Create an instance of {@link Histos}
@@ -121,6 +124,11 @@ public class Histos {
         h1_track_delta_phi = new H1F("track-delat-phi-itr-" + niter, "track theta", 100, -10, 10);
         h1_track_delta_phi.setTitleX("delta phi (deg)");
         h1_track_delta_phi.setTitleY("count");
+
+        // delta vz
+        h1_delta_vz = new H1F("delta-vz-itr-" + niter, "delta vz", 100, -15, 8);
+        h1_delta_vz.setTitleX("delta vz (cm)");
+        h1_delta_vz.setTitleY("count");
     }
 
     /** 
@@ -151,6 +159,7 @@ public class Histos {
         // Integrated
         this.h1_track_theta.add(histos.h1_track_theta);
         this.h1_track_delta_phi.add(histos.h1_track_delta_phi);
+        this.h1_delta_vz.add(histos.h1_delta_vz);
 
     }
 }
