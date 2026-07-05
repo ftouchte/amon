@@ -1626,6 +1626,7 @@ public class AhdcAlignmentAnalyser {
             String line = String.format("%f   %f   %f", clas_alignment, mean, width);
             writer.write(line);
             writer.newLine();
+            System.out.println("* scan results : " + line);
 
         } // end loop over criteria / nb iterations
         writer.close();
