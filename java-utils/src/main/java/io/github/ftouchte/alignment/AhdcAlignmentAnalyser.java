@@ -1414,6 +1414,12 @@ public class AhdcAlignmentAnalyser {
     }
 
     /**
+     * Code obselète: à modifier pour épouser la nouvelle philosophie.
+     *                  --> modifier la ccdb et créer la géométrie à partir de la ccdb
+     *                  --> cf. layer_alignment() for example
+     * 
+     * To be done later.
+     * 
      * Routine to scan ahdc position with respect to CLAS
      * @param args
      * @param flag_do_fit if true, a KF fit is performed, if false, a simple propagation is performed
