@@ -237,7 +237,8 @@ public class AhdcAlignmentAnalyser {
             H1F h = global_histos.h1_track_theta;
             double mean = h.getMean();
             double width = h.getRMS();
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            double clas_alignment = results.clas_alignment;
+            h.setTitle(String.format("mean : %.5f, width : %.5f, clas alignment : %.1f", mean, width, -0.1*clas_alignment));
             save_histo1D(h, null,  globalOutDir + "/track_theta.pdf");
         }
 
@@ -1609,11 +1610,12 @@ public class AhdcAlignmentAnalyser {
             check_output_dir(stepDir);
 
             double clas_alignment = 1.0*step; // mm
+            results.clas_alignment = clas_alignment;
 
             // run iteration
             System.out.println("\033[1;32m ########### Start iteration : \033[0m clas_alignment : " + clas_alignment);
 
-            run(0, results, inFiles, stepDir, +75, flag_do_fit, trackSelectorFactory, analysers);
+            run(0, results, inFiles, stepDir, clas_alignment, flag_do_fit, trackSelectorFactory, analysers);
 
             double mean = results.mean_delta_vz;
             double width = results.width_delta_vz;

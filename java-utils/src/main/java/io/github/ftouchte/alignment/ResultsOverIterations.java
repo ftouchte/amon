@@ -113,6 +113,7 @@ public class ResultsOverIterations {
     //-------------
     public double mean_delta_vz = 0;
     public double width_delta_vz = 0;
+    public double clas_alignment = 0;
 
     public void save_layer_angles_to_file(String outDir) throws IOException, InterruptedException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/layer_angles.txt"));
