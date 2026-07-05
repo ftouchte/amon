@@ -237,8 +237,7 @@ public class AhdcAlignmentAnalyser {
             H1F h = global_histos.h1_track_theta;
             double mean = h.getMean();
             double width = h.getRMS();
-            double clas_alignment = results.clas_alignment;
-            h.setTitle(String.format("mean : %.5f, width : %.5f, clas alignment : %.1f", mean, width, -0.1*clas_alignment));
+            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             save_histo1D(h, null,  globalOutDir + "/track_theta.pdf");
         }
 
@@ -248,7 +247,6 @@ public class AhdcAlignmentAnalyser {
             double mean = h.getMean();
             double width = h.getRMS();
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             save_histo1D(h, null,  globalOutDir + "/track_delta_phi.pdf");
         }
 
@@ -257,12 +255,14 @@ public class AhdcAlignmentAnalyser {
             H1F h = global_histos.h1_delta_vz;
             double mean = h.getMean();
             double width = h.getRMS();
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
-            h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
+            double peak = h.getDataX(h.getMaximumBin());
+            double clas_alignment = results.clas_alignment;
+            h.setTitle(String.format("clas alignment : %.1f, mean : %.5f, peak %.5f, width : %.5f", -0.1*clas_alignment, mean, peak, width));
             save_histo1D(h, null,  globalOutDir + "/track_delta_vz.pdf");
 
             results.mean_delta_vz = mean;
             results.width_delta_vz = width;
+            results.peak_delta_vz = peak;
         }
 
     }
@@ -1604,7 +1604,7 @@ public class AhdcAlignmentAnalyser {
         writer.newLine();
 
         /// --- Loop over criteria
-        for (int step = 30; step < 80; step++) {
+        for (int step = 25; step < 80; step++) {
 
             String stepDir = outDir + "/" + step;
             check_output_dir(stepDir);
@@ -1619,11 +1619,12 @@ public class AhdcAlignmentAnalyser {
 
             double mean = results.mean_delta_vz;
             double width = results.width_delta_vz;
+            double peak = results.peak_delta_vz;
             
             g_mean.addPoint(clas_alignment, mean, 0,0);
             g_width.addPoint(clas_alignment, width, 0,0);
 
-            String line = String.format("%f   %f   %f", clas_alignment, mean, width);
+            String line = String.format("%f   %f   %f   %f", clas_alignment, mean, peak, width);
             writer.write(line);
             writer.newLine();
             System.out.println("* scan results : " + line);
