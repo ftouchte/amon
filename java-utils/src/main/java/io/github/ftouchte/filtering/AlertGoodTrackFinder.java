@@ -89,6 +89,7 @@ public class AlertGoodTrackFinder implements AlertTrackSelector {
                     if (nhits < 6 || chi2 > 8) continue;
                     int[] vec = {row, i};
                     trackRows.add(vec);
+                    return true;
                 }
 
             }

@@ -50,6 +50,7 @@ import org.jlab.service.alert.ALERTEngine;
 
 import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
 import io.github.ftouchte.filtering.AlertElasticAnalyser;
+import io.github.ftouchte.filtering.AlertGoodTrackFinder;
 import io.github.ftouchte.filtering.AlertTrackSelector;
 import io.github.ftouchte.fitting.CrystalBall;
 import io.github.ftouchte.fitting.CrystallBallFitter;
@@ -922,6 +923,8 @@ public class AhdcAlignmentAnalyser {
             // Data analysis
             DataBank trackBank = event.getBank("AHDC::kftrack");
             DataBank hitBank = event.getBank("AHDC::hits");
+            DataBank recBank = event.getBank("REC::Particle");
+            //recBank.show();
 
             // Look at residuals in elastic tracks
              ArrayList<int[]> trackRows = analyser.getAhdcKFTrackRows();
@@ -975,7 +978,6 @@ public class AhdcAlignmentAnalyser {
                 histos.h1_track_theta.fill(track_theta_deg);
 
                 // link with the electron
-                DataBank recBank = event.getBank("REC::Particle");
                 int electron_row = rows[0];
                     
                     // delta phi
@@ -2091,7 +2093,7 @@ public class AhdcAlignmentAnalyser {
 
         // 4) New ahdc position scan
         new_ahdc_position_scan(inFiles, outDir, false, 
-            AlertElasticAnalyser::new,
+            AlertGoodTrackFinder::new,
             AhdcAlignmentAnalyser::analyse_global_histograms
         );
 
