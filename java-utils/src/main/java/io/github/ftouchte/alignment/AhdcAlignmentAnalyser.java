@@ -924,23 +924,21 @@ public class AhdcAlignmentAnalyser {
             DataBank hitBank = event.getBank("AHDC::hits");
 
             // Look at residuals in elastic tracks
-            ArrayList<Integer> trackRows = analyser.getAhdcKFTrackRows();
+             ArrayList<int[]> trackRows = analyser.getAhdcKFTrackRows();
             
             for (int i = 0; i < trackRows.size(); i++) {
-                int track_row = trackRows.get(i);
+                int[] rows = trackRows.get(i);
+                int track_row = rows[1];
                 int trackid = trackBank.getInt("trackid", track_row);
                 
-                double vz = trackBank.getFloat("z" , track_row); // mm
+                double track_vz = trackBank.getFloat("z" , track_row); // mm
                 double px = trackBank.getFloat("px", track_row); // MeV
                 double py = trackBank.getFloat("py", track_row); // MeV
                 double pz = trackBank.getFloat("pz", track_row); // MeV
                 double p = Math.sqrt(Math.pow(px, 2)+Math.pow(py, 2)+Math.pow(pz, 2));
                 double track_theta_deg = Math.toDegrees(Math.acos(pz/p));
-                double track_phi_rad = Math.atan2(py, px);
-                if (track_phi_rad < 0) track_phi_rad += 2*Math.PI;
-                double track_phi_deg = Math.toDegrees(track_phi_rad);
                 
-
+                // Layer or wire histograms
                 for (int j = 0; j < hitBank.rows(); j++) {
                     if (trackid == hitBank.getInt("trackid", j)) {
                         int layer = 10*hitBank.getByte("superlayer", j) + hitBank.getByte("layer", j);
@@ -952,7 +950,7 @@ public class AhdcAlignmentAnalyser {
                         double doca = hitBank.getDouble("doca", j);
                         double distance = doca - residual;
 
-                        double vz_hit = vz + AhdcWireId.layer2Radius(layer)/Math.tan(Math.toRadians(track_theta_deg));
+                        double vz_hit = track_vz + AhdcWireId.layer2Radius(layer)/Math.tan(Math.toRadians(track_theta_deg));
 
                         // Fill histograms per layers
                         histos.h1_residual_LR_per_layers.get(AhdcWireId.layer2number(layer)).fill(residual_LR);
@@ -970,23 +968,27 @@ public class AhdcAlignmentAnalyser {
                         histos.h2_corr_vz_residual_LR_per_wires.get(wireId.num).fill(vz_hit, residual_LR);
                         histos.h2_time2distance_per_wires.get(wireId.num).fill(time, distance);
 
-                        // Fill integrated histos
-                        histos.h1_track_theta.fill(track_theta_deg);
-
-                        // link with the electron
-                        if (analyser instanceof AlertElasticAnalyser elasticAnalyser) {
-                            ParticleRow elastic_electron = elasticAnalyser.getElectron();
-                            double delta_phi = track_phi_deg - elastic_electron.phi(Units.deg);
-                            delta_phi = Math.abs(delta_phi) - 180; //center at zero
-                            histos.h1_track_delta_phi.fill(delta_phi);
-                            
-                            double delta_vz = elastic_electron.vz() - 0.1*vz; // cm
-                            histos.h1_delta_vz.fill(delta_vz);
-                        }
-
                     } // end select hits for this trackid
                 }  // end loop over hits
-            } // end loop over good tracks
+
+                // Integrated distributions
+                histos.h1_track_theta.fill(track_theta_deg);
+
+                // link with the electron
+                DataBank recBank = event.getBank("REC::Particle");
+                int electron_row = rows[0];
+                    
+                    // delta phi
+                double phi_track_rad = Math.atan2(trackBank.getFloat("py", track_row), trackBank.getFloat("px", track_row));
+                double phi_electron_rad = Math.atan2(recBank.getFloat("py", electron_row), recBank.getFloat("px", electron_row));
+                double delta_phi_rad = diffAngles(phi_electron_rad, phi_track_rad);
+                delta_phi_rad = diffAngles(delta_phi_rad, Math.PI); // remove 180°
+                histos.h1_track_delta_phi.fill(Math.toDegrees(delta_phi_rad));
+                    // delta vz
+                double delta_vz = recBank.getFloat("vz", electron_row) - 0.1*track_vz; // cm
+                histos.h1_delta_vz.fill(delta_vz);
+
+            } // end loop over good track rows
 
         } // end event has good track
     }
@@ -1989,6 +1991,19 @@ public class AhdcAlignmentAnalyser {
     @FunctionalInterface
     public interface HistoAnalyser {
         void analyse(Histos histos, String outDir, int niter, ResultsOverIterations results);
+    }
+
+    /**
+     * Angles are in radians. Compute the difference vetween two angles and ensures that the results is between -pi and pi
+     * @param angle1
+     * @param angle2
+     */
+    static double diffAngles(double angle1, double angle2) {
+        double dphi = Math.atan2(
+			Math.sin(angle1 - angle2),
+			Math.cos(angle1 - angle2)
+		);
+        return dphi;
     }
 
 

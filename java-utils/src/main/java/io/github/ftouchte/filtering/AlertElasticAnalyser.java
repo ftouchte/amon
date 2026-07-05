@@ -234,10 +234,11 @@ public class AlertElasticAnalyser implements AlertTrackSelector {
         }
     }
 
-    public ArrayList<Integer> getAhdcKFTrackRows() {
-        ArrayList<Integer> list = new ArrayList<>();
+    public ArrayList<int[]> getAhdcKFTrackRows() {
+         ArrayList<int[]> list = new ArrayList<>();
         if (ahdc_track != null) {
-            list.add(ahdc_track.GetBankRow());
+            int[] vec = {electron.GetBankRow(), ahdc_track.GetBankRow()};
+            list.add(vec);
         }
         return list;
     }

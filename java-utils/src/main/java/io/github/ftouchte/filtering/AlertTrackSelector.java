@@ -14,9 +14,9 @@ public interface AlertTrackSelector {
     public boolean hasGoodTrack(DataEvent event);
 
     /**
-     * Should ideally be used jsut after {@link #hasGoodTrack(DataEvent)}. If not, should return an empty list.
-     * @return the rows, in AHDC::kftrack, of all tracks considered as good ones.
+     * Should ideally be used just after {@link #hasGoodTrack(DataEvent)}. If not, should return an empty list.
+     * @return the couple of rows for (REC::Particle ; AHDC::kftrack)  identified as good events. If electron is associated return a negative number, e.g -1
      */
-    public ArrayList<Integer> getAhdcKFTrackRows();
+    public ArrayList<int[]> getAhdcKFTrackRows();
 
 }
