@@ -30,6 +30,7 @@ struct Histograms {
     TH1D* H1_track_theta; ///< track theta
     TH1D* H1_track_phi; /// track phi
     TH1D* H1_track_nhits; /// number of hits per track
+    TH1D* H1_track_chi2; /// track chi2
     TH2D* H2_track_corr_p_dEdx; ///< correlation p versus dEdx for the tracks
 
     // --- hit
@@ -41,6 +42,8 @@ struct Histograms {
     TH1D* H1_electron_theta; ///< electron theta
     TH1D* H1_electron_phi; /// electron phi
 
+    TH1D* H1_delta_vz;
+
     /// Constructor
     Histograms() {
         // --- track
@@ -49,6 +52,7 @@ struct Histograms {
         H1_track_theta = new TH1D("track_theta", "track theta; #theta (deg); count", 100, 0, 180);
         H1_track_phi = new TH1D("track_phi", "track phi; #phi (deg); count", 100, 0, 360);
         H1_track_nhits = new TH1D("track_nhits", "Number of hits per track; nhits; count", 17, 0, 17);
+        H1_track_chi2 = new TH1D("track_chi2", "chi2; chi2; count", 100, 0, 15);
         H2_track_corr_p_dEdx = new TH2D("track_corr_p_dEdx", "track : dE/dx versus p; p (GeV); dE/dx (MeV/mm)", 50, 0, 1.0, 50, 0, 180);
 
         // --- phi
@@ -60,6 +64,8 @@ struct Histograms {
         H1_electron_theta = new TH1D("electron_theta", "electron theta; #theta (deg); count", 100, 0, 40);
         H1_electron_phi = new TH1D("electron_phi", "electron phi; #phi (deg); count", 100, 0, 360);
 
+        H1_delta_vz = new TH1D("delta_vz", "delta vertex; #Delta vz (cm); count", 100, -16, 16);
+
     }
 
     /// Destructor
@@ -70,6 +76,7 @@ struct Histograms {
         delete H1_track_theta;
         delete H1_track_phi;
         delete H1_track_nhits;
+        delete H1_track_chi2;
         delete H2_track_corr_p_dEdx;
 
         // --- hit
@@ -80,6 +87,8 @@ struct Histograms {
         delete H1_electron_p;
         delete H1_electron_theta;
         delete H1_electron_phi;
+
+        delete H1_delta_vz;
     }
 
     /// @brief Save as ROOT file
@@ -92,6 +101,7 @@ struct Histograms {
         H1_track_theta->Write("track_theta");
         H1_track_phi->Write("track_phi");
         H1_track_nhits->Write("track_nhits");
+        H1_track_chi2->Write("track_chi2");
         H2_track_corr_p_dEdx->Write("track_corr_p_dEdx");
 
         // --- hit
@@ -102,6 +112,8 @@ struct Histograms {
         H1_electron_p->Write("electron_p");
         H1_electron_theta->Write("electron_theta");
         H1_electron_phi->Write("electron_phi");
+
+        H1_delta_vz->Write("delta_vz");
 
     }
 };

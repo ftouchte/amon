@@ -90,68 +90,86 @@ int main(int argc, char const *argv[]) {
             event.getStructure(hitBank);
             event.getStructure(recBank);
 
-            /// --- Loop over track
-            for (int i = 0; i < trackBank.getRows(); i++) {
-                int trackid = trackBank.getInt("trackid", i);
-                int nhits = trackBank.getInt("n_hits", i);
-
-                if (nhits < 6) continue;
-                
-                double vz = trackBank.getFloat("z", i) * Units::mm;
-                double px = trackBank.getFloat("px", i) * Units::MeV;
-                double py = trackBank.getFloat("py", i) * Units::MeV;
-                double pz = trackBank.getFloat("pz", i) * Units::MeV;
-                double dEdx = trackBank.getFloat("dEdx", i) * Units::MeV/Units::mm;
-                // double dEdx = trackBank.getFloat("dEdx", i);
-
-                double p = sqrt(px*px + py*py + pz*pz);
-                double theta = acos(pz/p);
-                double phi = atan2(py, px);
-
-                Histos->H1_track_p->Fill(p);
-                Histos->H1_track_theta->Fill(theta / Units::deg); // read per degree to convert in degree
-                Histos->H1_track_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
-                Histos->H1_track_nhits->Fill(nhits);
-                Histos->H1_track_vz->Fill(vz);
-                Histos->H2_track_corr_p_dEdx->Fill(p, dEdx / (Units::MeV/Units::mm));
-
-                // Loop over hit for this track
-                for (int j = 0; j < hitBank.getRows(); j++) {
-                    if (hitBank.getInt("trackid", j) == trackid) {
-                        double residual = hitBank.getDouble("residual", j) * Units::mm;
-                        // double doca = hitBank.getDouble("doca", j) * Units::mm;
-                        // double time = hitBank.getDouble("time", j) * Units::ns;
-                        
-                        Histos->H1_hit_residual->Fill(residual / Units::mm);
-                    }
-                }
-
-            }
-
+            bool FT_flag = false;
+            
             /// --- Loop over electron
             for (int i = 0; i < recBank.getRows(); i++) {
                 // Look for electrons
                 if (recBank.getInt("pid", i) == 11) {
                     //int status = trackBank.getShort("status", i);
-                    double vz = recBank.getFloat("vz", i) * Units::cm;
-                    double px = recBank.getFloat("px", i) * Units::GeV;
-                    double py = recBank.getFloat("py", i) * Units::GeV;
-                    double pz = recBank.getFloat("pz", i) * Units::GeV;
+                    double vze = recBank.getFloat("vz", i) * Units::cm;
+                    int status = recBank.getShort("status", i);
+                    //printf("%f  ", recBank.getFloat("vz", i));
+                    // if (fabs(vze+3) < 1e-6) {
+                    //     FT_flag = true;
+                    //     recBank.show();
+                    // }
+                    if (abs(status)/1000 == 1) { // FT electron
+                        FT_flag = true;
+                        //recBank.show();
+                    }
 
-                    double p = sqrt(px*px + py*py + pz*pz);
-                    double theta = acos(pz/p);
-                    double phi = atan2(py, px);
 
-                    Histos->H1_electron_p->Fill(p);
-                    Histos->H1_electron_theta->Fill(theta / Units::deg); // read per degree to convert in degree
-                    Histos->H1_electron_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
-                    Histos->H1_electron_vz->Fill(vz);
+                    if (FT_flag) continue;
+                    {
+                        double px = recBank.getFloat("px", i) * Units::GeV;
+                        double py = recBank.getFloat("py", i) * Units::GeV;
+                        double pz = recBank.getFloat("pz", i) * Units::GeV;
+                        double p = sqrt(px*px + py*py + pz*pz);
+                        double theta = acos(pz/p);
+                        double phi = atan2(py, px);
+
+                        Histos->H1_electron_p->Fill(p);
+                        Histos->H1_electron_theta->Fill(theta / Units::deg); // read per degree to convert in degree
+                        Histos->H1_electron_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
+                        Histos->H1_electron_vz->Fill(vze);
+                    }
+                    
+                    /// --- Loop over track
+                    for (int i = 0; i < trackBank.getRows(); i++) {
+                        int trackid = trackBank.getInt("trackid", i);
+                        int nhits = trackBank.getInt("n_hits", i);
+
+                        if (nhits < 6) continue;
+                        
+                        double vz = trackBank.getFloat("z", i) * Units::mm;
+                        double px = trackBank.getFloat("px", i) * Units::MeV;
+                        double py = trackBank.getFloat("py", i) * Units::MeV;
+                        double pz = trackBank.getFloat("pz", i) * Units::MeV;
+                        double dEdx = trackBank.getFloat("dEdx", i) * Units::MeV/Units::mm;
+                        double chi2 = trackBank.getFloat("chi2", i);
+
+                        if (chi2 > 8) continue;
+
+                        double p = sqrt(px*px + py*py + pz*pz);
+                        double theta = acos(pz/p);
+                        double phi = atan2(py, px);
+
+                        Histos->H1_track_p->Fill(p);
+                        Histos->H1_track_theta->Fill(theta / Units::deg); // read per degree to convert in degree
+                        Histos->H1_track_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
+                        Histos->H1_track_nhits->Fill(nhits);
+                        Histos->H1_track_chi2->Fill(chi2);
+                        Histos->H1_track_vz->Fill(vz);
+                        Histos->H2_track_corr_p_dEdx->Fill(p, dEdx / (Units::MeV/Units::mm));
+
+                        Histos->H1_delta_vz->Fill(vze - vz);
+
+                        // Loop over hit for this track
+                        for (int j = 0; j < hitBank.getRows(); j++) {
+                            if (hitBank.getInt("trackid", j) == trackid) {
+                                double residual = hitBank.getDouble("residual", j) * Units::mm;
+                                // double doca = hitBank.getDouble("doca", j) * Units::mm;
+                                // double time = hitBank.getDouble("time", j) * Units::ns;
+                                
+                                Histos->H1_hit_residual->Fill(residual / Units::mm);
+                            }
+                        }
+
+                    }  
                     
                 }
             }
-
-            
-
 
         } // end loop over events for this file
 
