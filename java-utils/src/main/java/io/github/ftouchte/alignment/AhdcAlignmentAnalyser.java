@@ -248,7 +248,7 @@ public class AhdcAlignmentAnalyser {
             save_histo1D(h, null, layerOutDir + "/track_delta_phi.pdf");
         }
 
-        /// track delta vz
+        /// delta vz
         {
             H1F h = global_histos.h1_delta_vz;
             double mean = h.getMean();
@@ -256,6 +256,9 @@ public class AhdcAlignmentAnalyser {
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             h.setTitle(String.format("mean : %.5f, width : %.5f", mean, width));
             save_histo1D(h, null, layerOutDir + "/track_delta_vz.pdf");
+
+            results.mean_delta_vz = mean;
+            results.width_delta_vz = width;
         }
 
     }
@@ -1563,6 +1566,75 @@ public class AhdcAlignmentAnalyser {
     } // end scan ahdc position
 
     /**
+     * New AHDC position scan: the oversable is delta vz versus clas alignment
+     * @param inFiles HIPO files
+     * @param outDir output directory
+     * @param flag_do_fit does KF perform a fit ?
+     * @throws IOException 
+     * @throws InterruptedException 
+     */
+    static void new_ahdc_position_scan(ArrayList<String> inFiles, String outDir, boolean flag_do_fit) throws IOException, InterruptedException {
+
+        // --- Results over iterations
+        ResultsOverIterations results = new ResultsOverIterations();
+
+        check_output_dir(outDir + "/initialConfig");
+        results.screenshot(outDir + "/initialConfig");
+
+        /// --- Obsevables
+        GraphErrors g_mean = new GraphErrors("mean-angle-over-position");
+        g_mean.setTitle("Mean delta vz versus clas alignment");
+        g_mean.setTitleX("clas alignment");
+        g_mean.setTitleY("mean delta vz");
+        GraphErrors g_width = new GraphErrors("angle-deviation-over-position");
+        g_width.setTitle("Width delta vz versus clas alignment");
+        g_width.setTitleX("clas alignment");
+        g_width.setTitleY("width delta vz");
+
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/results.txt"));
+        writer.write("# clas alignment, mean delta vz, width delta vz");
+        writer.newLine();
+        writer.newLine();
+
+        /// --- Loop over criteria
+        for (int step = 30; step < 80; step++) {
+
+            String stepDir = outDir + "/" + step;
+            check_output_dir(stepDir);
+
+            double clas_alignment = 1.0*step; // mm
+
+            // run iteration
+            System.out.println("\033[1;32m ########### Start iteration : \033[0m clas_alignment : " + clas_alignment);
+
+            run(0, results, inFiles, outDir, +75, false, flag_do_fit);
+
+            double mean = results.mean_delta_vz;
+            double width = results.width_delta_vz;
+            
+            g_mean.addPoint(clas_alignment, mean, 0,0);
+            g_width.addPoint(clas_alignment, width, 0,0);
+
+            String line = String.format("%f   %f   %f", clas_alignment, mean, width);
+            writer.write(line);
+            writer.newLine();
+
+        } // end loop over criteria / nb iterations
+        writer.close();
+
+        { // Mean
+            EmbeddedCanvas c = new EmbeddedCanvas(800, 600);
+            c.draw(g_mean);
+            c.save(outDir + "/delta_vz_mean_versus_clas_alignment.pdf");
+        }
+        { // Width
+            EmbeddedCanvas c = new EmbeddedCanvas(800, 600);
+            c.draw(g_width);
+            c.save(outDir + "/delta_vz_width_versus_clas_alignment.pdf");
+        }
+    }
+
+    /**
      * Wire alignment analysis
      * @param inFiles HIPO files
      * @param outDir output directory
@@ -1956,7 +2028,8 @@ public class AhdcAlignmentAnalyser {
         /// --- Choose the application
 
         //scan_ahdc_position(args, false);
-        layer_alignment(inFiles, outDir, true);
+        new_ahdc_position_scan(inFiles, outDir, true);
+        //layer_alignment(inFiles, outDir, true);
         //wire_alignment(inFiles, outDir, true);
         //time2distance_calibration(inFiles, outDir, true);
 

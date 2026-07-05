@@ -66,13 +66,11 @@ public class ResultsOverIterations {
         cp.disconnect();
     }
     
+    //-----------
     // layers
+    //-----------
     public double[] layer_angles = new double[8];
     public double[] layer_residuals = new double[8];
-
-    // old
-    // public double[] layer_angles_start = {0.8609, 1.0181, 0.5654, 0.7998, 0.3913, 0.5151, 0.2749, 0.5057};
-    // public double[] layer_angles_end   = {0.8412, 0.8157, 0.4084, 0.7939, 0.4747, 0.5086, 0.3518, 0.2534};
 
     public double[] layer_angles_start = new double[8];
     public double[] layer_angles_end   = new double[8];
@@ -109,6 +107,12 @@ public class ResultsOverIterations {
         WIRE, // update the wire angles
         T2D, // update the tim2distance
     }
+
+    //-------------
+    // Global
+    //-------------
+    public double mean_delta_vz = 0;
+    public double width_delta_vz = 0;
 
     public void save_layer_angles_to_file(String outDir) throws IOException, InterruptedException {
         BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/layer_angles.txt"));
