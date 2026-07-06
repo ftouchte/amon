@@ -1604,7 +1604,7 @@ public class AhdcAlignmentAnalyser {
         writer.newLine();
 
         /// --- Loop over criteria
-        for (int step = 25; step < 80; step++) {
+        for (int step = 60; step < 80; step++) {
 
             String stepDir = outDir + "/" + step;
             check_output_dir(stepDir);
@@ -2097,7 +2097,8 @@ public class AhdcAlignmentAnalyser {
 
         // 4) New ahdc position scan
         new_ahdc_position_scan(inFiles, outDir, true, 
-            AlertGoodTrackFinder::new,
+            //AlertGoodTrackFinder::new,
+            AlertElasticAnalyser::new,
             AhdcAlignmentAnalyser::analyse_global_histograms
         );
 
