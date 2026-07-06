@@ -93,7 +93,7 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_Q2_sel = new TH1D("Q2_sel", "Q^{2}; Q^{2} (GeV^{2}); count", 50, 0, 0.4);
     TH1D* H1_nu_all = new TH1D("nu", "#nu = E - E'; #nu (GeV); count", 50, 0, 2.24);
     TH1D* H1_nu_sel = new TH1D("nu_sel", "#nu = E - E'; #nu (GeV); count", 50, 0, 2.24);
-    TH1D* H1_vz = new TH1D("vz_electron", "vz; vz (cm); count", 50, -60, 40);
+    TH1D* H1_vz = new TH1D("vz_electron", "vz; vz (cm); count", 100, -60, 40);
     // ahdc track
     TH1D* H1_delta_phi_nosym = new TH1D("delta_phi_nosym", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -360, 360); 
     TH1D* H1_delta_phi_nosym_sel = new TH1D("delta_phi_nosym_sel", "#Delta #phi = #phi_{e} - #phi_{t}; #Delta #phi (deg); count", 100, -360, 360); 
