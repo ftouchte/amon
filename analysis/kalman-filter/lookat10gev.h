@@ -47,7 +47,7 @@ struct Histograms {
     /// Constructor
     Histograms() {
         // --- track
-        H1_track_vz = new TH1D("track_vz", "track vertex; vz (cm); count", 100, -16, 16);
+        H1_track_vz = new TH1D("track_vz", "track vertex; vz (cm); count", 100, -25, 25);
         H1_track_p = new TH1D("track_p", "track momentum; p (GeV); count", 100, 0, 1.0);
         H1_track_theta = new TH1D("track_theta", "track theta; #theta (deg); count", 100, 0, 180);
         H1_track_phi = new TH1D("track_phi", "track phi; #phi (deg); count", 100, 0, 360);
@@ -59,7 +59,7 @@ struct Histograms {
         H1_hit_residual = new TH1D("hit_residual", "residual ; residual (mm); count", 100, -3, 3);
 
         // --- electron
-        H1_electron_vz = new TH1D("electron_vz", "electron vertex; vz (cm); count", 100, -16, 16);
+        H1_electron_vz = new TH1D("electron_vz", "electron vertex; vz (cm); count", 100, -40, 25);
         H1_electron_p = new TH1D("electron_p", "electron momentum; p (GeV); count", 100, 0, 10.6);
         H1_electron_theta = new TH1D("electron_theta", "electron theta; #theta (deg); count", 100, 0, 40);
         H1_electron_phi = new TH1D("electron_phi", "electron phi; #phi (deg); count", 100, 0, 360);
