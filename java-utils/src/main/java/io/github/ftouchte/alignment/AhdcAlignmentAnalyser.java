@@ -1598,9 +1598,8 @@ public class AhdcAlignmentAnalyser {
         g_width.setTitleX("clas alignment");
         g_width.setTitleY("width delta vz");
 
-        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/results.txt"));
-        writer.write("# clas alignment, mean delta vz, width delta vz");
-        writer.newLine();
+        BufferedWriter writer = new BufferedWriter(new FileWriter(outDir + "/results.csv"));
+        writer.write("alignment,mean,peak,width");
         writer.newLine();
 
         /// --- Loop over criteria
@@ -1624,7 +1623,7 @@ public class AhdcAlignmentAnalyser {
             g_mean.addPoint(clas_alignment, mean, 0,0);
             g_width.addPoint(clas_alignment, width, 0,0);
 
-            String line = String.format("%f   %f   %f   %f", clas_alignment, mean, peak, width);
+            String line = String.format("%f,%f,%f,%f", clas_alignment, mean, peak, width);
             writer.write(line);
             writer.newLine();
             System.out.println("* scan results : " + line);
@@ -2097,8 +2096,8 @@ public class AhdcAlignmentAnalyser {
 
         // 4) New ahdc position scan
         new_ahdc_position_scan(inFiles, outDir, true, 
-            //AlertGoodTrackFinder::new,
-            AlertElasticAnalyser::new,
+            AlertGoodTrackFinder::new,
+            //AlertElasticAnalyser::new,
             AhdcAlignmentAnalyser::analyse_global_histograms
         );
 
