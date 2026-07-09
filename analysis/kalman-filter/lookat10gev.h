@@ -38,6 +38,7 @@ struct Histograms {
 
     // --- electron
     TH1D* H1_electron_vz; ///< electron vertex
+    TH1D* H1_electron_vz_nocut; ///< electron vertex no cut
     TH1D* H1_electron_p; ///< electron momentum
     TH1D* H1_electron_theta; ///< electron theta
     TH1D* H1_electron_phi; /// electron phi
@@ -60,6 +61,7 @@ struct Histograms {
 
         // --- electron
         H1_electron_vz = new TH1D("electron_vz", "electron vertex; vz (cm); count", 100, -40, 25);
+        H1_electron_vz_nocut = new TH1D("electron_vz_nocut", "electron vertex; vz (cm); count", 100, -60, 45);
         H1_electron_p = new TH1D("electron_p", "electron momentum; p (GeV); count", 100, 0, 10.6);
         H1_electron_theta = new TH1D("electron_theta", "electron theta; #theta (deg); count", 100, 0, 40);
         H1_electron_phi = new TH1D("electron_phi", "electron phi; #phi (deg); count", 100, 0, 360);
@@ -84,6 +86,7 @@ struct Histograms {
         
         // --- electron
         delete H1_electron_vz;
+        delete H1_electron_vz_nocut;
         delete H1_electron_p;
         delete H1_electron_theta;
         delete H1_electron_phi;
@@ -109,6 +112,7 @@ struct Histograms {
 
         // --- electron
         H1_electron_vz->Write("electron_vz");
+        H1_electron_vz_nocut->Write("electron_vz_nocut");
         H1_electron_p->Write("electron_p");
         H1_electron_theta->Write("electron_theta");
         H1_electron_phi->Write("electron_phi");

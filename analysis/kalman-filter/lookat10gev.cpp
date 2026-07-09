@@ -104,6 +104,7 @@ int main(int argc, char const *argv[]) {
                     //     FT_flag = true;
                     //     recBank.show();
                     // }
+                    Histos->H1_electron_vz_nocut->Fill(vze);
                     if (abs(status)/1000 == 1) { // FT electron
                         FT_flag = true;
                         //recBank.show();
