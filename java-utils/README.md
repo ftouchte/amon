@@ -1,11 +1,11 @@
 # Dependencies
 
-One needs to install coatjava and `ahdc/alignment-v?` branch
+One needs to install coatjava and move to `ahdc/alignment-v3` branch
 
 ```shell
 get clone https://github.com/ftouchte/coatjava.git
 cd coatjava
-git checkout ahdc/alignment-v?
+git checkout ahdc/alignment-v3
 ```
 
 Each time the modifications in **jeffersonlab/coatjava:development** will be merge in the `ahdc/alignment-v?` branch, one needs to config the path in the `pom.xml` file
