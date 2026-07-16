@@ -28,6 +28,11 @@ sans toucher à l'installation système ni à d'autres projets.
 ## Installation
 
 ```bash
+#(bash)
+# 0. Unset PYTHONPATH
+echo $PYTHONPATH
+unset PYTHONPATH
+
 # 1. Se placer dans le dossier du projet
 cd /work/clas12/users/touchte/amon/python-utils
 
