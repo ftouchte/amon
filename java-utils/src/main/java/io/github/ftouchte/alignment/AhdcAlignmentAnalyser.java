@@ -49,6 +49,7 @@ import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
 
 import io.github.ftouchte.alignment.ResultsOverIterations.CCDB_TYPE;
+import io.github.ftouchte.filtering.AlertElasticAnalyser;
 import io.github.ftouchte.filtering.AlertGoodTrackFinder;
 import io.github.ftouchte.filtering.AlertTrackSelector;
 import io.github.ftouchte.fitting.CrystalBall;
@@ -612,7 +613,7 @@ public class AhdcAlignmentAnalyser {
             for (int pt = 0; pt < gr_bis.getDataSize(0)-2; pt++) { // exclude the 2 end points
                 double x = gr_bis.getDataX(pt);
                 double y = gr_bis.getDataY(pt);
-                if (x < 230) { // filtering
+                if (x > 70 && x < 230) { // filtering
                     xList.add(x);
                     yList.add(y);
                 }
@@ -1889,22 +1890,22 @@ public class AhdcAlignmentAnalyser {
                 double[] p = params.toArray();
 
                 // cf. eval_t2d()
-                p[6] = Math.min(Math.max(p[6], 0), 50); // transition time t1
-                p[8] = Math.min(Math.max(p[8], p[6]), 150); // transition time t2
-                p[7] = Math.min(Math.max(p[7], 0.5), 15); // should be small
-                p[9] = Math.min(Math.max(p[9], 0.5), 30); // should be small
+                p[6] = Math.min(Math.max(p[6], 0), 150); // transition time t1
+                p[8] = Math.min(Math.max(p[8], p[6]), 200); // transition time t2
+                p[7] = Math.min(Math.max(p[7], 0.5), 2); // should be small
+                p[9] = Math.min(Math.max(p[9], 0.5), 2); // should be small
 
-                p[0] = Math.min(Math.max(p[0], 0), 0.5); // int
+                p[0] = Math.min(Math.max(p[0], -1), 3); // int
                 p[1] = Math.min(Math.max(p[1], 0), 0.1); // slope : mm / ms
 
                 //double d1 = p[0]+p[1]*p[6];
                 //p[2] = Math.min(Math.max(p[2], 0.9*d1), 1.1*d1);
-                p[2] = Math.min(Math.max(p[2], 0), 2.5);
+                p[2] = Math.min(Math.max(p[2], -1), 3);
                 p[3] = Math.min(Math.max(p[3], 0), 0.1); // slope : mm / ms
 
                 //double d2 = p[2]+p[3]*p[8];
                 //p[4] = Math.min(Math.max(p[4], 0.9*d2), 1.1*d2); // int
-                p[4] = Math.min(Math.max(p[4], 0), 2.5);
+                p[4] = Math.min(Math.max(p[4], -1), 3);
                 p[5] = Math.min(Math.max(p[5], 0), 0.1); // slope : mm / ms
 
                 // Contrainte de monotonicité : vérifier sur une grille
@@ -2083,20 +2084,20 @@ public class AhdcAlignmentAnalyser {
         //     //,AhdcAlignmentAnalyser::analyse_wire_2D_histograms
         // );
 
-        // // 3) time2distance calibration
-        // time2distance_calibration(inFiles, outDir, false, 
-        //     AlertElasticAnalyser::new,
-        //     AhdcAlignmentAnalyser::analyse_global_histograms,
-        //     AhdcAlignmentAnalyser::analyse_layer_histograms,
-        //     AhdcAlignmentAnalyser::analyse_layer_2D_histograms
-        // );
+        // 3) time2distance calibration
+        time2distance_calibration(inFiles, outDir, true, 
+            AlertElasticAnalyser::new,
+            AhdcAlignmentAnalyser::analyse_global_histograms,
+            AhdcAlignmentAnalyser::analyse_layer_histograms,
+            AhdcAlignmentAnalyser::analyse_layer_2D_histograms
+        );
 
         // 4) New ahdc position scan
-        new_ahdc_position_scan(inFiles, outDir, true, 
-            AlertGoodTrackFinder::new,
-            //AlertElasticAnalyser::new,
-            AhdcAlignmentAnalyser::analyse_global_histograms
-        );
+        // new_ahdc_position_scan(inFiles, outDir, true, 
+        //     AlertGoodTrackFinder::new,
+        //     //AlertElasticAnalyser::new,
+        //     AhdcAlignmentAnalyser::analyse_global_histograms
+        // );
 
         //scan_ahdc_position(args, false);
         //new_ahdc_position_scan(inFiles, outDir, true);
@@ -2106,6 +2107,9 @@ public class AhdcAlignmentAnalyser {
 
         // usage
         // time /w/hallb-scshelf2102/clas12/users/touchte/amon/scripts/hipo/run-ahdc-aligner.sh -i /volatile/clas12/touchte/new-translation-table/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-834.hipo -o /lustre24/expphy/volatile/clas12/touchte/new-alignment/wire_alignment_following -ncpu 60 > logger.txt 2>&1
+
+        // 3) T2D calibration
+        // /w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/alignment/run-ahdc-aligner.sh -i /volatile/clas12/touchte/sync-coat/reconstructed/022712/elastic-filtered/merged/rec_clas_022712.evio.0-99.hipo -o $PWD/attempt-5 -ncpu 40 -nevts 100000 > & logger_t2d.txt &
     }
 
 }
