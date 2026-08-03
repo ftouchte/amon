@@ -33,6 +33,17 @@
 #include "Math/PdfFuncMathCore.h"
 #include "TText.h"
 #include "THStack.h"
+#include "TTree.h"
+#include "TMath.h"
+
+
+double ahdcPulse(double x, double mpv, double sigma, double norm, double constant) {
+    return constant + norm*TMath::Landau(x, mpv, sigma, true);
+}
+
+Double_t fitFunction(Double_t *x, Double_t *par) {
+    return ahdcPulse(x[0], par[0], par[1], par[2], par[3]);
+}
 
 
 int main(int argc, char const *argv[]) {
@@ -51,9 +62,34 @@ int main(int argc, char const *argv[]) {
     /// --- Histograms
     Histograms* Histos = new Histograms();
 
+    TTree *tree = new TTree("T", "ADC versus Time");
 
-    /// --- Event counters
-    long unsigned int nevents =0;
+    double residual;
+    double time;
+    int adc;
+    int raw_adc;
+    double tot;
+    double leadingEdgeTime;
+    int wfType;
+
+    tree->Branch("residual", &residual, "residual/D");
+    tree->Branch("time", &time, "time/D");
+    tree->Branch("leadingEdgeTime", &leadingEdgeTime, "leadingEdgeTime/D");
+    tree->Branch("tot", &tot, "tot/D");
+    tree->Branch("adc", &adc, "adc/I");
+    tree->Branch("raw_adc", &raw_adc, "raw_adc/I");
+    tree->Branch("wfType", &wfType, "wfType/I");
+
+
+    int nb_fits = 0;
+
+    TFile *f = new TFile(output.c_str(), "RECREATE");
+    TDirectory * fit_dir = f->mkdir("pulse_fitted");
+    fit_dir->cd();
+
+
+
+    
 
     /// --- Loop over files
     int nfiles = 0;
@@ -72,6 +108,9 @@ int main(int argc, char const *argv[]) {
         hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
         hipo::bank  recBank(factory.getSchema("REC::Particle"));
         hipo::event event;
+        
+        /// --- Event counters
+        long unsigned int nevents =0;
 
         /// --- Loop over events
         while( reader.next()){
@@ -90,7 +129,7 @@ int main(int argc, char const *argv[]) {
             event.getStructure(hitBank);
             event.getStructure(recBank);
 
-            bool FT_flag = false;
+            //bool FT_flag = false;
             
             /// --- Loop over electron
             for (int i = 0; i < recBank.getRows(); i++) {
@@ -98,20 +137,19 @@ int main(int argc, char const *argv[]) {
                 if (recBank.getInt("pid", i) == 11) {
                     //int status = trackBank.getShort("status", i);
                     double vze = recBank.getFloat("vz", i) * Units::cm;
-                    int status = recBank.getShort("status", i);
+                    //int status = recBank.getShort("status", i);
                     //printf("%f  ", recBank.getFloat("vz", i));
                     // if (fabs(vze+3) < 1e-6) {
                     //     FT_flag = true;
                     //     recBank.show();
                     // }
                     Histos->H1_electron_vz_nocut->Fill(vze);
-                    if (abs(status)/1000 == 1) { // FT electron
-                        FT_flag = true;
-                        //recBank.show();
-                    }
+                    // if (abs(status)/1000 == 1) { // FT electron
+                    //     FT_flag = true;
+                    //     //recBank.show();
+                    // }
+                    // if (FT_flag) continue;
 
-
-                    if (FT_flag) continue;
                     {
                         double px = recBank.getFloat("px", i) * Units::GeV;
                         double py = recBank.getFloat("py", i) * Units::GeV;
@@ -128,48 +166,108 @@ int main(int argc, char const *argv[]) {
                     
                     /// --- Loop over track
                     for (int i = 0; i < trackBank.getRows(); i++) {
-                        int trackid = trackBank.getInt("trackid", i);
-                        int nhits = trackBank.getInt("n_hits", i);
-
-                        if (nhits < 6) continue;
                         
-                        double vz = trackBank.getFloat("z", i) * Units::mm;
-                        double px = trackBank.getFloat("px", i) * Units::MeV;
-                        double py = trackBank.getFloat("py", i) * Units::MeV;
-                        double pz = trackBank.getFloat("pz", i) * Units::MeV;
-                        double dEdx = trackBank.getFloat("dEdx", i) * Units::MeV/Units::mm;
+                        int nhits = trackBank.getInt("n_hits", i);
                         double chi2 = trackBank.getFloat("chi2", i);
 
-                        if (chi2 > 8) continue;
+                        if (nhits >= 7 && chi2 < 8) {
+                        
+                            double vz = trackBank.getFloat("z", i) * Units::mm;
+                            double px = trackBank.getFloat("px", i) * Units::MeV;
+                            double py = trackBank.getFloat("py", i) * Units::MeV;
+                            double pz = trackBank.getFloat("pz", i) * Units::MeV;
+                            double dEdx = trackBank.getFloat("dEdx", i) * Units::MeV/Units::mm;
+                            
 
-                        double p = sqrt(px*px + py*py + pz*pz);
-                        double theta = acos(pz/p);
-                        double phi = atan2(py, px);
+                            
 
-                        Histos->H1_track_p->Fill(p);
-                        Histos->H1_track_theta->Fill(theta / Units::deg); // read per degree to convert in degree
-                        Histos->H1_track_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
-                        Histos->H1_track_nhits->Fill(nhits);
-                        Histos->H1_track_chi2->Fill(chi2);
-                        Histos->H1_track_vz->Fill(vz);
-                        Histos->H2_track_corr_p_dEdx->Fill(p, dEdx / (Units::MeV/Units::mm));
+                            double p = sqrt(px*px + py*py + pz*pz);
+                            double theta = acos(pz/p);
+                            double phi = atan2(py, px);
 
-                        Histos->H1_delta_vz->Fill(vze - vz);
+                            Histos->H1_track_p->Fill(p);
+                            Histos->H1_track_theta->Fill(theta / Units::deg); // read per degree to convert in degree
+                            Histos->H1_track_phi->Fill(phi > 0 ? phi / Units::deg : 360 + phi / Units::deg);
+                            Histos->H1_track_nhits->Fill(nhits);
+                            Histos->H1_track_chi2->Fill(chi2);
+                            Histos->H1_track_vz->Fill(vz);
+                            Histos->H2_track_corr_p_dEdx->Fill(p, dEdx / (Units::MeV/Units::mm));
 
-                        // Loop over hit for this track
-                        for (int j = 0; j < hitBank.getRows(); j++) {
-                            if (hitBank.getInt("trackid", j) == trackid) {
-                                double residual = hitBank.getDouble("residual", j) * Units::mm;
-                                // double doca = hitBank.getDouble("doca", j) * Units::mm;
-                                // double time = hitBank.getDouble("time", j) * Units::ns;
-                                
-                                Histos->H1_hit_residual->Fill(residual / Units::mm);
-                            }
-                        }
+                            Histos->H1_delta_vz->Fill(vze - vz);
 
-                    }  
+                            // Loop over hit for this track
+                            int trackid = trackBank.getInt("trackid", i);
+                            for (int j = 0; j < hitBank.getRows(); j++) {
+                                if (hitBank.getInt("trackid", j) == trackid) {
+                                    residual = hitBank.getDouble("residual", j);
+                                    time = hitBank.getDouble("time", j);
+                                    
+                                    
+                                    int adcRow = hitBank.getShort("id", j) - 1;
+                                    adc = hitBank.getInt("adc", j);
+                                    raw_adc = adcBank.getInt("ADC", adcRow);
+                                    tot = adcBank.getFloat("timeOverThreshold", adcRow);
+                                    leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", adcRow);
+                                    wfType = adcBank.getShort("wfType", adcRow);
+
+                                    //printf("rawdADC %d , calibrated ADC : %d \n", rawAdc, adc);
+
+                                    tree->Fill();
+
+
+                                    Histos->H1_hit_residual->Fill(residual);
+                                    Histos->H1_hit_adc->Fill(raw_adc);
+                                    Histos->H1_hit_time->Fill(time);
+                                    Histos->H1_hit_leadingEdgeTime->Fill(leadingEdgeTime);
+                                    Histos->H1_hit_tot->Fill(tot);
+
+                                    Histos->H2_hit_adc_vs_time->Fill(adc, time);
+                                    Histos->H2_hit_adc_vs_leadingEdgeTime->Fill(adc, leadingEdgeTime);
+                                    Histos->H2_hit_adc_vs_tot->Fill(adc, tot);
+                                    Histos->H2_hit_time_vs_tot->Fill(time, tot);
+
+                                    // saturated signal
+                                    if (wfType == 1) {
+                                        int smax = 0;
+                                        TGraph * gr = new TGraph(20);
+                                        for (int bin  = 0; bin < 20; bin++) {
+                                            double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
+                                            if (s > smax) smax = s;
+                                            //gr->SetPoint(bin, bin*48.0, s);
+                                        }
+                                        // fill points and exclused plateau
+                                        for (int bin  = 0; bin < 20; bin++) {
+                                            double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
+                                            if (s < 0.9*smax) {
+                                                gr->SetPoint(bin, bin*48.0, s);
+                                            }
+                                        }
+                                        nb_fits++;
+                                        if (nb_fits > 10) continue;
+                                        TF1* fitFcn = new TF1("fitFcn", fitFunction, 0, 1000, 4);
+                                        fitFcn->SetParameter(0, adcBank.getFloat("time", adcRow)); // mpv --> timeMax
+                                        fitFcn->SetParameter(1, tot/4.017); // sigma --> ToT
+                                        fitFcn->SetParameter(2, adcBank.getInt("integral", adcRow)); // norm --> integral
+                                        fitFcn->SetParameter(3, adcBank.getFloat("ed", adcRow)); // pedestal
+
+                                        gr->Fit(fitFcn, "RQ");
+
+                                        fit_dir->cd();
+                                        gr->Write(TString::Format("fit_%d", nb_fits).Data());
+
+
+                                    }
+
+
+
+                                }
+                            } // loop over track hits
+
+                        } // track selection
+
+                    } // loop over tracks 
                     
-                }
+                } // electron selection
             }
 
         } // end loop over events for this file
@@ -182,8 +280,12 @@ int main(int argc, char const *argv[]) {
     
 
     /// --- Output
-    TFile *f = new TFile(output.c_str(), "RECREATE");
+    
     Histos->SaveIn(f);
+
+    TDirectory * tree_dir = f->mkdir("data");
+    tree_dir->cd();
+    tree->Write();
 
 
     f->Close();
