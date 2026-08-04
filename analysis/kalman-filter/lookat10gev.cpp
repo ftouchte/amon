@@ -45,6 +45,48 @@ Double_t fitFunction(Double_t *x, Double_t *par) {
     return ahdcPulse(x[0], par[0], par[1], par[2], par[3]);
 }
 
+TGraph* getSlopes(TGraph * gr) {
+    int N = gr->GetN();
+    TGraph * dgr = new TGraph(N-1);
+    for (int i = 0; i < N-1; i++) {
+        double x1 = gr->GetPointX(i);
+        double y1 = gr->GetPointY(i);
+        double x2 = gr->GetPointX(i+1);
+        double y2 = gr->GetPointY(i+1);
+        double slope = (y2-y1)/(x2-x1);
+        dgr->SetPoint(i,x1, slope);
+    }
+    dgr->SetMarkerColor(kRed);
+    dgr->SetMarkerStyle(20);
+    dgr->SetTitle("pulse slopes; time (ns); ADC");
+    
+    return dgr;
+}
+
+TCanvas* computeResiduals(TGraph* gr, TF1* fn) {
+    int N = gr->GetN();
+    TGraph* diff = new TGraph(N);
+    double chi2 = 0;
+    for (int i = 0; i < N; i++) {
+        double x = gr->GetPointX(i);
+        double y = gr->GetPointY(i);
+        double new_y = fn->Eval(x);
+        double dy = y - new_y;
+        diff->SetPoint(i, x, dy);
+        chi2 += pow(dy/y,2);
+    }
+    chi2 /= N;
+
+    TCanvas* c = new TCanvas();
+    diff->SetMarkerColor(kRed);
+    diff->SetMarkerStyle(20);
+    diff->SetTitle(TString::Format("Fit pulse residuals, chi2 %lf; time (ns); ADC", chi2).Data());
+    diff->Draw("APL");
+    
+    return c;
+    
+}
+
 
 int main(int argc, char const *argv[]) {
 
@@ -71,6 +113,7 @@ int main(int argc, char const *argv[]) {
     double tot;
     double leadingEdgeTime;
     int wfType;
+    double slope_max;
 
     tree->Branch("residual", &residual, "residual/D");
     tree->Branch("time", &time, "time/D");
@@ -79,16 +122,16 @@ int main(int argc, char const *argv[]) {
     tree->Branch("adc", &adc, "adc/I");
     tree->Branch("raw_adc", &raw_adc, "raw_adc/I");
     tree->Branch("wfType", &wfType, "wfType/I");
+    tree->Branch("slope_max", &slope_max, "slope_max/D");
 
 
-    int nb_fits = 0;
+    int nb_wf0 = 0;
+    int nb_wf1 = 0;
 
     TFile *f = new TFile(output.c_str(), "RECREATE");
-    TDirectory * fit_dir = f->mkdir("pulse_fitted");
-    fit_dir->cd();
-
-
-
+    TDirectory * pulse_dir = f->mkdir("pulse");
+    TDirectory * wf0_dir = pulse_dir->mkdir("wfType_0");
+    TDirectory * wf1_dir = pulse_dir->mkdir("wfType_1");
     
 
     /// --- Loop over files
@@ -212,9 +255,6 @@ int main(int argc, char const *argv[]) {
 
                                     //printf("rawdADC %d , calibrated ADC : %d \n", rawAdc, adc);
 
-                                    tree->Fill();
-
-
                                     Histos->H1_hit_residual->Fill(residual);
                                     Histos->H1_hit_adc->Fill(raw_adc);
                                     Histos->H1_hit_time->Fill(time);
@@ -229,36 +269,147 @@ int main(int argc, char const *argv[]) {
                                     // saturated signal
                                     if (wfType == 1) {
                                         int smax = 0;
-                                        TGraph * gr = new TGraph(20);
+                                        TGraph * gr = new TGraph();
+                                        TGraph * gr_nocut = new TGraph();
                                         for (int bin  = 0; bin < 20; bin++) {
                                             double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
                                             if (s > smax) smax = s;
-                                            //gr->SetPoint(bin, bin*48.0, s);
+                                            gr_nocut->AddPoint(bin*48.0, s);
                                         }
                                         // fill points and exclused plateau
                                         for (int bin  = 0; bin < 20; bin++) {
                                             double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
-                                            if (s < 0.9*smax) {
-                                                gr->SetPoint(bin, bin*48.0, s);
+                                            if (s < 0.95*smax && bin > 4) {
+                                                gr->AddPoint(bin*48.0, s);
                                             }
                                         }
-                                        nb_fits++;
-                                        if (nb_fits > 10) continue;
+                                        nb_wf1++;
+                                        if (nb_wf1 > 10) continue;
+                                        double timeMax = adcBank.getFloat("time", adcRow);
+                                        double integral = adcBank.getInt("integral", adcRow);
+                                        double ped = adcBank.getFloat("ped", adcRow);
                                         TF1* fitFcn = new TF1("fitFcn", fitFunction, 0, 1000, 4);
-                                        fitFcn->SetParameter(0, adcBank.getFloat("time", adcRow)); // mpv --> timeMax
+                                        fitFcn->SetParameter(0, timeMax); // mpv --> timeMax
                                         fitFcn->SetParameter(1, tot/4.017); // sigma --> ToT
-                                        fitFcn->SetParameter(2, adcBank.getInt("integral", adcRow)); // norm --> integral
-                                        fitFcn->SetParameter(3, adcBank.getFloat("ed", adcRow)); // pedestal
+                                        fitFcn->SetParameter(2, integral); // norm --> integral
+                                        fitFcn->SetParameter(3, ped); // pedestal
 
-                                        gr->Fit(fitFcn, "RQ");
+                                        //fitFcn->SetParLimits(0, 0, 1000);
+                                        //fitFcn->SetParLimits(1, 0, 1.5*tot);
+                                        //fitFcn->SetParLimits(2, 0, 5*integral);
+                                        //fitFcn->SetParLimits(3, -1e10, 2000);
+                                        
 
-                                        fit_dir->cd();
-                                        gr->Write(TString::Format("fit_%d", nb_fits).Data());
+                                        gr->Fit(fitFcn, "RW");
+
+                                        double mpv = fitFcn->GetParameter(0);
+                                        //double sigma = fitFcn->GetParameter(1);
+                                        //double norm = fitFcn->GetParameter(2);
+                                        double constant = fitFcn->GetParameter(3);
+                                        double new_adc = fitFcn->GetMaximum() - constant;
+                                        //printf("mpv : %lf \n", mpv);
+                                        double t1 = fitFcn->GetX(constant + 0.5*new_adc, 0, mpv);
+                                        double t2 = fitFcn->GetX(constant + 0.5*new_adc, mpv, 1000);
+                                        double new_tot = t2-t1;
+
+                                        
+                                        { // pulse
+                                            wf1_dir->cd();
+                                            TCanvas* c = new TCanvas();
+                                            gr->SetMarkerColor(kRed);
+                                            gr->SetMarkerStyle(20);
+                                            gr_nocut->SetTitle(TString::Format("ADC = %d, ToT = %.2lf --> fitted ADC = %.2lf, ToT = %.2lf, chi2 = %lf; time (ns); ADC", raw_adc, tot, new_adc, new_tot, fitFcn->GetChisquare()).Data());
+                                            gr_nocut->SetLineStyle(10);
+                                            gr_nocut->Draw("AL");
+                                            gr->Draw("PL");
+                                            c->Write(TString::Format("pulse_%d", nb_wf1).Data());
+                                        }
+
+                                        { // slope
+                                            wf1_dir->cd();
+                                            TCanvas* c = new TCanvas();
+                                            TGraph* gr_slope = getSlopes(gr_nocut);
+                                            gr_slope->Draw("APL");
+                                            c->Write(TString::Format("pulse_%d_slope", nb_wf1).Data());
+                                        }
+                                        // residuals
+                                        wf1_dir->cd();
+                                        computeResiduals(gr, fitFcn)->Write(TString::Format("pulse_%d_residuals", nb_wf1).Data());
 
 
+                                    } // wfType 1
+
+                                    else if (wfType == 0) {
+                                        TGraph * gr = new TGraph();
+                                        for (int bin  = 0; bin < 20; bin++) {
+                                            double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
+                                            gr->AddPoint(bin*48.0, s);
+                                        }
+
+                                        nb_wf0++;
+
+                                        { // pulse
+                                            wf0_dir->cd();
+                                            TCanvas* c = new TCanvas();
+                                            gr->SetMarkerColor(kRed);
+                                            gr->SetMarkerStyle(20);
+                                            gr->Draw("APL");
+                                            if (nb_wf0 <= 10)
+                                                c->Write(TString::Format("pulse_%d", nb_wf0).Data());
+                                        }
+
+                                        { // slope
+                                            wf0_dir->cd();
+                                            TCanvas* c = new TCanvas();
+                                            TGraph* gr_slope = getSlopes(gr);
+                                            gr_slope->SetMarkerColor(kRed);
+                                            gr_slope->SetMarkerStyle(20);
+                                            gr_slope->Draw("APL");
+                                            if (nb_wf0 <= 10)
+                                                c->Write(TString::Format("pulse_%d_slope", nb_wf0).Data());
+                                            
+                                            // extract max slope
+                                            int N = gr->GetN();
+                                            double ymax = 0;
+                                            //double xmax = 0;
+                                            for (int i = 0; i < N; i++) {
+                                                //double x = gr_slope->GetPointX(i);
+                                                double y = gr_slope->GetPointY(i);
+                                                if (y > ymax) {
+                                                    ymax = y;
+                                                    //xmax = x;
+                                                }
+                                            }
+                                            Histos->H2_hit_slope_vs_adc_wfType0->Fill(raw_adc, ymax);
+                                        }
+
+                                    } // end wfType 0
+
+                                    { // all types together
+                                        TGraph * gr = new TGraph();
+                                        for (int bin  = 0; bin < 20; bin++) {
+                                            double s = wfBank.getShort(TString::Format("s%d",bin+1).Data(), adcRow);
+                                            gr->AddPoint(bin*48.0, s);
+                                        }
+                                        TGraph* gr_slope = getSlopes(gr);
+                                        // extract max slope
+                                        int N = gr->GetN();
+                                        double ymax = 0;
+                                        //double xmax = 0;
+                                        for (int i = 0; i < N; i++) {
+                                            //double x = gr_slope->GetPointX(i);
+                                            double y = gr_slope->GetPointY(i);
+                                            if (y > ymax) {
+                                                ymax = y;
+                                                //xmax = x;
+                                            }
+                                        }
+                                        slope_max = ymax;
+                                        Histos->H2_hit_slope_vs_adc_allTypes->Fill(raw_adc, slope_max);
                                     }
 
-
+                                    // Fill tree
+                                    tree->Fill();
 
                                 }
                             } // loop over track hits
