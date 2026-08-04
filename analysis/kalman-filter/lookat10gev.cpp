@@ -58,7 +58,7 @@ TGraph* getSlopes(TGraph * gr) {
     }
     dgr->SetMarkerColor(kRed);
     dgr->SetMarkerStyle(20);
-    dgr->SetTitle("pulse slopes; time (ns); ADC");
+    dgr->SetTitle("pulse slopes; time (ns); slope (ADC/ns)");
     
     return dgr;
 }
@@ -284,7 +284,7 @@ int main(int argc, char const *argv[]) {
                                             }
                                         }
                                         nb_wf1++;
-                                        if (nb_wf1 > 10) continue;
+                                        //if (nb_wf1 > 10) continue;
                                         double timeMax = adcBank.getFloat("time", adcRow);
                                         double integral = adcBank.getInt("integral", adcRow);
                                         double ped = adcBank.getFloat("ped", adcRow);
@@ -299,17 +299,24 @@ int main(int argc, char const *argv[]) {
                                         //fitFcn->SetParLimits(2, 0, 5*integral);
                                         //fitFcn->SetParLimits(3, -1e10, 2000);
                                         
-
-                                        gr->Fit(fitFcn, "RW");
-
+                                        if (nb_wf1 <= 10) {
+                                            gr->Fit(fitFcn, "RW");
+                                        }
+                                        else {
+                                            gr->Fit(fitFcn, "RQW");
+                                        }
+                                            
                                         double mpv = fitFcn->GetParameter(0);
                                         //double sigma = fitFcn->GetParameter(1);
                                         //double norm = fitFcn->GetParameter(2);
                                         double constant = fitFcn->GetParameter(3);
                                         double new_adc = fitFcn->GetMaximum() - constant;
                                         //printf("mpv : %lf \n", mpv);
+                                        Int_t oldLevel = gErrorIgnoreLevel; // ignore non fatal error
+                                        gErrorIgnoreLevel = kFatal;
                                         double t1 = fitFcn->GetX(constant + 0.5*new_adc, 0, mpv);
                                         double t2 = fitFcn->GetX(constant + 0.5*new_adc, mpv, 1000);
+                                        gErrorIgnoreLevel = oldLevel; // end ignore non fatal error
                                         double new_tot = t2-t1;
 
                                         
@@ -322,7 +329,8 @@ int main(int argc, char const *argv[]) {
                                             gr_nocut->SetLineStyle(10);
                                             gr_nocut->Draw("AL");
                                             gr->Draw("PL");
-                                            c->Write(TString::Format("pulse_%d", nb_wf1).Data());
+                                            if (nb_wf1 <= 10)
+                                                c->Write(TString::Format("pulse_%d", nb_wf1).Data());
                                         }
 
                                         { // slope
@@ -330,11 +338,13 @@ int main(int argc, char const *argv[]) {
                                             TCanvas* c = new TCanvas();
                                             TGraph* gr_slope = getSlopes(gr_nocut);
                                             gr_slope->Draw("APL");
-                                            c->Write(TString::Format("pulse_%d_slope", nb_wf1).Data());
+                                            if (nb_wf1 <= 10)
+                                                c->Write(TString::Format("pulse_%d_slope", nb_wf1).Data());
                                         }
                                         // residuals
                                         wf1_dir->cd();
-                                        computeResiduals(gr, fitFcn)->Write(TString::Format("pulse_%d_residuals", nb_wf1).Data());
+                                        if (nb_wf1 <= 10)
+                                            computeResiduals(gr, fitFcn)->Write(TString::Format("pulse_%d_residuals", nb_wf1).Data());
 
 
                                     } // wfType 1
@@ -426,13 +436,59 @@ int main(int argc, char const *argv[]) {
 
     } // loop over files
 
-
-
-    
-
     /// --- Output
     
     Histos->SaveIn(f);
+
+
+    /// --- post processing
+    if (f->cd("time_versus_adc")) {
+        f->mkdir("time_versus_adc/fits");
+    }
+    TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_wfType0->Clone("adc_vs_slopemax");
+    TGraphErrors* gr = new TGraphErrors();
+    int nbins = h2->GetXaxis()->GetNbins();
+    int step = 5;
+    int bin = 0;
+    while (bin < nbins && bin < nbins-3*step && bin > 1*step) {
+        int binSup = std::min(bin+step, nbins);
+        TH1D* h_tmp = h2->ProjectionY(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+        // fit
+        h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - 2*h_tmp->GetStdDev(), h_tmp->GetMean() + 2*h_tmp->GetStdDev());
+        TF1 *gaus = h_tmp->GetFunction("gaus");
+        double mean = gaus->GetParameter("Mean");
+        double sigma = gaus->GetParameter("Sigma");
+        // data
+        double xinf = h2->GetXaxis()->GetBinCenter(bin);
+        double xsup = h2->GetXaxis()->GetBinCenter(binSup);
+        double xval = 0.5*(xinf+xsup);
+        //double yval = h_tmp->GetMaximum();
+        // save
+        gr->AddPointError(xval, mean, 0, sigma);
+        if (f->cd("time_versus_adc/fits")) 
+            h_tmp->Write(h_tmp->GetName());
+        // go to next bin
+        bin += step;
+    }
+
+    if (f->cd("time_versus_adc")) {
+        TCanvas* c = new TCanvas();
+        h2->Draw("colz");
+        gr->SetMarkerColor(kBlack);
+        gr->SetMarkerStyle(21);
+        gr->SetLineWidth(2);
+        gr->SetLineColor(kRed);
+        gr->Draw("same");
+        c->Write("hit_slope_vs_adc_wfType0_fitted");
+    }
+    
+
+
+
+
+    
+
+    
 
     TDirectory * tree_dir = f->mkdir("data");
     tree_dir->cd();
