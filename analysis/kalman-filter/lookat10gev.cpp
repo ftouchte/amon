@@ -58,7 +58,7 @@ TGraph* getSlopes(TGraph * gr) {
     }
     dgr->SetMarkerColor(kRed);
     dgr->SetMarkerStyle(20);
-    dgr->SetTitle("pulse slopes; time (ns); slope (ADC/ns)");
+    dgr->SetTitle("Derivate of the pulse; time (ns); slope (ADC/ns)");
     
     return dgr;
 }
@@ -363,6 +363,7 @@ int main(int argc, char const *argv[]) {
                                             TCanvas* c = new TCanvas();
                                             gr->SetMarkerColor(kRed);
                                             gr->SetMarkerStyle(20);
+                                            gr->SetTitle(TString::Format("ADC = %d , time = %.2lf , ToT = %.2lf; time (ns); ADC", raw_adc, time, tot).Data());
                                             gr->Draw("APL");
                                             if (nb_wf0 <= 10)
                                                 c->Write(TString::Format("pulse_%d", nb_wf0).Data());
@@ -449,8 +450,8 @@ int main(int argc, char const *argv[]) {
     TGraphErrors* gr = new TGraphErrors();
     int nbins = h2->GetXaxis()->GetNbins();
     int step = 5;
-    int bin = 0;
-    while (bin < nbins && bin < nbins-3*step && bin > 1*step) {
+    int bin = 4;
+    while (bin < nbins && bin < nbins-3*step) {
         int binSup = std::min(bin+step, nbins);
         TH1D* h_tmp = h2->ProjectionY(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
         // fit
@@ -474,11 +475,23 @@ int main(int argc, char const *argv[]) {
     if (f->cd("time_versus_adc")) {
         TCanvas* c = new TCanvas();
         h2->Draw("colz");
+        h2->SetStats(0);
         gr->SetMarkerColor(kBlack);
         gr->SetMarkerStyle(21);
-        gr->SetLineWidth(2);
-        gr->SetLineColor(kRed);
-        gr->Draw("same");
+        gr->SetMarkerSize(2);
+        gr->SetLineWidth(3);
+        gr->SetLineColor(kBlack);
+        gr->Draw("same pe");
+        // fit
+        gr->Fit("pol1","R","", 0, 4000);
+        TF1* fn = gr->GetFunction("pol1");
+        fn->SetLineWidth(3);
+        TText text;
+        text.SetTextSize(0.035);
+        double p0 = fn->GetParameter(0);
+        double p1 = fn->GetParameter(1);
+        text.DrawText(250, 18, TString::Format("slope = %lf + %lf*ADC", p0, p1).Data());
+        text.DrawText(250, 16, TString::Format("ADC = %lf + %lf*slope", -p1/p0, 1/p0).Data());
         c->Write("hit_slope_vs_adc_wfType0_fitted");
     }
     
