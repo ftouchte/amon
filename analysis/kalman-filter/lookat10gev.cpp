@@ -102,6 +102,7 @@ int main(int argc, char const *argv[]) {
 
 
     int nb_wf0 = 0;
+    int nb_wf0_outlier = 0;
     int nb_wf1 = 0;
 
     int nb_wf0_max = 10;
@@ -110,6 +111,7 @@ int main(int argc, char const *argv[]) {
     TFile *f = new TFile(output.c_str(), "RECREATE");
     TDirectory * pulse_dir = f->mkdir("pulse");
     TDirectory * wf0_dir = pulse_dir->mkdir("wfType_0");
+    TDirectory * wf0_outlier_dir = wf0_dir->mkdir("outlier");
     TDirectory * wf1_dir = pulse_dir->mkdir("wfType_1");
     
 
@@ -353,7 +355,13 @@ int main(int argc, char const *argv[]) {
                                     else if (wfType == 0) {
 
                                         nb_wf0++;
+                                        double predicted_adc = -3.047979 + 190.905810*slope_max;
+                                        double delta_adc = raw_adc - predicted_adc;
+
                                         Histos->H2_hit_slope_vs_adc_wfType0->Fill(raw_adc, slope_max);
+                                        Histos->H1_diff_adc_wfType0->Fill(delta_adc);
+
+                                        //printf("raw_adc : %d , predicted_adc : %lf , slope_max : %lf \n", raw_adc, predicted_adc, slope_max);
 
                                         if (nb_wf0 < nb_wf0_max) {
                                             { // original pulse
@@ -376,10 +384,32 @@ int main(int argc, char const *argv[]) {
                                             }
 
                                         }
-                                        
-                                    } // end wfType 0
 
-                                    
+                                        if (nb_wf0_outlier < nb_wf0_max && fabs(delta_adc) > 200) {
+                                            nb_wf0_outlier++;
+                                            { // original pulse
+                                                wf0_outlier_dir->cd();
+                                                TCanvas* c = new TCanvas();
+                                                gr->SetMarkerColor(kRed);
+                                                gr->SetMarkerStyle(20);
+                                                gr->SetTitle(TString::Format("ADC = %d , time = %.2lf , ToT = %.2lf; time (ns); ADC", raw_adc, time, tot).Data());
+                                                gr->Draw("APL");
+                                                c->Write(TString::Format("pulse_%d", nb_wf0).Data());
+                                            }
+
+                                            { // pulse slope
+                                                wf0_outlier_dir->cd();
+                                                TCanvas* c = new TCanvas();
+                                                gr_slope->SetMarkerColor(kRed);
+                                                gr_slope->SetMarkerStyle(20);
+                                                gr_slope->SetTitle(TString::Format("Derivate of the pulse : raw ADC = %d , predicted ADC = %.2lf ", raw_adc, predicted_adc).Data());
+                                                gr_slope->Draw("APL");
+                                                c->Write(TString::Format("pulse_%d_slope", nb_wf0).Data());
+                                            }
+
+                                        }
+
+                                    } // end wfType 0
 
                                 }
                             } // loop over track hits
@@ -450,7 +480,7 @@ int main(int argc, char const *argv[]) {
         double p0 = fn->GetParameter(0);
         double p1 = fn->GetParameter(1);
         text.DrawText(250, 18, TString::Format("slope = %lf + %lf*ADC", p0, p1).Data());
-        text.DrawText(250, 16, TString::Format("ADC = %lf + %lf*slope", -p1/p0, 1/p0).Data());
+        text.DrawText(250, 16, TString::Format("ADC = %lf + %lf*slope", -p0/p1, 1/p1).Data());
         c->Write("hit_slope_vs_adc_wfType0_fitted");
     }
     

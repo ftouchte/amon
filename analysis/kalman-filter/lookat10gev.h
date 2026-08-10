@@ -59,6 +59,7 @@ struct Histograms {
 
     TH2D* H2_hit_slope_vs_adc_wfType0;
     TH2D* H2_hit_slope_vs_adc_allTypes;
+    TH1D* H1_diff_adc_wfType0;
 
 
 
@@ -99,6 +100,8 @@ struct Histograms {
 
         H2_hit_slope_vs_adc_allTypes = new TH2D("hit_slope_vs_adc_allTypes", "slope vs ADC all types; ADC; slope (ADC/ns)", 50, 0, 4000, 50, 0, 40);
 
+        H1_diff_adc_wfType0 = new TH1D("hit_diff_adc_wfType0", "#Delta ADC = raw ADC minus predicted ADC;#Delta ADC; count", 100, -400, 400);
+
     }
 
     /// Destructor
@@ -136,6 +139,8 @@ struct Histograms {
         delete H2_hit_slope_vs_adc_wfType0;
 
         delete H2_hit_slope_vs_adc_allTypes;
+
+        delete H1_diff_adc_wfType0;
 
         
     }
@@ -185,6 +190,8 @@ struct Histograms {
         H2_hit_slope_vs_adc_wfType0->Write(H2_hit_slope_vs_adc_wfType0->GetName());
 
         H2_hit_slope_vs_adc_allTypes->Write(H2_hit_slope_vs_adc_allTypes->GetName());
+
+        H1_diff_adc_wfType0->Write(H1_diff_adc_wfType0->GetName());
         
 
     }
