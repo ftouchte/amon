@@ -355,7 +355,7 @@ int main(int argc, char const *argv[]) {
                                     else if (wfType == 0) {
 
                                         nb_wf0++;
-                                        double predicted_adc = -3.047979 + 190.905810*slope_max;
+                                        double predicted_adc = -28.753520 + 191.791679*slope_max;
                                         double delta_adc = raw_adc - predicted_adc;
 
                                         Histos->H2_hit_slope_vs_adc_wfType0->Fill(raw_adc, slope_max);
