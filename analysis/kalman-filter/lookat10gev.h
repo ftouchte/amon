@@ -64,6 +64,8 @@ struct Histograms {
 
     TH2D* H2_hit_new_tot_vs_adc;
 
+    TH2D* H2_hit_slope_vs_adc_comp_new_tot;
+
 
 
     /// Constructor
@@ -106,7 +108,9 @@ struct Histograms {
 
         H1_diff_adc_wfType0 = new TH1D("hit_diff_adc_wfType0", "#Delta ADC = raw ADC minus predicted ADC;#Delta ADC; count", 100, -400, 400);
 
-        H2_hit_new_tot_vs_adc = new TH2D("hit_new_tot_vs_adc", "ADC vs ToT; ADC; ToT (ns)", 50, 1800, 3200, 50, 400, 700);
+        H2_hit_new_tot_vs_adc = new TH2D("hit_new_tot_vs_adc", "ADC vs ToT; ADC; ToT (ns)", 50, 1750, 3550, 50, 0, 700);
+
+        H2_hit_slope_vs_adc_comp_new_tot = new TH2D("hit_slope_vs_adc_comp_new_tot", "slope vs ADC; ADC; slope (ADC/ns)", 50, 1750, 3550, 50, 5, 20);
 
     }
 
@@ -151,6 +155,8 @@ struct Histograms {
         delete H1_hit_residual_wfType1;
 
         delete H2_hit_new_tot_vs_adc;
+
+        delete H2_hit_slope_vs_adc_comp_new_tot;
 
         
     }
@@ -206,6 +212,8 @@ struct Histograms {
         H1_hit_residual_wfType1->Write(H1_hit_residual_wfType1->GetName());
         
         H2_hit_new_tot_vs_adc->Write(H2_hit_new_tot_vs_adc->GetName());
+
+        H2_hit_slope_vs_adc_comp_new_tot->Write(H2_hit_slope_vs_adc_comp_new_tot->GetName());
 
     }
 };
