@@ -60,6 +60,7 @@ struct Histograms {
     TH2D* H2_hit_slope_vs_adc_wfType0;
     TH2D* H2_hit_slope_vs_adc_allTypes;
     TH1D* H1_diff_adc_wfType0;
+    TH1D* H1_hit_residual_wfType1;
 
 
 
@@ -74,8 +75,9 @@ struct Histograms {
         H1_track_chi2 = new TH1D("track_chi2", "chi2; chi2; count", 100, 0, 15);
         H2_track_corr_p_dEdx = new TH2D("track_corr_p_dEdx", "track : dE/dx versus p; p (GeV); dE/dx", 50, 0, 2.0, 50, 0, 500);
 
-        // --- phi
+        // --- hit
         H1_hit_residual = new TH1D("hit_residual", "residual ; residual (mm); count", 100, -3, 3);
+        H1_hit_residual_wfType1 = new TH1D("hit_residual_wfType1", "residual (wfType = 1); residual (mm); count", 100, -3, 3);
 
         // --- electron
         H1_electron_vz = new TH1D("electron_vz", "electron vertex; vz (cm); count", 100, -40, 25);
@@ -86,19 +88,19 @@ struct Histograms {
 
         H1_delta_vz = new TH1D("delta_vz", "delta vertex; #Delta vz (cm); count", 100, -16, 16);
 
-        H1_hit_adc = new TH1D("hit_adc", "ADC; ADC; count", 100, 0, 4000); 
+        H1_hit_adc = new TH1D("hit_adc", "ADC; ADC; count", 100, 0, 10000); 
         H1_hit_time = new TH1D("hit_time", "time; time (ns); count", 100, 0, 300);
         H1_hit_leadingEdgeTime = new TH1D("hit_leadingEdgeTime", "leadingEdgeTime ; leadingEdgeTime (ns); count", 100, 200, 650);
         H1_hit_tot = new TH1D("hit_tot", "timeOverThreshold ; ToT (ns); count", 100, 200, 700);
-        H2_hit_adc_vs_time = new TH2D("hit_adc_vs_time", "ADC vs time; ADC; time (ns)", 50, 0, 4000, 50, 0, 300);
-        H2_hit_adc_vs_leadingEdgeTime = new TH2D("hit_adc_vs_leadingEdgeTime", "ADC vs leadingEdgeTime; ADC; leadingEdgeTime (ns)", 50, 0, 4000, 50, 200, 650);
-        H2_hit_adc_vs_tot = new TH2D("hit_adc_vs_tot", "ADC vs timeOverThreshold; ADC; ToT (ns)", 50, 0, 4000, 50, 250, 700);
-        H2_hit_corrected_adc_vs_time = new TH2D("hit_corrected_adc_vs_time", "ADC vs time including ToT correction; ADC; time (ns)", 50, 0, 4000, 50, 0, 300);
+        H2_hit_adc_vs_time = new TH2D("hit_adc_vs_time", "ADC vs time; ADC; time (ns)", 50, 0, 10000, 50, 0, 300);
+        H2_hit_adc_vs_leadingEdgeTime = new TH2D("hit_adc_vs_leadingEdgeTime", "ADC vs leadingEdgeTime; ADC; leadingEdgeTime (ns)", 50, 0, 10000, 50, 200, 650);
+        H2_hit_adc_vs_tot = new TH2D("hit_adc_vs_tot", "ADC vs timeOverThreshold; ADC; ToT (ns)", 50, 0, 10000, 50, 250, 700);
+        H2_hit_corrected_adc_vs_time = new TH2D("hit_corrected_adc_vs_time", "ADC vs time including ToT correction; ADC; time (ns)", 50, 0, 10000, 50, 0, 300);
         H2_hit_time_vs_tot = new TH2D("hit_time_vs_tot", "time vs TimeOverthreshold; time (ns); toT (ns)", 50, 0, 300, 50, 200, 700);
 
         H2_hit_slope_vs_adc_wfType0 = new TH2D("hit_slope_vs_adc_wfType0", "slope vs ADC for wfType = 0; ADC; slope (ADC/ns)", 50, 0, 4000, 50, 0, 20);
 
-        H2_hit_slope_vs_adc_allTypes = new TH2D("hit_slope_vs_adc_allTypes", "slope vs ADC all types; ADC; slope (ADC/ns)", 50, 0, 4000, 50, 0, 40);
+        H2_hit_slope_vs_adc_allTypes = new TH2D("hit_slope_vs_adc_allTypes", "slope vs ADC all types; ADC; slope (ADC/ns)", 50, 0, 10000, 50, 0, 40);
 
         H1_diff_adc_wfType0 = new TH1D("hit_diff_adc_wfType0", "#Delta ADC = raw ADC minus predicted ADC;#Delta ADC; count", 100, -400, 400);
 
@@ -141,6 +143,8 @@ struct Histograms {
         delete H2_hit_slope_vs_adc_allTypes;
 
         delete H1_diff_adc_wfType0;
+
+        delete H1_hit_residual_wfType1;
 
         
     }
@@ -192,6 +196,8 @@ struct Histograms {
         H2_hit_slope_vs_adc_allTypes->Write(H2_hit_slope_vs_adc_allTypes->GetName());
 
         H1_diff_adc_wfType0->Write(H1_diff_adc_wfType0->GetName());
+
+        H1_hit_residual_wfType1->Write(H1_hit_residual_wfType1->GetName());
         
 
     }
