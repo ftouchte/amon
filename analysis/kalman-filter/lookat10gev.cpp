@@ -253,9 +253,9 @@ int main(int argc, char const *argv[]) {
                                     Histos->H1_hit_leadingEdgeTime->Fill(leadingEdgeTime);
                                     Histos->H1_hit_tot->Fill(tot);
 
-                                    Histos->H2_hit_adc_vs_time->Fill(adc, time);
-                                    Histos->H2_hit_adc_vs_leadingEdgeTime->Fill(adc, leadingEdgeTime);
-                                    Histos->H2_hit_adc_vs_tot->Fill(adc, tot);
+                                    Histos->H2_hit_adc_vs_time->Fill(raw_adc, time);
+                                    Histos->H2_hit_adc_vs_leadingEdgeTime->Fill(raw_adc, leadingEdgeTime);
+                                    Histos->H2_hit_adc_vs_tot->Fill(raw_adc, tot);
                                     Histos->H2_hit_time_vs_tot->Fill(time, tot);
 
                                     ///////////////////////////
