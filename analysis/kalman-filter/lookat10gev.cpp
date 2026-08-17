@@ -111,6 +111,7 @@ int main(int argc, char const *argv[]) {
 
     int nb_wf0 = 0;
     int nb_wf0_outlier = 0;
+    int nb_wf0_truncated = 0;
     int nb_wf1 = 0;
 
     int nb_wf0_max = 10;
@@ -121,6 +122,7 @@ int main(int argc, char const *argv[]) {
     TDirectory * wf0_dir = pulse_dir->mkdir("wfType_0");
     TDirectory * wf0_outlier_dir = wf0_dir->mkdir("outlier");
     TDirectory * wf1_dir = pulse_dir->mkdir("wfType_1");
+    TDirectory * wf0_truncated_dir = pulse_dir->mkdir("wfType_0_truncated");
     
 
     /// --- Loop over files
@@ -421,6 +423,51 @@ int main(int argc, char const *argv[]) {
                                                 c->Write(TString::Format("pulse_%d_slope", nb_wf0).Data());
                                             }
 
+                                        }
+
+                                        if (raw_adc > 2000 && raw_adc < 3500) {
+                                            int N = gr->GetN();
+                                            double ADC_LIMIT = 2000;
+                                            double half_amp = ADC_LIMIT/2;
+                                            // simulate a saturated signal
+                                            TGraph* gr_truncated = new TGraph();
+                                            for (int i = 0; i < N; i++) {
+                                                double x = gr->GetPointX(i);
+                                                double y = gr->GetPointY(i);
+                                                gr_truncated->AddPoint(x, std::min(y, ADC_LIMIT));
+                                            }
+                                            // extract time at half amplitude
+                                            double t1 = -99;
+                                            double t2 = -99;
+                                            for (int i = 0; i < N-1; i++) {
+                                                double x1 = gr->GetPointX(i);
+                                                double y1 = gr->GetPointY(i);
+                                                double x2 = gr->GetPointX(i+1);
+                                                double y2 = gr->GetPointY(i+1);
+                                                double a = (y1-y2)/(x1-x2);
+                                                if (y1 < half_amp && y2 > half_amp) {
+                                                    t1 = x1 + (half_amp-y1)/a;
+                                                }
+                                                if (y1 > half_amp && y2 < half_amp) {
+                                                    t2 = x1 + (half_amp-y1)/a;
+                                                }
+                                            }
+                                            if (t1 < 0 || t2 < 0) continue;
+                                            double new_tot = t2-t1;
+                                            Histos->H2_hit_new_tot_vs_adc->Fill(raw_adc, new_tot);
+                                            if (nb_wf0_truncated < nb_wf0_max) {
+                                                nb_wf0_truncated++;
+                                                wf0_truncated_dir->cd();
+                                                TCanvas* c = new TCanvas();
+                                                gr->SetMarkerColor(kRed);
+                                                gr->SetMarkerStyle(20);
+                                                gr->SetTitle(TString::Format("ADC = %d , time = %.2lf , ToT = %.2lf; time (ns); ADC", raw_adc, time, tot).Data());
+                                                gr->Draw("APL");
+                                                gr_truncated->SetLineColor(kBlue);
+                                                gr_truncated->SetLineStyle(10);
+                                                gr_truncated->Draw("L same");
+                                                c->Write(TString::Format("pulse_%d", nb_wf0).Data());
+                                            }
                                         }
 
                                     } // end wfType 0

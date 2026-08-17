@@ -62,6 +62,8 @@ struct Histograms {
     TH1D* H1_diff_adc_wfType0;
     TH1D* H1_hit_residual_wfType1;
 
+    TH2D* H2_hit_new_tot_vs_adc;
+
 
 
     /// Constructor
@@ -94,15 +96,17 @@ struct Histograms {
         H1_hit_tot = new TH1D("hit_tot", "timeOverThreshold ; ToT (ns); count", 100, 200, 700);
         H2_hit_adc_vs_time = new TH2D("hit_adc_vs_time", "ADC vs time; ADC; time (ns)", 50, 0, 10000, 50, 0, 300);
         H2_hit_adc_vs_leadingEdgeTime = new TH2D("hit_adc_vs_leadingEdgeTime", "ADC vs leadingEdgeTime; ADC; leadingEdgeTime (ns)", 50, 0, 10000, 50, 200, 650);
-        H2_hit_adc_vs_tot = new TH2D("hit_adc_vs_tot", "ADC vs timeOverThreshold; ADC; ToT (ns)", 50, 0, 10000, 50, 250, 700);
+        H2_hit_adc_vs_tot = new TH2D("hit_adc_vs_tot", "ADC vs ToT; ADC; ToT (ns)", 50, 0, 10000, 50, 250, 700);
         H2_hit_corrected_adc_vs_time = new TH2D("hit_corrected_adc_vs_time", "ADC vs time including ToT correction; ADC; time (ns)", 50, 0, 10000, 50, 0, 300);
-        H2_hit_time_vs_tot = new TH2D("hit_time_vs_tot", "time vs TimeOverthreshold; time (ns); toT (ns)", 50, 0, 300, 50, 200, 700);
+        H2_hit_time_vs_tot = new TH2D("hit_time_vs_tot", "time vs ToT; time (ns); toT (ns)", 50, 0, 300, 50, 200, 700);
 
         H2_hit_slope_vs_adc_wfType0 = new TH2D("hit_slope_vs_adc_wfType0", "slope vs ADC for wfType = 0; ADC; slope (ADC/ns)", 50, 0, 4000, 50, 0, 20);
 
         H2_hit_slope_vs_adc_allTypes = new TH2D("hit_slope_vs_adc_allTypes", "slope vs ADC all types; ADC; slope (ADC/ns)", 50, 0, 10000, 50, 0, 40);
 
         H1_diff_adc_wfType0 = new TH1D("hit_diff_adc_wfType0", "#Delta ADC = raw ADC minus predicted ADC;#Delta ADC; count", 100, -400, 400);
+
+        H2_hit_new_tot_vs_adc = new TH2D("hit_new_tot_vs_adc", "ADC vs ToT; ADC; ToT (ns)", 50, 1800, 3200, 50, 400, 700);
 
     }
 
@@ -145,6 +149,8 @@ struct Histograms {
         delete H1_diff_adc_wfType0;
 
         delete H1_hit_residual_wfType1;
+
+        delete H2_hit_new_tot_vs_adc;
 
         
     }
@@ -199,6 +205,7 @@ struct Histograms {
 
         H1_hit_residual_wfType1->Write(H1_hit_residual_wfType1->GetName());
         
+        H2_hit_new_tot_vs_adc->Write(H2_hit_new_tot_vs_adc->GetName());
 
     }
 };
