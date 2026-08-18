@@ -112,6 +112,7 @@ int main(int argc, char const *argv[]) {
     int nb_wf0 = 0;
     int nb_wf0_outlier = 0;
     int nb_wf0_truncated = 0;
+    int nb_wf0_functional = 0;
     int nb_wf1 = 0;
 
     int nb_wf0_max = 10;
@@ -123,6 +124,7 @@ int main(int argc, char const *argv[]) {
     TDirectory * wf0_outlier_dir = wf0_dir->mkdir("outlier");
     TDirectory * wf1_dir = pulse_dir->mkdir("wfType_1");
     TDirectory * wf0_truncated_dir = pulse_dir->mkdir("wfType_0_truncated");
+    TDirectory * wf0_functional_dir = pulse_dir->mkdir("wfType_0_functional");
     
 
     /// --- Loop over files
@@ -239,7 +241,7 @@ int main(int argc, char const *argv[]) {
                                         //     if (y < 0.95*smax && i > 4)
                                         //         gr_cut->AddPoint(x, y);
                                         // }
-                                        // nb_wf1++;
+                                        nb_wf1++;
                                         
                                         // // fit gr_cut
                                         // double timeMax = adcBank.getFloat("time", adcRow);
@@ -276,28 +278,28 @@ int main(int argc, char const *argv[]) {
                                         // gErrorIgnoreLevel = oldLevel; // end ignore non fatal error
                                         // double new_tot = t2-t1;
 
-                                        // // save some events
-                                        // if (nb_wf1 < nb_wf1_max) { // pulse
-                                        //     wf1_dir->cd();
-                                        //     { // original pulse
-                                        //         TCanvas* c = new TCanvas();
-                                        //         gr->SetTitle(TString::Format("ADC = %d, ToT = %.2lf --> fitted ADC = %.2lf, ToT = %.2lf, chi2 = %lf; time (ns); ADC", raw_adc, tot, new_adc, new_tot, fitFcn->GetChisquare()).Data());
-                                        //         gr->SetLineStyle(10);
-                                        //         gr->Draw("AL");
-                                        //         gr_cut->SetMarkerColor(kRed);
-                                        //         gr_cut->SetMarkerStyle(20);
-                                        //         gr_cut->Draw("PL");
-                                        //         c->Write(TString::Format("pulse_%d", nb_wf1).Data());
-                                        //     }
-                                        //     { // pulse slope
-                                        //         wf1_dir->cd();
-                                        //         TCanvas* c = new TCanvas();
-                                        //         TGraph* gr_slope = getSlopes(gr);
-                                        //         gr_slope->Draw("APL");
-                                        //         c->Write(TString::Format("pulse_%d_slope", nb_wf1).Data());
-                                        //     }
+                                        // save some events
+                                        if (nb_wf1 < nb_wf1_max) { // pulse
+                                            wf1_dir->cd();
+                                            { // original pulse
+                                                TCanvas* c = new TCanvas();
+                                                //gr->SetTitle(TString::Format("ADC = %d, ToT = %.2lf --> fitted ADC = %.2lf, ToT = %.2lf, chi2 = %lf; time (ns); ADC", raw_adc, tot, new_adc, new_tot, fitFcn->GetChisquare()).Data());
+                                                gr->SetLineStyle(10);
+                                                gr->Draw("APL");
+                                                // gr_cut->SetMarkerColor(kRed);
+                                                // gr_cut->SetMarkerStyle(20);
+                                                // gr_cut->Draw("PL");
+                                                c->Write(TString::Format("pulse_%d", nb_wf1).Data());
+                                            }
+                                            { // pulse slope
+                                                wf1_dir->cd();
+                                                TCanvas* c = new TCanvas();
+                                                TGraph* gr_slope = getSlopes(gr);
+                                                gr_slope->Draw("APL");
+                                                c->Write(TString::Format("pulse_%d_slope", nb_wf1).Data());
+                                            }
                                                 
-                                        // }
+                                        }
 
                                     } // end wfType 1
 
@@ -406,6 +408,70 @@ int main(int argc, char const *argv[]) {
                                             }
                                         }
 
+                                        // study the functional
+                                        if (raw_adc > 2000 && raw_adc < 2200) {
+                                            nb_wf0_functional++;
+                                            if (nb_wf0_functional < 30) {
+                                                { // pulse
+                                                    wf0_functional_dir->cd();
+                                                    TCanvas* c = new TCanvas();
+                                                    gr->SetMarkerColor(kRed);
+                                                    gr->SetMarkerStyle(20);
+                                                    gr->SetTitle(TString::Format("ADC = %d , time = %.2lf , ToT = %.2lf; time (ns); ADC", raw_adc, time, tot).Data());
+                                                    gr->Draw("APL");
+                                                    c->Write(TString::Format("pulse_%d", nb_wf0_functional).Data());
+                                                    
+                                                    //////////////
+                                                    /// Fit
+                                                    //////////////
+                                                    int Neff = gr->GetN();
+                                                    for (int i = gr->GetN()-1; i >= 0; i--) {
+                                                        if (gr->GetPointY(i) > 1) { // I want bigger than 0, but 1 if enough
+                                                            Neff = i+1;
+                                                            break;
+                                                        }
+                                                    }
+                                                    double baseline = (gr->GetPointY(0) + gr->GetPointY(1) + gr->GetPointY(2) + gr->GetPointY(3))/4;
+                                                    // create histogram
+                                                    TH1D* h = new TH1D(TString::Format("hist_pulse_%d", nb_wf0_functional).Data(), "Landau conv. Gauss", Neff, -24, 48*Neff-24);
+                                                    for (int i = 0; i < Neff; i++) {
+                                                        h->Fill(gr->GetPointX(i), std::max(gr->GetPointY(i)-baseline,0.));
+                                                    }
+
+                                                    double peak = h->GetXaxis()->GetBinCenter(h->GetMaximumBin());
+                                                    double sigma = h->GetStdDev();
+                                                    double integral = h->Integral();
+                                                    
+
+                                                       // Setting fit range and start values
+                                                    double fr[2];
+                                                    double sv[4], pllo[4], plhi[4], fp[4], fpe[4];
+                                                    // fr[0]=0.3*h->GetMean();
+                                                    // fr[1]=3.0*h->GetMean();
+                                                    fr[0]=0;
+                                                    fr[1]=1000;
+                                                    
+                                                    pllo[0]=0.5; pllo[1]=peak-2*sigma; pllo[2]=1.0; pllo[3]=0.4;
+                                                    plhi[0]=2*tot/4.017; plhi[1]=peak+2*sigma; plhi[2]=1000000.0; plhi[3]=30.0;
+                                                    sv[0]=tot/4.017; sv[1]=peak; sv[2]=integral; sv[3]=10;
+
+                                                    double chisqr;
+                                                    int    ndf;
+                                                    TF1 *fitsnr = langaufit(h,fr,sv,pllo,plhi,fp,fpe,&chisqr,&ndf);
+
+                                                    h->Write(TString::Format("hist_pulse_%d", nb_wf0_functional).Data());
+
+                                                }
+                                                { // pulse slope
+                                                    wf0_functional_dir->cd();
+                                                    TCanvas* c = new TCanvas();
+                                                    TGraph* gr_slope = getSlopes(gr);
+                                                    gr_slope->Draw("APL");
+                                                    c->Write(TString::Format("pulse_%d_slope", nb_wf0_functional).Data());
+                                                }
+                                            }
+                                        }
+
                                     } // end wfType 0
 
                                 } // loop over hits
@@ -434,7 +500,7 @@ int main(int argc, char const *argv[]) {
         int step = 5;
         int bin = 4;
         while (bin < nbins && bin < nbins-3*step) {
-            int binSup = std::min(bin+step, nbins);
+            int binSup = std::min(bin+step-1, nbins);
             TH1D* h_tmp = h2->ProjectionY(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
             // fit
             h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - 2*h_tmp->GetStdDev(), h_tmp->GetMean() + 2*h_tmp->GetStdDev());
@@ -478,101 +544,117 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-    // {
-    //     // delta ADC versus tot for 1800 < ADC < 3000
-    //     if (f->cd("time_versus_adc")) {
-    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
-    //     }
-    //     TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
-    //     TGraphErrors* gr = new TGraphErrors();
-    //     int nbins = h2->GetYaxis()->GetNbins();
-    //     int step = 2;
-    //     int bin = 0;
-    //     while (bin < nbins && bin < nbins-step) {
-    //         int binSup = std::min(bin+step, nbins);
-    //         double xinf = h2->GetYaxis()->GetBinCenter(bin);
-    //         double xsup = h2->GetYaxis()->GetBinCenter(binSup);
-    //         double xval = 0.5*(xinf+xsup);
-    //         if (xval < 100 && xval > 500) continue;
-    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-    //         // fit
-    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
-    //         double dev = h_tmp->GetStdDev();
-    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
-    //         TF1 *gaus = h_tmp->GetFunction("gaus");
-    //         double mean = gaus->GetParameter("Mean");
-    //         double sigma = gaus->GetParameter("Sigma");
-    //         // data
-            
-    //         //double yval = h_tmp->GetMaximum();
-    //         // save
-    //         //gr->AddPointError(xval, mean, sigma, 0);
-    //         gr->AddPointError(xval, mean, h_tmp->GetStdDev(), 0);
-    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
-    //             h_tmp->Write(h_tmp->GetName());
-    //         // go to next bin
-    //         bin += step;
-    //     }
-    //     gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
-    //     gr->Write("gr_delta_adc_vs_tot");
-    //     int N = gr->GetN();
-    //     TGraph* grerr = new TGraph();
-    //     for (int i = 0; i < N; i++) {
-    //         double x = gr->GetPointX(i);
-    //         double y = gr->GetErrorY(i);
-    //         grerr->AddPoint(x,y);
-    //     }
-    //     grerr->SetTitle("ADC resolution versus ToT; ToT (ns); res_{ADC}");
-    //     grerr->Write("error_graph_delta_adc_vs_tot");
-    // }
+    {
+        // delta ADC versus tot for 1800 < ADC < 3000
+        if (f->cd("time_versus_adc")) {
+            f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
+        }
+        TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
+        TGraphErrors* gr = new TGraphErrors();
+        int nbins = h2->GetYaxis()->GetNbins();
+        int step = 3;
+        int bin = 8;
+        while (bin < 32) {
+            int binSup = std::min(bin+step-1, nbins);
+            double yinf = h2->GetYaxis()->GetBinCenter(bin);
+            double ysup = h2->GetYaxis()->GetBinCenter(binSup);
+            double yval = 0.5*(yinf+ysup);
+            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+            // fit
+            double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+            double dev = h_tmp->GetStdDev();
+            h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+            TF1 *gaus = h_tmp->GetFunction("gaus");
+            double mean = gaus->GetParameter("Mean");
+            double sigma = gaus->GetParameter("Sigma");
+            // save
+            //gr->AddPointError(mean, yval, sigma, 0);
+            gr->AddPointError(peak, yval, dev, 0);
+            if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
+                h_tmp->Write(h_tmp->GetName());
+            // go to next bin
+            bin += step;
+        }
+        gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
+        gr->Write("gr_delta_adc_vs_tot");
+        int N = gr->GetN();
+        TGraph* grerr = new TGraph();
+        for (int i = 0; i < N; i++) {
+            double x = gr->GetPointY(i);
+            double y = gr->GetErrorX(i);
+            grerr->AddPoint(x,y);
+        }
+        grerr->SetTitle("ADC resolution; ToT; ADC resolution");
+        grerr->Write("error_graph_delta_adc_vs_tot");
 
-    // {
-    //     // delta ADC versus tot for 1800 < ADC < 3000
-    //     if (f->cd("time_versus_adc")) {
-    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
-    //     }
-    //     TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
-    //     TGraphErrors* gr = new TGraphErrors();
-    //     int nbins = h2->GetYaxis()->GetNbins();
-    //     int step = 2;
-    //     int bin = 0;
-    //     while (bin < nbins && bin < nbins-step) {
-    //         int binSup = std::min(bin+step, nbins);
-    //         double xinf = h2->GetYaxis()->GetBinCenter(bin);
-    //         double xsup = h2->GetYaxis()->GetBinCenter(binSup);
-    //         double xval = 0.5*(xinf+xsup);
-    //         if (xval < 8 && xval > 19) continue;
-    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-    //         // fit
-    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
-    //         double dev = h_tmp->GetStdDev();
-    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
-    //         TF1 *gaus = h_tmp->GetFunction("gaus");
-    //         double mean = gaus->GetParameter("Mean");
-    //         double sigma = gaus->GetParameter("Sigma");
-    //         // data
+        // canvas
+        TCanvas* c = new TCanvas();
+        h2->Draw("colz");
+        h2->SetStats(0);
+        gr->SetMarkerColor(kBlack);
+        gr->SetMarkerStyle(21);
+        gr->SetMarkerSize(2);
+        gr->SetLineWidth(3);
+        gr->SetLineColor(kBlack);
+        gr->Draw("same pe");
+        c->Write("hit_new_tot_vs_adc_fitted");
+    }
 
-    //         //double yval = h_tmp->GetMaximum();
-    //         // save
-    //         //gr->AddPointError(xval, mean, sigma, 0);
-    //         gr->AddPointError(xval, mean, h_tmp->GetStdDev(), 0);
-    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
-    //             h_tmp->Write(h_tmp->GetName());
-    //         // go to next bin
-    //         bin += step;
-    //     }
-    //     gr->SetTitle("ADC resolution versus Slope; Slope (ADC/ns); ADC");
-    //     gr->Write("gr_delta_adc_vs_slope");
-    //     int N = gr->GetN();
-    //     TGraph* grerr = new TGraph();
-    //     for (int i = 0; i < N; i++) {
-    //         double x = gr->GetPointX(i);
-    //         double y = gr->GetErrorY(i);
-    //         grerr->AddPoint(x,y);
-    //     }
-    //     grerr->SetTitle("ADC resolution versus Slope; Slope (ns); res_{ADC}");
-    //     grerr->Write("error_graph_delta_adc_vs_slope");
-    // }
+    {
+        // delta ADC versus tot for 1800 < ADC < 3000
+        if (f->cd("time_versus_adc")) {
+            f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
+        }
+        TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
+        TGraphErrors* gr = new TGraphErrors();
+        int nbins = h2->GetYaxis()->GetNbins();
+        int step = 3;
+        int bin = 17;
+        while (bin < 48) {
+            int binSup = std::min(bin+step-1, nbins);
+            double yinf = h2->GetYaxis()->GetBinCenter(bin);
+            double ysup = h2->GetYaxis()->GetBinCenter(binSup);
+            double yval = 0.5*(yinf+ysup);
+            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+            // fit
+            double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+            double dev = h_tmp->GetStdDev();
+            h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+            TF1 *gaus = h_tmp->GetFunction("gaus");
+            double mean = gaus->GetParameter("Mean");
+            double sigma = gaus->GetParameter("Sigma");
+            // save
+            //gr->AddPointError(mean, yval, sigma, 0);
+            gr->AddPointError(peak, yval, dev, 0);
+            if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
+                h_tmp->Write(h_tmp->GetName());
+            // go to next bin
+            bin += step;
+        }
+        gr->SetTitle("ADC resolution versus Slope; ADC; Slope (ADC/ns)");
+        gr->Write("gr_delta_adc_vs_slope");
+        int N = gr->GetN();
+        TGraph* grerr = new TGraph();
+        for (int i = 0; i < N; i++) {
+            double x = gr->GetPointY(i);
+            double y = gr->GetErrorX(i);
+            grerr->AddPoint(x,y);
+        }
+        grerr->SetTitle("ADC resolution; Slope; ADC resolution");
+        grerr->Write("error_graph_delta_adc_vs_slope");
+
+        // canvas
+        TCanvas* c = new TCanvas();
+        h2->Draw("colz");
+        h2->SetStats(0);
+        gr->SetMarkerColor(kBlack);
+        gr->SetMarkerStyle(21);
+        gr->SetMarkerSize(2);
+        gr->SetLineWidth(3);
+        gr->SetLineColor(kBlack);
+        gr->Draw("same pe");
+        c->Write("hit_slope_vs_adc_comp_new_tot");
+    }
 
 
 
