@@ -360,9 +360,9 @@ int main(int argc, char const *argv[]) {
 
                                         if (raw_adc > 1800 && raw_adc < 3500) {
                                             int N = gr->GetN();
-                                            double ADC_LIMIT = 2000;
+                                            //double ADC_LIMIT = 2000;
                                             //double half_amp = ADC_LIMIT/2;
-                                            double half_amp = 2000;
+                                            double threshold = 1800;
                                             // simulate a saturated signal
                                             // TGraph* gr_truncated = new TGraph();
                                             // for (int i = 0; i < N; i++) {
@@ -373,17 +373,18 @@ int main(int argc, char const *argv[]) {
                                             // extract time at half amplitude
                                             double t1 = -99;
                                             double t2 = -99;
+                                            double baseline = (gr->GetPointY(0) + gr->GetPointY(1) + gr->GetPointY(2) + gr->GetPointY(3))/4;
                                             for (int i = 0; i < N-1; i++) {
                                                 double x1 = gr->GetPointX(i);
-                                                double y1 = gr->GetPointY(i);
+                                                double y1 = gr->GetPointY(i) - baseline;
                                                 double x2 = gr->GetPointX(i+1);
-                                                double y2 = gr->GetPointY(i+1);
+                                                double y2 = gr->GetPointY(i+1) - baseline;
                                                 double a = (y1-y2)/(x1-x2);
-                                                if (y1 < half_amp && y2 > half_amp) {
-                                                    t1 = x1 + (half_amp-y1)/a;
+                                                if (y1 < threshold && y2 > threshold) {
+                                                    t1 = x1 + (threshold-y1)/a;
                                                 }
-                                                if (y1 > half_amp && y2 < half_amp && y2 > 1) { // make sure the second point is not zero
-                                                    t2 = x1 + (half_amp-y1)/a;
+                                                if (y1 > threshold && y2 < threshold && y2 > 1) { // make sure the second point is not zero
+                                                    t2 = x1 + (threshold-y1)/a;
                                                 }
                                             }
                                             if (t1 < 0 || t2 < 0) continue;
@@ -477,97 +478,101 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-    {
-        // delta ADC versus tot for 1800 < ADC < 3000
-        if (f->cd("time_versus_adc")) {
-            f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
-        }
-        TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
-        TGraphErrors* gr = new TGraphErrors();
-        int nbins = h2->GetYaxis()->GetNbins();
-        int step = 2;
-        int bin = 0;
-        while (bin < nbins && bin < nbins-step) {
-            int binSup = std::min(bin+step, nbins);
-            double xinf = h2->GetYaxis()->GetBinCenter(bin);
-            double xsup = h2->GetYaxis()->GetBinCenter(binSup);
-            double xval = 0.5*(xinf+xsup);
-            if (xval < 100 && xval > 500) continue;
-            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-            // fit
-            h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - h_tmp->GetStdDev(), h_tmp->GetMean() + h_tmp->GetStdDev());
-            TF1 *gaus = h_tmp->GetFunction("gaus");
-            double mean = gaus->GetParameter("Mean");
-            double sigma = gaus->GetParameter("Sigma");
-            // data
+    // {
+    //     // delta ADC versus tot for 1800 < ADC < 3000
+    //     if (f->cd("time_versus_adc")) {
+    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
+    //     }
+    //     TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
+    //     TGraphErrors* gr = new TGraphErrors();
+    //     int nbins = h2->GetYaxis()->GetNbins();
+    //     int step = 2;
+    //     int bin = 0;
+    //     while (bin < nbins && bin < nbins-step) {
+    //         int binSup = std::min(bin+step, nbins);
+    //         double xinf = h2->GetYaxis()->GetBinCenter(bin);
+    //         double xsup = h2->GetYaxis()->GetBinCenter(binSup);
+    //         double xval = 0.5*(xinf+xsup);
+    //         if (xval < 100 && xval > 500) continue;
+    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+    //         // fit
+    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+    //         double dev = h_tmp->GetStdDev();
+    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+    //         TF1 *gaus = h_tmp->GetFunction("gaus");
+    //         double mean = gaus->GetParameter("Mean");
+    //         double sigma = gaus->GetParameter("Sigma");
+    //         // data
             
-            //double yval = h_tmp->GetMaximum();
-            // save
-            //gr->AddPointError(xval, mean, 0, sigma);
-            gr->AddPointError(xval, mean, 0, h_tmp->GetStdDev());
-            if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
-                h_tmp->Write(h_tmp->GetName());
-            // go to next bin
-            bin += step;
-        }
-        gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
-        gr->Write("gr_delta_adc_vs_tot");
-        int N = gr->GetN();
-        TGraph* grerr = new TGraph();
-        for (int i = 0; i < N; i++) {
-            double x = gr->GetPointX(i);
-            double y = gr->GetErrorY(i);
-            grerr->AddPoint(x,y);
-        }
-        grerr->SetTitle("ADC resolution versus ToT; ToT (ns); res_{ADC}");
-        grerr->Write("error_graph_delta_adc_vs_tot");
-    }
+    //         //double yval = h_tmp->GetMaximum();
+    //         // save
+    //         //gr->AddPointError(xval, mean, sigma, 0);
+    //         gr->AddPointError(xval, mean, h_tmp->GetStdDev(), 0);
+    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
+    //             h_tmp->Write(h_tmp->GetName());
+    //         // go to next bin
+    //         bin += step;
+    //     }
+    //     gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
+    //     gr->Write("gr_delta_adc_vs_tot");
+    //     int N = gr->GetN();
+    //     TGraph* grerr = new TGraph();
+    //     for (int i = 0; i < N; i++) {
+    //         double x = gr->GetPointX(i);
+    //         double y = gr->GetErrorY(i);
+    //         grerr->AddPoint(x,y);
+    //     }
+    //     grerr->SetTitle("ADC resolution versus ToT; ToT (ns); res_{ADC}");
+    //     grerr->Write("error_graph_delta_adc_vs_tot");
+    // }
 
-    {
-        // delta ADC versus tot for 1800 < ADC < 3000
-        if (f->cd("time_versus_adc")) {
-            f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
-        }
-        TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
-        TGraphErrors* gr = new TGraphErrors();
-        int nbins = h2->GetYaxis()->GetNbins();
-        int step = 2;
-        int bin = 0;
-        while (bin < nbins && bin < nbins-step) {
-            int binSup = std::min(bin+step, nbins);
-            double xinf = h2->GetYaxis()->GetBinCenter(bin);
-            double xsup = h2->GetYaxis()->GetBinCenter(binSup);
-            double xval = 0.5*(xinf+xsup);
-            if (xval < 8 && xval > 19) continue;
-            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-            // fit
-            h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - h_tmp->GetStdDev(), h_tmp->GetMean() + h_tmp->GetStdDev());
-            TF1 *gaus = h_tmp->GetFunction("gaus");
-            double mean = gaus->GetParameter("Mean");
-            double sigma = gaus->GetParameter("Sigma");
-            // data
+    // {
+    //     // delta ADC versus tot for 1800 < ADC < 3000
+    //     if (f->cd("time_versus_adc")) {
+    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
+    //     }
+    //     TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
+    //     TGraphErrors* gr = new TGraphErrors();
+    //     int nbins = h2->GetYaxis()->GetNbins();
+    //     int step = 2;
+    //     int bin = 0;
+    //     while (bin < nbins && bin < nbins-step) {
+    //         int binSup = std::min(bin+step, nbins);
+    //         double xinf = h2->GetYaxis()->GetBinCenter(bin);
+    //         double xsup = h2->GetYaxis()->GetBinCenter(binSup);
+    //         double xval = 0.5*(xinf+xsup);
+    //         if (xval < 8 && xval > 19) continue;
+    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+    //         // fit
+    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+    //         double dev = h_tmp->GetStdDev();
+    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+    //         TF1 *gaus = h_tmp->GetFunction("gaus");
+    //         double mean = gaus->GetParameter("Mean");
+    //         double sigma = gaus->GetParameter("Sigma");
+    //         // data
 
-            //double yval = h_tmp->GetMaximum();
-            // save
-            //gr->AddPointError(xval, mean, 0, sigma);
-            gr->AddPointError(xval, mean, 0, h_tmp->GetStdDev());
-            if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
-                h_tmp->Write(h_tmp->GetName());
-            // go to next bin
-            bin += step;
-        }
-        gr->SetTitle("ADC resolution versus Slope; Slope (ADC/ns); ADC");
-        gr->Write("gr_delta_adc_vs_slope");
-        int N = gr->GetN();
-        TGraph* grerr = new TGraph();
-        for (int i = 0; i < N; i++) {
-            double x = gr->GetPointX(i);
-            double y = gr->GetErrorY(i);
-            grerr->AddPoint(x,y);
-        }
-        grerr->SetTitle("ADC resolution versus Slope; Slope (ns); res_{ADC}");
-        grerr->Write("error_graph_delta_adc_vs_slope");
-    }
+    //         //double yval = h_tmp->GetMaximum();
+    //         // save
+    //         //gr->AddPointError(xval, mean, sigma, 0);
+    //         gr->AddPointError(xval, mean, h_tmp->GetStdDev(), 0);
+    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
+    //             h_tmp->Write(h_tmp->GetName());
+    //         // go to next bin
+    //         bin += step;
+    //     }
+    //     gr->SetTitle("ADC resolution versus Slope; Slope (ADC/ns); ADC");
+    //     gr->Write("gr_delta_adc_vs_slope");
+    //     int N = gr->GetN();
+    //     TGraph* grerr = new TGraph();
+    //     for (int i = 0; i < N; i++) {
+    //         double x = gr->GetPointX(i);
+    //         double y = gr->GetErrorY(i);
+    //         grerr->AddPoint(x,y);
+    //     }
+    //     grerr->SetTitle("ADC resolution versus Slope; Slope (ns); res_{ADC}");
+    //     grerr->Write("error_graph_delta_adc_vs_slope");
+    // }
 
 
 
