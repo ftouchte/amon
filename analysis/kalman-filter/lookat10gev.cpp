@@ -148,8 +148,12 @@ int main(int argc, char const *argv[]) {
         /// --- Event counters
         long unsigned int nevents =0;
 
+        bool canStop = false;
+
         /// --- Loop over events
         while( reader.next()){
+
+            if (canStop) break;
             
             /// --- display progress Bar
             nevents++;
@@ -448,18 +452,30 @@ int main(int argc, char const *argv[]) {
                                                     double sv[4], pllo[4], plhi[4], fp[4], fpe[4];
                                                     // fr[0]=0.3*h->GetMean();
                                                     // fr[1]=3.0*h->GetMean();
-                                                    fr[0]=0;
-                                                    fr[1]=1000;
+                                                    fr[0]=peak-sigma;
+                                                    fr[1]=peak+1.5*sigma;
+                                                    // fr[0]=peak-1.5*sigma;
+                                                    // fr[1]=peak+0.05*sigma;
+                                                    // fr[0]=peak-2*sigma;;
+                                                    // fr[1]=0.7*peak;
                                                     
-                                                    pllo[0]=0.5; pllo[1]=peak-2*sigma; pllo[2]=1.0; pllo[3]=0.4;
-                                                    plhi[0]=2*tot/4.017; plhi[1]=peak+2*sigma; plhi[2]=1000000.0; plhi[3]=30.0;
+                                                    pllo[0]=0.6*tot/4.017; pllo[1]=peak-2*sigma; pllo[2]=1.0; pllo[3]=0.4;
+                                                    plhi[0]=2*tot/4.017; plhi[1]=peak+2*sigma; plhi[2]=2000000.0; plhi[3]=15.0;
                                                     sv[0]=tot/4.017; sv[1]=peak; sv[2]=integral; sv[3]=10;
 
                                                     double chisqr;
                                                     int    ndf;
                                                     TF1 *fitsnr = langaufit(h,fr,sv,pllo,plhi,fp,fpe,&chisqr,&ndf);
 
-                                                    h->Write(TString::Format("hist_pulse_%d", nb_wf0_functional).Data());
+                                                    //h->Write(TString::Format("hist_pulse_%d", nb_wf0_functional).Data());
+                                                    TCanvas* c2 = new TCanvas();
+                                                    h->Draw();
+                                                    TF1* fitsnr_copy = (TF1*) fitsnr->Clone(TString::Format("%s_copy", fitsnr->GetName()).Data());
+                                                    fitsnr->SetRange(0,1000);
+                                                    fitsnr->SetLineStyle(2);
+                                                    fitsnr->Draw("l same");
+                                                    fitsnr_copy->Draw("l same");
+                                                    c2->Write(TString::Format("hist_pulse_%d", nb_wf0_functional).Data());
 
                                                 }
                                                 { // pulse slope
@@ -469,6 +485,8 @@ int main(int argc, char const *argv[]) {
                                                     gr_slope->Draw("APL");
                                                     c->Write(TString::Format("pulse_%d_slope", nb_wf0_functional).Data());
                                                 }
+                                            } else {
+                                                canStop = true;
                                             }
                                         }
 
@@ -490,171 +508,171 @@ int main(int argc, char const *argv[]) {
 
     /// --- post processing
 
-    { // adc versus slope
-        if (f->cd("time_versus_adc")) {
-            f->mkdir("time_versus_adc/fits_slope_vs_adc");
-        }
-        TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_wfType0->Clone("adc_vs_slopemax");
-        TGraphErrors* gr = new TGraphErrors();
-        int nbins = h2->GetXaxis()->GetNbins();
-        int step = 5;
-        int bin = 4;
-        while (bin < nbins && bin < nbins-3*step) {
-            int binSup = std::min(bin+step-1, nbins);
-            TH1D* h_tmp = h2->ProjectionY(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-            // fit
-            h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - 2*h_tmp->GetStdDev(), h_tmp->GetMean() + 2*h_tmp->GetStdDev());
-            TF1 *gaus = h_tmp->GetFunction("gaus");
-            double mean = gaus->GetParameter("Mean");
-            double sigma = gaus->GetParameter("Sigma");
-            // data
-            double xinf = h2->GetXaxis()->GetBinCenter(bin);
-            double xsup = h2->GetXaxis()->GetBinCenter(binSup);
-            double xval = 0.5*(xinf+xsup);
-            //double yval = h_tmp->GetMaximum();
-            // save
-            gr->AddPointError(xval, mean, 0, sigma);
-            if (f->cd("time_versus_adc/fits_slope_vs_adc")) 
-                h_tmp->Write(h_tmp->GetName());
-            // go to next bin
-            bin += step;
-        }
+    // { // adc versus slope
+    //     if (f->cd("time_versus_adc")) {
+    //         f->mkdir("time_versus_adc/fits_slope_vs_adc");
+    //     }
+    //     TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_wfType0->Clone("adc_vs_slopemax");
+    //     TGraphErrors* gr = new TGraphErrors();
+    //     int nbins = h2->GetXaxis()->GetNbins();
+    //     int step = 5;
+    //     int bin = 4;
+    //     while (bin < nbins && bin < nbins-3*step) {
+    //         int binSup = std::min(bin+step-1, nbins);
+    //         TH1D* h_tmp = h2->ProjectionY(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+    //         // fit
+    //         h_tmp->Fit("gaus", "RQ", "", h_tmp->GetMean() - 2*h_tmp->GetStdDev(), h_tmp->GetMean() + 2*h_tmp->GetStdDev());
+    //         TF1 *gaus = h_tmp->GetFunction("gaus");
+    //         double mean = gaus->GetParameter("Mean");
+    //         double sigma = gaus->GetParameter("Sigma");
+    //         // data
+    //         double xinf = h2->GetXaxis()->GetBinCenter(bin);
+    //         double xsup = h2->GetXaxis()->GetBinCenter(binSup);
+    //         double xval = 0.5*(xinf+xsup);
+    //         //double yval = h_tmp->GetMaximum();
+    //         // save
+    //         gr->AddPointError(xval, mean, 0, sigma);
+    //         if (f->cd("time_versus_adc/fits_slope_vs_adc")) 
+    //             h_tmp->Write(h_tmp->GetName());
+    //         // go to next bin
+    //         bin += step;
+    //     }
 
-        if (f->cd("time_versus_adc")) {
-            TCanvas* c = new TCanvas();
-            h2->Draw("colz");
-            h2->SetStats(0);
-            gr->SetMarkerColor(kBlack);
-            gr->SetMarkerStyle(21);
-            gr->SetMarkerSize(2);
-            gr->SetLineWidth(3);
-            gr->SetLineColor(kBlack);
-            gr->Draw("same pe");
-            // fit
-            gr->Fit("pol1","R","", 0, 4000);
-            TF1* fn = gr->GetFunction("pol1");
-            fn->SetLineWidth(3);
-            TText text;
-            text.SetTextSize(0.035);
-            double p0 = fn->GetParameter(0);
-            double p1 = fn->GetParameter(1);
-            text.DrawText(250, 18, TString::Format("slope = %lf + %lf*ADC", p0, p1).Data());
-            text.DrawText(250, 16, TString::Format("ADC = %lf + %lf*slope", -p0/p1, 1/p1).Data());
-            c->Write("hit_slope_vs_adc_wfType0_fitted");
-        }
-    }
+    //     if (f->cd("time_versus_adc")) {
+    //         TCanvas* c = new TCanvas();
+    //         h2->Draw("colz");
+    //         h2->SetStats(0);
+    //         gr->SetMarkerColor(kBlack);
+    //         gr->SetMarkerStyle(21);
+    //         gr->SetMarkerSize(2);
+    //         gr->SetLineWidth(3);
+    //         gr->SetLineColor(kBlack);
+    //         gr->Draw("same pe");
+    //         // fit
+    //         gr->Fit("pol1","R","", 0, 4000);
+    //         TF1* fn = gr->GetFunction("pol1");
+    //         fn->SetLineWidth(3);
+    //         TText text;
+    //         text.SetTextSize(0.035);
+    //         double p0 = fn->GetParameter(0);
+    //         double p1 = fn->GetParameter(1);
+    //         text.DrawText(250, 18, TString::Format("slope = %lf + %lf*ADC", p0, p1).Data());
+    //         text.DrawText(250, 16, TString::Format("ADC = %lf + %lf*slope", -p0/p1, 1/p1).Data());
+    //         c->Write("hit_slope_vs_adc_wfType0_fitted");
+    //     }
+    // }
 
-    {
-        // delta ADC versus tot for 1800 < ADC < 3000
-        if (f->cd("time_versus_adc")) {
-            f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
-        }
-        TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
-        TGraphErrors* gr = new TGraphErrors();
-        int nbins = h2->GetYaxis()->GetNbins();
-        int step = 3;
-        int bin = 8;
-        while (bin < 32) {
-            int binSup = std::min(bin+step-1, nbins);
-            double yinf = h2->GetYaxis()->GetBinCenter(bin);
-            double ysup = h2->GetYaxis()->GetBinCenter(binSup);
-            double yval = 0.5*(yinf+ysup);
-            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-            // fit
-            double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
-            double dev = h_tmp->GetStdDev();
-            h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
-            TF1 *gaus = h_tmp->GetFunction("gaus");
-            double mean = gaus->GetParameter("Mean");
-            double sigma = gaus->GetParameter("Sigma");
-            // save
-            //gr->AddPointError(mean, yval, sigma, 0);
-            gr->AddPointError(peak, yval, dev, 0);
-            if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
-                h_tmp->Write(h_tmp->GetName());
-            // go to next bin
-            bin += step;
-        }
-        gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
-        gr->Write("gr_delta_adc_vs_tot");
-        int N = gr->GetN();
-        TGraph* grerr = new TGraph();
-        for (int i = 0; i < N; i++) {
-            double x = gr->GetPointY(i);
-            double y = gr->GetErrorX(i);
-            grerr->AddPoint(x,y);
-        }
-        grerr->SetTitle("ADC resolution; ToT; ADC resolution");
-        grerr->Write("error_graph_delta_adc_vs_tot");
+    // {
+    //     // delta ADC versus tot for 1800 < ADC < 3000
+    //     if (f->cd("time_versus_adc")) {
+    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_tot");
+    //     }
+    //     TH2D* h2 = (TH2D*) Histos->H2_hit_new_tot_vs_adc->Clone("new_tot_delta_adc");
+    //     TGraphErrors* gr = new TGraphErrors();
+    //     int nbins = h2->GetYaxis()->GetNbins();
+    //     int step = 3;
+    //     int bin = 8;
+    //     while (bin < 32) {
+    //         int binSup = std::min(bin+step-1, nbins);
+    //         double yinf = h2->GetYaxis()->GetBinCenter(bin);
+    //         double ysup = h2->GetYaxis()->GetBinCenter(binSup);
+    //         double yval = 0.5*(yinf+ysup);
+    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+    //         // fit
+    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+    //         double dev = h_tmp->GetStdDev();
+    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+    //         TF1 *gaus = h_tmp->GetFunction("gaus");
+    //         double mean = gaus->GetParameter("Mean");
+    //         double sigma = gaus->GetParameter("Sigma");
+    //         // save
+    //         //gr->AddPointError(mean, yval, sigma, 0);
+    //         gr->AddPointError(peak, yval, dev, 0);
+    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_tot")) 
+    //             h_tmp->Write(h_tmp->GetName());
+    //         // go to next bin
+    //         bin += step;
+    //     }
+    //     gr->SetTitle("ADC resolution versus ToT; ToT (ns); ADC");
+    //     gr->Write("gr_delta_adc_vs_tot");
+    //     int N = gr->GetN();
+    //     TGraph* grerr = new TGraph();
+    //     for (int i = 0; i < N; i++) {
+    //         double x = gr->GetPointY(i);
+    //         double y = gr->GetErrorX(i);
+    //         grerr->AddPoint(x,y);
+    //     }
+    //     grerr->SetTitle("ADC resolution; ToT; ADC resolution");
+    //     grerr->Write("error_graph_delta_adc_vs_tot");
 
-        // canvas
-        TCanvas* c = new TCanvas();
-        h2->Draw("colz");
-        h2->SetStats(0);
-        gr->SetMarkerColor(kBlack);
-        gr->SetMarkerStyle(21);
-        gr->SetMarkerSize(2);
-        gr->SetLineWidth(3);
-        gr->SetLineColor(kBlack);
-        gr->Draw("same pe");
-        c->Write("hit_new_tot_vs_adc_fitted");
-    }
+    //     // canvas
+    //     TCanvas* c = new TCanvas();
+    //     h2->Draw("colz");
+    //     h2->SetStats(0);
+    //     gr->SetMarkerColor(kBlack);
+    //     gr->SetMarkerStyle(21);
+    //     gr->SetMarkerSize(2);
+    //     gr->SetLineWidth(3);
+    //     gr->SetLineColor(kBlack);
+    //     gr->Draw("same pe");
+    //     c->Write("hit_new_tot_vs_adc_fitted");
+    // }
 
-    {
-        // delta ADC versus tot for 1800 < ADC < 3000
-        if (f->cd("time_versus_adc")) {
-            f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
-        }
-        TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
-        TGraphErrors* gr = new TGraphErrors();
-        int nbins = h2->GetYaxis()->GetNbins();
-        int step = 3;
-        int bin = 17;
-        while (bin < 48) {
-            int binSup = std::min(bin+step-1, nbins);
-            double yinf = h2->GetYaxis()->GetBinCenter(bin);
-            double ysup = h2->GetYaxis()->GetBinCenter(binSup);
-            double yval = 0.5*(yinf+ysup);
-            TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
-            // fit
-            double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
-            double dev = h_tmp->GetStdDev();
-            h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
-            TF1 *gaus = h_tmp->GetFunction("gaus");
-            double mean = gaus->GetParameter("Mean");
-            double sigma = gaus->GetParameter("Sigma");
-            // save
-            //gr->AddPointError(mean, yval, sigma, 0);
-            gr->AddPointError(peak, yval, dev, 0);
-            if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
-                h_tmp->Write(h_tmp->GetName());
-            // go to next bin
-            bin += step;
-        }
-        gr->SetTitle("ADC resolution versus Slope; ADC; Slope (ADC/ns)");
-        gr->Write("gr_delta_adc_vs_slope");
-        int N = gr->GetN();
-        TGraph* grerr = new TGraph();
-        for (int i = 0; i < N; i++) {
-            double x = gr->GetPointY(i);
-            double y = gr->GetErrorX(i);
-            grerr->AddPoint(x,y);
-        }
-        grerr->SetTitle("ADC resolution; Slope; ADC resolution");
-        grerr->Write("error_graph_delta_adc_vs_slope");
+    // {
+    //     // delta ADC versus tot for 1800 < ADC < 3000
+    //     if (f->cd("time_versus_adc")) {
+    //         f->mkdir("time_versus_adc/fits_delta_adc_vs_slope");
+    //     }
+    //     TH2D* h2 = (TH2D*) Histos->H2_hit_slope_vs_adc_comp_new_tot->Clone("slope_delta_adc_comp_new_tot");
+    //     TGraphErrors* gr = new TGraphErrors();
+    //     int nbins = h2->GetYaxis()->GetNbins();
+    //     int step = 3;
+    //     int bin = 17;
+    //     while (bin < 48) {
+    //         int binSup = std::min(bin+step-1, nbins);
+    //         double yinf = h2->GetYaxis()->GetBinCenter(bin);
+    //         double ysup = h2->GetYaxis()->GetBinCenter(binSup);
+    //         double yval = 0.5*(yinf+ysup);
+    //         TH1D* h_tmp = h2->ProjectionX(TString::Format("h_tmp_%d-%d", bin, binSup).Data(), bin, binSup);
+    //         // fit
+    //         double peak = h_tmp->GetXaxis()->GetBinCenter(h_tmp->GetMaximumBin());
+    //         double dev = h_tmp->GetStdDev();
+    //         h_tmp->Fit("gaus", "RQ", "", peak-dev, peak+dev);
+    //         TF1 *gaus = h_tmp->GetFunction("gaus");
+    //         double mean = gaus->GetParameter("Mean");
+    //         double sigma = gaus->GetParameter("Sigma");
+    //         // save
+    //         //gr->AddPointError(mean, yval, sigma, 0);
+    //         gr->AddPointError(peak, yval, dev, 0);
+    //         if (f->cd("time_versus_adc/fits_delta_adc_vs_slope")) 
+    //             h_tmp->Write(h_tmp->GetName());
+    //         // go to next bin
+    //         bin += step;
+    //     }
+    //     gr->SetTitle("ADC resolution versus Slope; ADC; Slope (ADC/ns)");
+    //     gr->Write("gr_delta_adc_vs_slope");
+    //     int N = gr->GetN();
+    //     TGraph* grerr = new TGraph();
+    //     for (int i = 0; i < N; i++) {
+    //         double x = gr->GetPointY(i);
+    //         double y = gr->GetErrorX(i);
+    //         grerr->AddPoint(x,y);
+    //     }
+    //     grerr->SetTitle("ADC resolution; Slope; ADC resolution");
+    //     grerr->Write("error_graph_delta_adc_vs_slope");
 
-        // canvas
-        TCanvas* c = new TCanvas();
-        h2->Draw("colz");
-        h2->SetStats(0);
-        gr->SetMarkerColor(kBlack);
-        gr->SetMarkerStyle(21);
-        gr->SetMarkerSize(2);
-        gr->SetLineWidth(3);
-        gr->SetLineColor(kBlack);
-        gr->Draw("same pe");
-        c->Write("hit_slope_vs_adc_comp_new_tot");
-    }
+    //     // canvas
+    //     TCanvas* c = new TCanvas();
+    //     h2->Draw("colz");
+    //     h2->SetStats(0);
+    //     gr->SetMarkerColor(kBlack);
+    //     gr->SetMarkerStyle(21);
+    //     gr->SetMarkerSize(2);
+    //     gr->SetLineWidth(3);
+    //     gr->SetLineColor(kBlack);
+    //     gr->Draw("same pe");
+    //     c->Write("hit_slope_vs_adc_comp_new_tot");
+    // }
 
 
 
