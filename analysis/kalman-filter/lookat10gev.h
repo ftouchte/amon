@@ -1,8 +1,12 @@
-/**********************************************
- * 
+/***********************************************
+ * Look at 10.6 GeV data
+ *
  * @author Felix Touchte Codjo
  * @date April 02, 2026
- **********************************************/
+ * 
+ * Now: Study time reconstruction of saturated ADC
+ * new date : August 19, 2026
+ * ********************************************/
 
 #ifndef LOOK_AT_10_GEV
 #define LOOK_AT_10_GEV

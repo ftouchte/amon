@@ -3,6 +3,9 @@
  *
  * @author Felix Touchte Codjo
  * @date April 02, 2026
+ * 
+ * Now: Study time reconstruction of saturated ADC
+ * new date : August 19, 2026
  * ********************************************/
 
 #include <cstdlib>
