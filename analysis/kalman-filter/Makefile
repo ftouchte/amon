@@ -35,7 +35,7 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev track_selection wire_disposition_dict wire_disposition
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev lookat10gev_all_hits track_selection wire_disposition_dict wire_disposition
 
 wire_disposition: wire_disposition.o wire_disposition_Dict.o fOptions.o AhdcUtils.o AhdcDetector.o AhdcPulse.o Point3D.o AhdcCCDB.o
 	$(CXX) -o wire_disposition.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
@@ -51,6 +51,9 @@ track_selection: track_selection.o fOptions.o AhdcUtils.o
 
 lookat10gev: lookat10gev.o fOptions.o
 	$(CXX) -o lookat10gev.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
+
+lookat10gev_all_hits: lookat10gev_all_hits.o fOptions.o
+	$(CXX) -o lookat10gev_all_hits.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
 
 alignment: alignment.o
 	$(CXX) -o alignment.exe $^ $(ROOTLIBS)
