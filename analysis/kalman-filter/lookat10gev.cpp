@@ -698,10 +698,10 @@ int main(int argc, char const *argv[]) {
         //gr_res_tot->Draw("PL same");
         mg->Add(gr_res_tot, "pl");
 
-        mg->SetTitle("ADC resolution per method; ADC; resolution");
+        mg->SetTitle("ADC resolution for each method; ADC; ADC resolution");
         mg->Draw("APL");
 
-        legend->AddEntry(gr_res_slope, "Slope", "lpf");
+        legend->AddEntry(gr_res_slope, "slope", "lpf");
         legend->AddEntry(gr_res_tot, "ToT", "lpf");
         legend->Draw();
 
