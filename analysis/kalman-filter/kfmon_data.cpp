@@ -337,6 +337,10 @@ int main(int argc, char const *argv[]) {
         }
     }
 
+    TH1D* H1_selected_hit_occupancy = new TH1D("occupancy_from_selected_hits", "occupancy; wire; occupancy [%]", 576, 0, 576); // after HitReader
+    TH1D* H1_all_hit_occupancy = new TH1D("occupancy_from_all_hits", "occupancy; wire; occupancy [%]", 576, 0, 576); // before HitReader
+    TH1D* H1_nb_tracks_per_event = new TH1D("H1_nb_tracks_per_event", "nb tracks per event; nb tracks per event; count", 10, 0, 10);
+
     // ATOF study // counters
     long unsigned int ntracks =0;
     long unsigned int nmatches =0;
@@ -397,6 +401,20 @@ int main(int argc, char const *argv[]) {
             event.getStructure(atofTdcBank);
             event.getStructure(aiMatchingBank);
             event.getStructure(aiPrePIDBank);
+
+            // occupancy
+            for (int i = 0; i < adcBank.getRows(); i++) {
+                int layer = adcBank.get("layer", i);
+                int component = adcBank.get("component", i);
+                H1_all_hit_occupancy->Fill(slc2wire(1,layer,component));
+            }
+            for (int i = 0; i < hitBank.getRows(); i++) {
+                int layer = 10*hitBank.get("superlayer", i) + hitBank.get("layer", i);
+                int component = hitBank.get("wire", i);
+                H1_selected_hit_occupancy->Fill(slc2wire(1,layer,component));
+            }
+            if (trackBank.getRows() > 0)
+                H1_nb_tracks_per_event->Fill(trackBank.getRows());
 
             // find the elastic electron
             //int electron_row = -1;
@@ -911,6 +929,14 @@ int main(int argc, char const *argv[]) {
         
     }
     canvas_cuts->Write("nevents_versus_cuts");
+
+    H1_all_hit_occupancy->Scale(100.0/nevents);
+    H1_selected_hit_occupancy->Scale(100.0/nevents);
+    H1_all_hit_occupancy->Write(H1_all_hit_occupancy->GetName());
+    H1_selected_hit_occupancy->Write(H1_selected_hit_occupancy->GetName());
+    H1_nb_tracks_per_event->Write(H1_nb_tracks_per_event->GetName());
+
+
     //H1_cuts->Write("nevents_versus_cuts");
     // all
     TDirectory *all_dir = f->mkdir("all_elastics");
