@@ -35,7 +35,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev lookat10gev_all_hits track_selection wire_disposition_dict wire_disposition
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev lookat10gev_all_hits track_selection wire_disposition_dict wire_disposition occupancy
+
+occupancy: occupancy.o fOptions.o
+	$(CXX) -o occupancy.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS)
 
 wire_disposition: wire_disposition.o wire_disposition_Dict.o fOptions.o AhdcUtils.o AhdcDetector.o AhdcPulse.o Point3D.o AhdcCCDB.o
 	$(CXX) -o wire_disposition.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
