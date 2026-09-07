@@ -173,7 +173,7 @@ int main(int argc, char const *argv[]) {
 
                     if (hitBank.getInt("trackid", h) != trackid) continue;
 
-                    int i = hitBank.getShort("id", h);
+                    int i = hitBank.getShort("id", h) - 1;
                     
                     int layer = adcBank.get("layer", i);
                     int component = adcBank.get("component", i);
@@ -200,6 +200,11 @@ int main(int argc, char const *argv[]) {
         } // loop over events 
 
     } // loop over files
+
+    // occupancy renormalization
+    histos->H1_any_hit_occupancy->Scale(100.0/nevents);
+    histos->H1_selected_hit_occupancy->Scale(100.0/nevents);
+    histos->H1_track_hit_occupancy->Scale(100.0/nevents);
 
     TFile *f = new TFile(output.c_str(), "RECREATE");
 

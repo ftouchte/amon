@@ -48,22 +48,22 @@ struct Histograms {
         H1_any_hit_tot = new TH1D("any_hit_tot", "any hit tot; time over threshold (ns); count", 100, 100, 800);
         H1_any_hit_ped = new TH1D("any_hit_ped", "any hit pedestal; pedestal (ADC); count", 100, 0, 600);
         H1_any_hit_amplitude = new TH1D("any_hit_amplitude", "any hit amplitude; amplitude (ADC); count", 100, 0, 4000);
-        H1_any_hit_wfType = new TH1I("any_hit_wfType", "any hit time; time (ns); count", 7, 0, 7);
-        H1_any_hit_occupancy = new TH1D("any_hit_occupancy", "any hit time; time (ns); count", 576, 0, 576);
+        H1_any_hit_wfType = new TH1I("any_hit_wfType", "any hit wfType; wfType; count", 7, 0, 7);
+        H1_any_hit_occupancy = new TH1D("any_hit_occupancy", "any hit occupany; wire number; count", 576, 0, 576);
 
         H1_selected_hit_time = new TH1D("selected_hit_time", "selected hit time; time (ns); count", 100, 0, 300);
         H1_selected_hit_tot = new TH1D("selected_hit_tot", "selected hit tot; time over threshold (ns); count", 100, 100, 800);
         H1_selected_hit_ped = new TH1D("selected_hit_ped", "selected hit pedestal; pedestal (ADC); count", 100, 0, 600);
         H1_selected_hit_amplitude = new TH1D("selected_hit_amplitude", "selected hit amplitude; amplitude (ADC); count", 100, 0, 4000);
-        H1_selected_hit_wfType = new TH1I("selected_hit_wfType", "selected hit time; time (ns); count", 7, 0, 7);
-        H1_selected_hit_occupancy = new TH1D("selected_hit_occupancy", "selected hit time; time (ns); count", 576, 0, 576);
+        H1_selected_hit_wfType = new TH1I("selected_hit_wfType", "selected hit wfType; wfType; count", 7, 0, 7);
+        H1_selected_hit_occupancy = new TH1D("selected_hit_occupancy", "selected hit occupancy; wire number; count", 576, 0, 576);
 
         H1_track_hit_time = new TH1D("track_hit_time", "track hit time; time (ns); count", 100, 0, 300);
         H1_track_hit_tot = new TH1D("track_hit_tot", "track hit tot; time over threshold (ns); count", 100, 100, 800);
         H1_track_hit_ped = new TH1D("track_hit_ped", "track hit pedestal; pedestal (ADC); count", 100, 0, 600);
         H1_track_hit_amplitude = new TH1D("track_hit_amplitude", "track hit amplitude; amplitude (ADC); count", 100, 0, 4000);
-        H1_track_hit_wfType = new TH1I("track_hit_wfType", "track hit time; time (ns); count", 7, 0, 7);
-        H1_track_hit_occupancy = new TH1D("track_hit_occupancy", "track hit time; time (ns); count", 576, 0, 576);
+        H1_track_hit_wfType = new TH1I("track_hit_wfType", "track hit wfType; wfType; count", 7, 0, 7);
+        H1_track_hit_occupancy = new TH1D("track_hit_occupancy", "track hit occupancy; wire number; count", 576, 0, 576);
         H1_track_nhits = new TH1D("track_nhits", "track nhits", 12, 0, 12);
 
     }
