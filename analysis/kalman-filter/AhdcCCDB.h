@@ -58,7 +58,15 @@ class AhdcCCDB {
     // time to distance
     ahdcT2d T2d;
 public:
+    // when we know the run number
     AhdcCCDB(std::string _connection = "mysql://clas12reader@clasdb.jlab.org/clas12", int _runNo = 22000, std::string _variation = "default", std::string timestamp = "no"); 
+    // when the run number is to be read from the file
+    void loadConstants();
+    void setConnectionString(std::string _connection, int _runNo, std::string _variation, std::string _timestamp);
+    void setDBConnection(std::string _connection) { connection = _connection;}
+    void setRunNumber(int _runNo) {runNo = _runNo;}
+    void setTimeStamp(std::string _timestamp) { timestamp = _timestamp;}
+    void setVariation(std::string _variation) { variation = _variation;}
     static int wireUniqueId(int sector, int layer, int component);
     ahdcT0 get_t0(int sector, int layer, int component);
     ahdcT0 get_t0(int wire); // numbering starts at 0

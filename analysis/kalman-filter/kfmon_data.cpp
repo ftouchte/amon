@@ -392,6 +392,7 @@ int main(int argc, char const *argv[]) {
         long unsigned int nevents_per_file =0;
 
         AhdcCCDB ahdcConstants("mysql://clas12reader@clasdb.jlab.org/clas12", 22712, "default", "2026-09-04_12-00-00");
+        ahdcConstants.loadConstants();
         
         /////////////////////////
         // Loop over events

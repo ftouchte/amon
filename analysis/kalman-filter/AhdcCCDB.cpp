@@ -17,7 +17,18 @@
 
 AhdcCCDB::AhdcCCDB(std::string _connection, int _runNo, std::string _variation, std::string _timestamp) 
     : connection(_connection), runNo(_runNo), variation(_variation), timestamp(_timestamp) {
-    
+
+}
+
+void AhdcCCDB::setConnectionString(std::string _connection, int _runNo, std::string _variation, std::string _timestamp) {
+    connection = _connection;
+    runNo = _runNo;
+    variation = _variation;
+    timestamp = _timestamp;
+}
+
+void AhdcCCDB::loadConstants() {
+
     // Create calibraion object
     // To specify run number, variation and time, the full signature of CreateCalibration is:
     // CreateCalibration(connection_str, int run=0, const string& variation="default", const time_t time=0);
