@@ -111,6 +111,7 @@ int main(int argc, char const *argv[]) {
             
 
             double startTime = recEventBank.getFloat("startTime", 0);
+            histos->H1_startTime->Fill(startTime);
 
             // any hits
             for (int i = 0; i < adcBank.getRows(); i++) {

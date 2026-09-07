@@ -42,6 +42,8 @@ struct Histograms {
     TH1I* H1_track_hit_wfType;
     TH1D* H1_track_hit_occupancy;
 
+    TH1D* H1_startTime;
+
     Histograms() {
         
         H1_any_hit_time = new TH1D("any_hit_time", "any hit time; time (ns); count", 100, 0, 300);
@@ -65,6 +67,8 @@ struct Histograms {
         H1_track_hit_wfType = new TH1I("track_hit_wfType", "track hit wfType; wfType; count", 7, 0, 7);
         H1_track_hit_occupancy = new TH1D("track_hit_occupancy", "track hit occupancy; wire number; count", 576, 0, 576);
         H1_track_nhits = new TH1D("track_nhits", "track nhits", 12, 0, 12);
+
+        H1_startTime = new TH1D("rec_event_startTime", "REC::Event startTime; startTime (ns); count", 100, 0, 300);
 
     }
 
@@ -90,6 +94,8 @@ struct Histograms {
         delete H1_track_hit_amplitude;
         delete H1_track_hit_wfType;
         delete H1_track_hit_occupancy;
+
+        delete H1_startTime;
     }
 
 
@@ -118,7 +124,10 @@ struct Histograms {
         H1_track_hit_amplitude->Write(H1_track_hit_amplitude->GetName());
         H1_track_hit_wfType->Write(H1_track_hit_wfType->GetName());
         H1_track_hit_occupancy->Write(H1_track_hit_occupancy->GetName());
+
+        H1_startTime->Write(H1_startTime->GetName());
     }
+    
 };
 
 
