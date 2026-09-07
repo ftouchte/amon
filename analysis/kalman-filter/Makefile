@@ -67,7 +67,7 @@ fOptions_test: fOptions_test.o fOptions.o
 clasrecon: clasrecon.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 
 	$(CXX) -o clasrecon.exe $^ $(HIPOLIBS) $(ROOTLIBS) $(CCDBLIBS) 
 
-kfmon_data: kfmon_data.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o fOptions.o
+kfmon_data: kfmon_data.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o fOptions.o AhdcCCDB.o
 	$(CXX) -o kfmon_data.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS) 
 
 kfmon: kfmon.o AhdcDetector.o AhdcPulse.o Point3D.o futils.o 

@@ -36,6 +36,7 @@
 #include "kfmon_data.h"
 #include "futils.h"
 #include "fOptions.h"
+#include "AhdcCCDB.h"
 
 
 // define some constants
@@ -298,6 +299,10 @@ int main(int argc, char const *argv[]) {
         H1_distance.push_back(new TH1D("AHDC::hits:doca_all", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // all elastics
         H1_distance.push_back(new TH1D("AHDC::hits:doca_deuteron", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // deuteron 
         H1_distance.push_back(new TH1D("AHDC::hits:doca_proton", "AHDC::hits:doca ; AHDC::hits:doca (mm); count",  50, 0, 4)); // proton
+    std::vector<TH1D*> H1_ped;
+        H1_ped.push_back(new TH1D("AHDC::hits:ped_all", "AHDC::hits:ped ; AHDC::hits:ped (mm); count",  50, 0, 600)); // all elastics
+        H1_ped.push_back(new TH1D("AHDC::hits:ped_deuteron", "AHDC::hits:ped ; AHDC::hits:ped (mm); count",  50, 0, 600)); // deuteron 
+        H1_ped.push_back(new TH1D("AHDC::hits:ped_proton", "AHDC::hits:ped ; AHDC::hits:ped (mm); count",  50, 0, 600)); // proton
     // ATOF
     TH2D* H2_corr_atof_wedge_vz = new TH2D("corr_atof_wedge_vz", "ATOF wedge vz versus electron vz;electron vz (cm); ATOF wedge vz (cm)", 50, -30, 20, 10, -14, 14);
     TH1D* H1_diff_atof_wedge_vz = new TH1D("diff_atof_wedge_vz", "#Delta vz = vz^{(electron)} - vz^{(ATOF wedge)}; #Delta vz (cm); count", 50, -30, 10);
@@ -341,6 +346,11 @@ int main(int argc, char const *argv[]) {
     TH1D* H1_all_hit_occupancy = new TH1D("occupancy_from_all_hits", "occupancy; wire; occupancy [%]", 576, 0, 576); // before HitReader
     TH1D* H1_nb_tracks_per_event = new TH1D("H1_nb_tracks_per_event", "nb tracks per event; nb tracks per event; count", 10, 0, 10);
 
+    TH1D* H1_all_hit_amplitude = new TH1D("all_hit_amplitude", "Amplitude; amplitude (ADC); count", 100, 0, 7000);
+    TH1D* H1_all_hit_tot = new TH1D("all_hit_tot", "Time over threshold; time over threshold (ns); count", 100, 0, 900);
+    TH1D* H1_all_hit_time = new TH1D("all_hit_time", "Time; time (ns); count", 100, 0, 1000);
+    TH1D* H1_all_hit_ped = new TH1D("all_hit_ped", "Pedestal; pedestal (ADC); count", 100, 0, 1000);
+
     // ATOF study // counters
     long unsigned int ntracks =0;
     long unsigned int nmatches =0;
@@ -372,6 +382,7 @@ int main(int argc, char const *argv[]) {
         hipo::bank  trackBank(factory.getSchema("AHDC::kftrack"));
         hipo::bank  hitBank(factory.getSchema("AHDC::hits"));
         hipo::bank  recBank(factory.getSchema("REC::Particle"));
+        hipo::bank  recEventBank(factory.getSchema("REC::Event"));
         hipo::bank  atofHitBank(factory.getSchema("ATOF::hits"));
         hipo::bank  atofTdcBank(factory.getSchema("ATOF::tdc"));
         hipo::bank  aiMatchingBank(factory.getSchema("ALERT::ai:projections"));
@@ -379,6 +390,8 @@ int main(int argc, char const *argv[]) {
         //hipo::bank  aiPrePIDBank(factory.getSchema("AHDC::track"));
         hipo::event event;
         long unsigned int nevents_per_file =0;
+
+        AhdcCCDB ahdcConstants("mysql://clas12reader@clasdb.jlab.org/clas12", 22712, "default", "2026-09-04_12-00-00");
         
         /////////////////////////
         // Loop over events
@@ -397,16 +410,31 @@ int main(int argc, char const *argv[]) {
             event.getStructure(trackBank);
             event.getStructure(hitBank);
             event.getStructure(recBank);
+            event.getStructure(recEventBank);
             event.getStructure(atofHitBank);
             event.getStructure(atofTdcBank);
             event.getStructure(aiMatchingBank);
             event.getStructure(aiPrePIDBank);
+
+            double startTime = recEventBank.getFloat("startTime", 0);
 
             // occupancy
             for (int i = 0; i < adcBank.getRows(); i++) {
                 int layer = adcBank.get("layer", i);
                 int component = adcBank.get("component", i);
                 H1_all_hit_occupancy->Fill(slc2wire(1,layer,component));
+                double adcRaw            = adcBank.getInt("ADC", i);
+                double leadingEdgeTime   = adcBank.getFloat("leadingEdgeTime", i);
+                double timeOverThreshold = adcBank.getFloat("timeOverThreshold", i);
+                double adcOffset         = adcBank.getFloat("ped", i);
+                int    wfType            = adcBank.getShort("wfType", i);
+                double t0         = ahdcConstants.get_t0(1, layer, component).t0;
+                double time = leadingEdgeTime - startTime - t0;
+                H1_all_hit_amplitude->Fill(adcRaw);
+                H1_all_hit_ped->Fill(adcOffset);
+                H1_all_hit_time->Fill(time);
+                H1_all_hit_tot->Fill(timeOverThreshold);
+
             }
             for (int i = 0; i < hitBank.getRows(); i++) {
                 int layer = 10*hitBank.get("superlayer", i) + hitBank.get("layer", i);
@@ -550,6 +578,7 @@ int main(int argc, char const *argv[]) {
                             H2_time2distance[0]->Fill(hitBank.get("time", hitRow), hitBank.get("doca", hitRow) - hitBank.get("residual", hitRow));
                             H1_time[0]->Fill(hitBank.get("time", hitRow));
                             H1_distance[0]->Fill(hitBank.get("doca", hitRow));
+                            H1_ped[0]->Fill(adcBank.get("ped", adcRow));
                             H1_amplitude[0]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
                             H1_timeOverThreshold[0]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                             
@@ -624,6 +653,7 @@ int main(int argc, char const *argv[]) {
                                 H1_amplitude[1]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
                                 H1_timeOverThreshold[1]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                                 H1_distance[1]->Fill(hitBank.get("doca", hitRow));
+                                H1_ped[1]->Fill(adcBank.get("ped", adcRow));
                             }
                         }
                         H1_track_sum_residual[1]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
@@ -667,6 +697,7 @@ int main(int argc, char const *argv[]) {
                                 H1_amplitude[2]->Fill(adcBank.get("ADC", hitBank.get("id", hitRow)-1));
                                 H1_timeOverThreshold[2]->Fill(adcBank.get("timeOverThreshold", hitBank.get("id", hitRow)-1));
                                 H1_distance[2]->Fill(hitBank.get("doca", hitRow));
+                                H1_ped[2]->Fill(adcBank.get("ped", adcRow));
                             }
                         }
                         H1_track_sum_residual[2]->Fill(trackBank.get("sum_residuals", ahdc_track.row));
@@ -936,6 +967,11 @@ int main(int argc, char const *argv[]) {
     H1_selected_hit_occupancy->Write(H1_selected_hit_occupancy->GetName());
     H1_nb_tracks_per_event->Write(H1_nb_tracks_per_event->GetName());
 
+    H1_all_hit_amplitude->Write(H1_all_hit_amplitude->GetName());
+    H1_all_hit_tot->Write(H1_all_hit_tot->GetName());
+    H1_all_hit_time->Write(H1_all_hit_time->GetName());
+    H1_all_hit_ped->Write(H1_all_hit_ped->GetName());
+
 
     //H1_cuts->Write("nevents_versus_cuts");
     // all
@@ -1024,6 +1060,7 @@ int main(int argc, char const *argv[]) {
     H1_amplitude[0]->Write("AHDC::adc:ADC");
     H1_timeOverThreshold[0]->Write("AHDC::adc:timeOverThreshold");
     H1_distance[0]->Write("AHDC::hits:doca");
+    H1_ped[0]->Write("AHDC::hits:ped");
     H1_track_nhits[0]->Write("h1_track_nhits");
     H1_track_sum_residual[0]->Write("h1_track_sum_residuals");  
     H2_corr_atof_wedge_vz->Write("corr_atof_wedge");
@@ -1064,6 +1101,7 @@ int main(int argc, char const *argv[]) {
     H1_amplitude[1]->Write("AHDC::adc:ADC");
     H1_timeOverThreshold[1]->Write("AHDC::adc:timeOverThreshold");
     H1_distance[1]->Write("AHDC::hits:doca");
+    H1_ped[1]->Write("AHDC::hits:ped");
     H1_track_nhits[1]->Write("h1_track_nhits");
     H1_track_sum_residual[1]->Write("h1_track_sum_residuals");
     H1_prepid[1]->Write("prepid");
@@ -1095,6 +1133,7 @@ int main(int argc, char const *argv[]) {
     H1_timeOverThreshold[2]->Write("AHDC::adc:timeOverThreshold");
     H1_amplitude[2]->Write("AHDC::adc:ADC");
     H1_distance[2]->Write("AHDC::hits:doca");
+    H1_ped[2]->Write("AHDC::hits:ped");
     H1_track_nhits[2]->Write("h1_track_nhits");
     H1_track_sum_residual[2]->Write("h1_track_sum_residuals");
     H1_prepid[2]->Write("prepid");
