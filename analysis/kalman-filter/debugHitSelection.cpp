@@ -31,6 +31,7 @@
 #include "THStack.h"
 #include "TArrow.h"
 #include "TLine.h"
+#include "TTree.h"
 
 #include "fOptions.h"
 #include "debugHitSelection.h"
@@ -42,7 +43,7 @@ int main(int argc, char const *argv[]) {
     // record start time
     auto start = std::chrono::high_resolution_clock::now();
 
-    fOptions OPT({"-i", "-o"});
+    fOptions OPT({"-i", "-o", "-N"});
     OPT.LoadOptions(argc, argv);
     OPT.Show();
 
@@ -55,8 +56,43 @@ int main(int argc, char const *argv[]) {
         return 1;
     }
 
+    long unsigned int N = 1'000'000'000;
+    std::string str_N = OPT.GetValue("-N");
+    if (str_N != "") {
+        N = std::atoi(str_N.c_str());
+    }
+
     // Histograms
     Histograms* histos = new Histograms();
+
+    // TTree
+    TTree *tree_any_hit = new TTree("T_any_hit", "Debug any hit selection at 10.6 GeV");
+    double leaf_any_hit_time;
+    double leaf_any_hit_tot;
+    double leaf_any_hit_ped;
+    double leaf_any_hit_amplitude;
+    int leaf_any_hit_wfType;
+
+    TTree *tree_track_hit = new TTree("T_track_hit", "Debug track hit selection at 10.6 GeV");
+    double leaf_track_hit_time;
+    double leaf_track_hit_tot;
+    double leaf_track_hit_ped;
+    double leaf_track_hit_amplitude;
+    int leaf_track_hit_wfType;
+    int leaf_track_nhits;
+
+    tree_any_hit->Branch("time", &leaf_any_hit_time, "any_hit_time/D");
+    tree_any_hit->Branch("tot", &leaf_any_hit_tot, "any_hit_tot/D");
+    tree_any_hit->Branch("ped", &leaf_any_hit_ped, "any_hit_ped/D");
+    tree_any_hit->Branch("amplitude", &leaf_any_hit_amplitude, "any_hit_amplitude/D");
+    tree_any_hit->Branch("wfType", &leaf_any_hit_wfType, "any_hit_wfType/I");
+
+    tree_track_hit->Branch("time", &leaf_track_hit_time, "track_hit_time/D");
+    tree_track_hit->Branch("tot", &leaf_track_hit_tot, "track_hit_tot/D");
+    tree_track_hit->Branch("ped", &leaf_track_hit_ped, "track_hit_ped/D");
+    tree_track_hit->Branch("amplitude", &leaf_track_hit_amplitude, "track_hit_amplitude/D");
+    tree_track_hit->Branch("wfType", &leaf_track_hit_wfType, "track_hit_wfType/I");
+    tree_track_hit->Branch("nhits", &leaf_track_nhits, "track_hit_nhits/I");
 
     // Nb events
     long unsigned int nevents = 0;
@@ -88,6 +124,8 @@ int main(int argc, char const *argv[]) {
         while( reader.next()){
             nevents++;
             nevents_per_file++;
+
+            if (nevents > N) break;
 
             // display progress Bar
             if ((nevents_per_file % 1000 == 0) || ((int) nevents_per_file == reader.getEntries())) {
@@ -133,6 +171,14 @@ int main(int argc, char const *argv[]) {
                 histos->H1_any_hit_time->Fill(time);
                 histos->H1_any_hit_ped->Fill(ped);
                 histos->H1_any_hit_wfType->Fill(wfType);
+
+                leaf_any_hit_time = time;
+                leaf_any_hit_tot = tot;
+                leaf_any_hit_ped = ped;
+                leaf_any_hit_amplitude = adc;
+                leaf_any_hit_wfType = wfType;
+
+                tree_any_hit->Fill();
             }
 
             // selected hits
@@ -161,7 +207,7 @@ int main(int argc, char const *argv[]) {
                 histos->H1_selected_hit_ped->Fill(ped);
                 histos->H1_selected_hit_wfType->Fill(wfType);
 
-            }
+            } // end loop over hits
 
             for (int t = 0; t < trackBank.getRows(); t++) {
                 int trackid = trackBank.getInt("trackid", t);
@@ -193,10 +239,20 @@ int main(int argc, char const *argv[]) {
                     histos->H1_track_hit_time->Fill(time);
                     histos->H1_track_hit_ped->Fill(ped);
                     histos->H1_track_hit_wfType->Fill(wfType);
-                    
 
+                    leaf_track_hit_time = time;
+                    leaf_track_hit_tot = tot;
+                    leaf_track_hit_ped = ped;
+                    leaf_track_hit_amplitude = adc;
+                    leaf_track_hit_wfType = wfType;
+                    leaf_track_nhits = nhits;
+
+                    tree_track_hit->Fill();
+                    
                 }
-            }
+            } // end loop over tracks
+
+            
             
         } // loop over events 
 
@@ -210,6 +266,9 @@ int main(int argc, char const *argv[]) {
     TFile *f = new TFile(output.c_str(), "RECREATE");
 
     histos->WriteIn(f);
+
+    tree_any_hit->Write();
+    tree_track_hit->Write();
 
     f->Close();
 
