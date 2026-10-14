@@ -37,6 +37,7 @@ import org.apache.commons.math3.linear.RealVector;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.SeriesRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.util.ShapeUtils;
@@ -45,6 +46,8 @@ import org.jfree.data.xy.XYSeriesCollection;
 import org.jlab.clas.pdg.PDGDatabase;
 import org.jlab.clas.pdg.PDGParticle;
 import org.jlab.clas.tracking.kalmanfilter.Material;
+import org.jfree.chart.plot.SeriesRenderingOrder;
+import org.jfree.chart.axis.NumberAxis;
 
 
 import org.jfree.chart.ChartFactory;
@@ -185,6 +188,7 @@ public class Monitor {
                 RungeKutta4 RK4 = new RungeKutta4(proton, 6, B);
                 Propagator propagator = new Propagator(RK4);
                 RealVector initialStateEstimate = new ArrayRealVector(y);
+                // First 3 lines in mm^2; last 3 lines in MeV^2 (in the beamline)
                 RealMatrix initialErrorCovariance = MatrixUtils.createRealMatrix(new double[][]{
                     {50  , 0.0 , 0.0 , 0.0 , 0.0 , 0.0}, 
                     {0.0 , 50  , 0.0 , 0.0 , 0.0 , 0.0}, 
@@ -200,7 +204,7 @@ public class Monitor {
 
                 // Generate beamline hit
                 RadialKFHit hit_beam = new RadialKFHit(0, 0, vertex);
-                double[] vz_error2 = {0.09, 1e10, 1e10}; // mm^2, radians^2, mm^2, error on r, phi, z
+                double[] vz_error2 = {0.09, 1e10, 64}; // mm^2, radians^2, mm^2, error on r, phi, z
                 RealMatrix measurementNoise = new Array2DRowRealMatrix(
                                                 new double[][]{
                                                     {vz_error2[0], 0.0000      , 0.0000},
@@ -210,7 +214,7 @@ public class Monitor {
                 hit_beam.setMeasurementNoise(measurementNoise);
 
                 // Do KF iterations
-                int Niter = 10;
+                int Niter = 150;
                 XYSeriesCollection prediction_dataset = new XYSeriesCollection();
                 XYSeriesCollection correction_dataset = new XYSeriesCollection();
                 XYSeriesCollection dataset = new XYSeriesCollection();
@@ -222,6 +226,8 @@ public class Monitor {
 
                     // Starting point
                     addPointToSeries(TrackFitter, combined);
+
+                    //TrackFitter.ResetErrorCovariance(initialErrorCovariance.copy());
 
 
 
@@ -260,10 +266,6 @@ public class Monitor {
 
                 }
 
-
-
-
-
                 // Do post fit propagation
                 RealVector x_out = TrackFitter.getStateEstimationVector();
                 track.setPositionAndMomentumVec(x_out.toArray());
@@ -275,6 +277,9 @@ public class Monitor {
                     hit.setResidual(PostFitPropagator.residual(hit));
                     hit.setResidual_LR(PostFitPropagator.residual_LR(hit));
                 }
+
+                // Expected track
+                // to be done...
 
                 String workDir = "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/kalmanFilter/output";
                 String outName = String.format("%s/evt_%d_trackid_%d.png", workDir, nevents, track.get_trackId());
@@ -308,6 +313,19 @@ public class Monitor {
                 true, true, false);
 
         XYPlot plot = chart.getXYPlot();
+
+        // The last serie is the last to be plotted
+        plot.setSeriesRenderingOrder(SeriesRenderingOrder.FORWARD);
+
+        //Axis limit
+        NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+
+        xAxis.setRange(-200.0, 200.0);   // xlim
+        yAxis.setRange(0.0, 80.0);   // ylim
+
+
+
 
         // Attach the other datasets
         plot.setDataset(1, prediction_dataset);
