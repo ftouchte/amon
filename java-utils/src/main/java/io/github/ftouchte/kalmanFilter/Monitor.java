@@ -26,7 +26,8 @@ import org.jlab.rec.alert.Track.TrackCandidate;
 import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
 
-import javafx.scene.paint.Color;
+import java.awt.BasicStroke;
+import java.awt.Color;
 
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.ArrayRealVector;
@@ -38,6 +39,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.util.ShapeUtils;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jlab.clas.pdg.PDGDatabase;
@@ -56,6 +58,9 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.swing.*;
+import java.awt.Shape;
+import java.awt.geom.*;
+import org.jfree.chart.util.ShapeUtils;
 
 
 /**
@@ -205,15 +210,20 @@ public class Monitor {
                 hit_beam.setMeasurementNoise(measurementNoise);
 
                 // Do KF iterations
-                int Niter = 2;
+                int Niter = 10;
                 XYSeriesCollection prediction_dataset = new XYSeriesCollection();
                 XYSeriesCollection correction_dataset = new XYSeriesCollection();
                 XYSeriesCollection dataset = new XYSeriesCollection();
                 for(int k = 0; k < Niter; ++k) {
                     
-                    XYSeries predictions = new XYSeries(String.format("prediction_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k));
-                    XYSeries corrections = new XYSeries(String.format("correction_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k));
-                    XYSeries combined = new XYSeries(String.format("combined_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k));
+                    XYSeries predictions = new XYSeries(String.format("prediction_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k), false, true);
+                    XYSeries corrections = new XYSeries(String.format("correction_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k), false, true);
+                    XYSeries combined = new XYSeries(String.format("combined_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k), false, true);
+
+                    // Starting point
+                    addPointToSeries(TrackFitter, combined);
+
+
 
                     // Forward
                     for(Hit hit : AHDC_hits) {
@@ -226,7 +236,7 @@ public class Monitor {
                     }
 
                     // Backward
-                    for(int i = AHDC_hits.size() - 2; i >= 0; --i) {
+                    for(int i = AHDC_hits.size() - 2; i >= 0; i--) {
                         Hit hit = (Hit)AHDC_hits.get(i);
                         TrackFitter.predict(hit, false);
                         addPointToSeries(TrackFitter, predictions);
@@ -291,8 +301,8 @@ public class Monitor {
         // Create the chart with the first dataset
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "Track fit",       // title
-                "x",               // x-axis label
-                "y",               // y-axis label
+                "z",               // x-axis label
+                "r",               // y-axis label
                 dataset,           // dataset 0 (combined)
                 PlotOrientation.VERTICAL,
                 true, true, false);
@@ -308,13 +318,28 @@ public class Monitor {
         XYLineAndShapeRenderer r2 = new XYLineAndShapeRenderer(false, true);
 
         for (int i = 0; i < dataset.getSeriesCount(); i++) {
-            r0.setSeriesPaint(i, java.awt.Color.LIGHT_GRAY);   // (indice, couleur)
+            int n = dataset.getSeriesCount();
+            float t = (n > 1) ? i / (float) (n - 1) : 1f;
+            Color c = Color.getHSBColor(0.6f, 0.2f + 0.8f * t, 0.5f + 0.5f * t);
+            r0.setSeriesPaint(i, c);   // (indice, couleur)
+            r0.setSeriesStroke(i, new BasicStroke(1.0f));
         }
         for (int i = 0; i < prediction_dataset.getSeriesCount(); i++) {
             r1.setSeriesPaint(i, java.awt.Color.BLUE);
+            double s = 3.0;
+            r1.setSeriesShape(i, ShapeUtils.createUpTriangle((float) s));
         }
         for (int i = 0; i < correction_dataset.getSeriesCount(); i++) {
             r2.setSeriesPaint(i, java.awt.Color.RED);
+            double s = 2.0;
+            r2.setSeriesShape(i, new Rectangle2D.Double(-s, -s, 2*s, 2*s));
+        }
+
+        // remove legend
+        for (int i = 1; i < dataset.getSeriesCount() - 1; i++) {
+            r0.setSeriesVisibleInLegend(i, false);
+            r1.setSeriesVisibleInLegend(i, false);
+            r2.setSeriesVisibleInLegend(i, false);
         }
 
         plot.setRenderer(0, r0);
