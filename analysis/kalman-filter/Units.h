@@ -30,6 +30,12 @@ struct Units {
     static constexpr double keV = 1e-6 * GeV;
     static constexpr double  eV = 1e-9 * GeV;
 
+    // Energy (GeV), Squared
+    static constexpr double GeV2 = GeV*GeV;
+    static constexpr double MeV2 = MeV*MeV;
+    static constexpr double keV2 = keV*keV;
+    static constexpr double  eV2 = eV*eV;
+
     // Distance (cm)
     static constexpr double cm = 1.0;
     static constexpr double mm = 1e-1 * cm;

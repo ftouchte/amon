@@ -35,7 +35,10 @@ LDFLAGS   :=
 
 
 #all:  showFile histo plot benchmark kfilter
-all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev lookat10gev_all_hits track_selection wire_disposition_dict wire_disposition occupancy debugHitSelection
+all: kfilter distance time2distance fitter kfmon lund-file clasrecon kfmon_data fOptions_test alignment lookat10gev lookat10gev_all_hits track_selection wire_disposition_dict wire_disposition occupancy debugHitSelection helium
+
+helium: helium.o fOptions.o
+	$(CXX) -o helium.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
 
 debugHitSelection: debugHitSelection.o fOptions.o AhdcCCDB.o
 	$(CXX) -o debugHitSelection.exe $^ $(HIPOLIBS) $(LZ4LIBS) $(ROOTLIBS) $(CCDBLIBS)
