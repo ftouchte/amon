@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jlab.io.base.DataBank;
 import org.jlab.io.hipo.HipoDataEvent;
 import org.jlab.jnp.hipo4.data.Bank;
 import org.jlab.jnp.hipo4.data.Event;
@@ -29,10 +30,10 @@ public class ElasticEventFilter {
         }
 
         // Read input and ouputs file from arguments
-        // String inFile = "/volatile/clas12/touchte/kalman-filter/v120/rec_clas_022712.evio.00000.hipo";
-		// String outFile = "/lustre24/expphy/volatile/clas12/touchte/kalman-filter/test/elastic_" + Path.of(inFile).getFileName().toString();
-        String inFile = args[0];
-		String outFile = args[1];
+        String inFile = "/work/clas12/users/touchte/data/fix-wfType4/clas_022098.evio.00040_after.hipo";
+		String outFile = "/work/clas12/users/touchte/data/fix-wfType4/filter_100evts_clas_022098.evio.00040_after.hipo";
+        // String inFile = args[0];
+		// String outFile = args[1];
 
         
 		Path path = Path.of(outFile);
@@ -88,12 +89,16 @@ public class ElasticEventFilter {
 
         // Initialiase elastic analyser
         //AlertElasticAnalyser analyser = new AlertElasticAnalyser();
-        AlertGoodTrackFinder analyser = new AlertGoodTrackFinder();
+        //AlertGoodTrackFinder analyser = new AlertGoodTrackFinder();
 
         // Loop over events
         int counter = 0;
         int nevents = 0;
         while(reader.hasNext()==true){ // just check if we have a next event but do not load it
+            
+            // control nb events
+            if (counter > 100) break;
+            
             // print
             nevents++;
             if (nevents % 10000 == 0) {
@@ -106,10 +111,25 @@ public class ElasticEventFilter {
 			// load the event
 			reader.nextEvent(inEvent);
 
+            // Custom selection criteria
+            HipoDataEvent event = new HipoDataEvent(inEvent, factory);
+            DataBank adcBank = event.getBank("AHDC::adc");
+
+            boolean flag = false;
+            for (int row = 0; row < adcBank.rows(); row++) {
+                double leadingEdgeTime = adcBank.getFloat("leadingEdgeTime", row);
+                int wfType = adcBank.getShort("wfType", row);
+                if (wfType == 4 && leadingEdgeTime > 650) {
+                    flag = true;
+                    break;
+                }
+            }
+
             // Check that the event is an elastic
-            if (analyser.hasGoodTrack(new HipoDataEvent(inEvent, factory))) {
+            //if (analyser.hasGoodTrack(new HipoDataEvent(inEvent, factory))) {
             //if (analyser.IsElastic(new HipoDataEvent(inEvent, factory))) {
             //if (analyser.hasBadWires(new HipoDataEvent(inEvent, factory))) {
+            if (flag) {
                 counter++;
                 // loop over all existing banks in the input file (reader)
                 for(int b = 0; b < schemaBanks.size(); b++){
