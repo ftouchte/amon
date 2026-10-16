@@ -48,7 +48,12 @@ const double deuteron_mass = 1.875*Units::GeV; ///< deuteron energy mass
 // beam energy
 const double beam_energy =  2239.49*Units::MeV;
 
-
+/**
+ * @brief Return an angle between 0 and 2*pi
+ * 
+ * @param x 
+ * @return double 
+ */
 double mod2Pi(double x) {
     double r = atan2(sin(x), cos(x)); // is an angle between -pi and pi
     if (r >= 0) {
@@ -56,6 +61,18 @@ double mod2Pi(double x) {
     } else {
         return r + 2*M_PI;
     }
+}
+
+/**
+ * @brief Return an angle between -pi and +pi
+ * 
+ * equals atan2(sin(x), cos(x))
+ * 
+ * @param x 
+ * @return double 
+ */
+double modPi(double x) {
+    return atan2(sin(x), cos(x));
 }
 
 int main(int argc, char const *argv[]) {
@@ -220,9 +237,10 @@ int main(int argc, char const *argv[]) {
                 if (nhits >= 7 && chi2 < 8) {
                 
                     double vz = trackBank.getFloat("z",  row) * Units::mm;
-                    double px = trackBank.getFloat("px", row) * Units::MeV;
-                    double py = trackBank.getFloat("py", row) * Units::MeV;
-                    double pz = trackBank.getFloat("pz", row) * Units::MeV;
+                    // momentum correction because we only have p/q for now
+                    double px = 2*trackBank.getFloat("px", row) * Units::MeV;
+                    double py = 2*trackBank.getFloat("py", row) * Units::MeV;
+                    double pz = 2*trackBank.getFloat("pz", row) * Units::MeV;
                     double dEdx = trackBank.getFloat("dEdx", row);
 
                     double p = sqrt(px*px + py*py + pz*pz);
@@ -241,10 +259,10 @@ int main(int argc, char const *argv[]) {
                     recoil_helium.momentum.SetCoordinates(px, py, pz, E);
 
                     // Look at delta phi
-                    ThreeVector v1 = outgoing_electron.momentum.Vect();
-                    ThreeVector v2 = recoil_helium.momentum.Vect();
-                    double phi1 = v1.Phi();
-                    double phi2 = v2.Phi();
+                    ThreeVector p1 = outgoing_electron.momentum.Vect();
+                    ThreeVector p2 = recoil_helium.momentum.Vect();
+                    double phi1 = p1.Phi();
+                    double phi2 = p2.Phi();
                     double delta_phi = mod2Pi(phi1- phi2) - M_PI;
 
                     histos->h1_ahdc_track_delta_phi->Fill(delta_phi/Units::deg);
@@ -258,10 +276,22 @@ int main(int argc, char const *argv[]) {
                         histos->h1_elastics_ahdc_track_phi->Fill(mod2Pi(phi)/Units::deg);
                         histos->h1_elastics_ahdc_track_vz->Fill(vz);
                         histos->h2_elastics_ahdc_track_p_vs_dEdx->Fill(p, dEdx);
-                        histos->h1_elastics_electron_p->Fill(v1.R());
-                        histos->h1_elastics_electron_theta->Fill(v1.Theta()/Units::deg);
-                        histos->h1_elastics_electron_phi->Fill(mod2Pi(v1.Phi())/Units::deg);
-                        histos->h1_elastics_electron_vz->Fill(recBank.getDouble("vz", outgoing_electron.row));
+                        histos->h1_elastics_electron_p->Fill(p1.R());
+                        histos->h1_elastics_electron_theta->Fill(p1.Theta()/Units::deg);
+                        histos->h1_elastics_electron_phi->Fill(mod2Pi(p1.Phi())/Units::deg);
+                        double vze = recBank.getDouble("vz", outgoing_electron.row);
+                        histos->h1_elastics_electron_vz->Fill(vze);
+                        histos->h1_elastics_delta_vz->Fill(vze - vz);
+
+                        ThreeVector p_eX = sys_eX.momentum.Vect();
+                        histos->h1_elastics_expected_track_p->Fill(p_eX.R());
+                        histos->h1_elastics_expected_track_theta->Fill(p_eX.Theta()/Units::deg);
+                        histos->h1_elastics_expected_track_phi->Fill(mod2Pi(p_eX.Phi())/Units::deg);
+
+                        histos->h1_elastics_diff_p->Fill(p_eX.R() - p);
+                        histos->h1_elastics_diff_theta->Fill(modPi(p_eX.Theta() - theta)/Units::deg);
+                        histos->h1_elastics_diff_phi->Fill(modPi(p_eX.Phi() - phi)/Units::deg);
+
                     }
 
                 } // end cut track quality

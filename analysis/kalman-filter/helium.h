@@ -90,6 +90,13 @@ struct Histograms
     TH1D* h1_elastics_electron_theta;
     TH1D* h1_elastics_electron_phi;
     TH1D* h1_elastics_electron_vz;
+    TH1D* h1_elastics_delta_vz;
+    TH1D* h1_elastics_expected_track_p;
+    TH1D* h1_elastics_expected_track_theta;
+    TH1D* h1_elastics_expected_track_phi;
+    TH1D* h1_elastics_diff_p;
+    TH1D* h1_elastics_diff_theta;
+    TH1D* h1_elastics_diff_phi;
     
 
     /**
@@ -139,6 +146,14 @@ struct Histograms
         h1_elastics_electron_theta = new TH1D("elastics_electron_theta", "electron theta;  (deg); count", 100, 4, 14);
         h1_elastics_electron_phi = new TH1D("elastics_electron_phi", "electron phi; phi (deg); count", 100, 0, 360);
         h1_elastics_electron_vz = new TH1D("elastics_electron_vz", "electron vz; vz (cm); count", 100, -45, 30);
+        h1_elastics_delta_vz = new TH1D("elastics_ahdc_track_delta_vz", "#Delta vz = vz^{electron} - vz^{AHDC}; #Delta vz (cm); count", 100, -11, 3);
+        h1_elastics_expected_track_p = new TH1D("elastics_expected_track_p", "expected track p; p (GeV); count", 100, 0, 1);
+        h1_elastics_expected_track_theta = new TH1D("elastics_expected_track_theta", "expected track theta;  (deg); count", 100, 0, 180);
+        h1_elastics_expected_track_phi = new TH1D("elastics_expected_track_phi", "expected track phi; phi (deg); count", 100, 0, 360);
+
+        h1_elastics_diff_p = new TH1D("elastics_diff_p", "elastics diff p; #Delta p (GeV); count", 100, -0.11, 0.11);
+        h1_elastics_diff_theta = new TH1D("elastics_diff_theta", "elastics diff theta; #Delta #theta (deg); count", 100, -60, 60);
+        h1_elastics_diff_phi = new TH1D("elastics_diff_phi", "elastics diff phi;  #Delta #phi (deg); count", 100, -8, 8);
         
 
 
@@ -179,7 +194,7 @@ struct Histograms
         delete h1_ahdc_track_vz;
 
         delete h1_ahdc_track_delta_phi;
-        
+           
         delete h1_elastics_ahdc_track_delta_phi;
         delete h1_elastics_ahdc_track_nhits;
         delete h1_elastics_ahdc_track_chi2;
@@ -192,6 +207,15 @@ struct Histograms
         delete h1_elastics_electron_theta;
         delete h1_elastics_electron_phi;
         delete h1_elastics_electron_vz;
+        delete h1_elastics_delta_vz;
+        delete h1_elastics_expected_track_p;
+        delete h1_elastics_expected_track_theta;
+        delete h1_elastics_expected_track_phi;
+
+        delete h1_elastics_diff_p;
+        delete h1_elastics_diff_theta;
+        delete h1_elastics_diff_phi;
+        
 
     }
 
@@ -242,6 +266,15 @@ struct Histograms
         h1_elastics_electron_theta->Write(h1_elastics_electron_theta->GetName());
         h1_elastics_electron_phi->Write(h1_elastics_electron_phi->GetName());
         h1_elastics_electron_vz->Write(h1_elastics_electron_vz->GetName());
+
+        h1_elastics_delta_vz->Write(h1_elastics_delta_vz->GetName());
+        h1_elastics_expected_track_p->Write(h1_elastics_expected_track_p->GetName());
+        h1_elastics_expected_track_theta->Write(h1_elastics_expected_track_theta->GetName());
+        h1_elastics_expected_track_phi->Write(h1_elastics_expected_track_phi->GetName());
+
+        h1_elastics_diff_p->Write(h1_elastics_diff_p->GetName());
+        h1_elastics_diff_theta->Write(h1_elastics_diff_theta->GetName());
+        h1_elastics_diff_phi->Write(h1_elastics_diff_phi->GetName());
 
     }
 
