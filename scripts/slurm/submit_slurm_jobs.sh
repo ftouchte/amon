@@ -6,7 +6,7 @@
 ##########################################################################
 
 # --- working directory
-workDir="/lustre24/expphy/volatile/clas12/touchte/new-translation-table" # should macth the one in run.sbatch
+workDir="/lustre24/expphy/volatile/clas12/touchte/helium_elastics" # should macth the one in run.sbatch
 cache="/cache/clas12/rg-l/data"
 
 # --- Location of the reconstructed files
@@ -27,7 +27,16 @@ rec_list="$workDir/rec_list.txt"
 
 # --- Create the list of input (here evio) files
 # find $cache/clas_02299[0124] -regextype posix-extended -regex ".*/clas_[0-9]+\.evio\.[0-9]+\.hipo" | sort > "$dec_list" # case of hipo file
-find $cache/clas_02299[0124] -regextype posix-extended -regex ".*/clas_[0-9]+\.evio\.[0-9]+" | sort > "$evio_list"
+find $cache/clas_022758 \
+    $cache/clas_022767 \
+    $cache/clas_022769 \
+    $cache/clas_022770 \
+    $cache/clas_022772 \
+    $cache/clas_022773 \
+    $cache/clas_022775 \
+    -regextype posix-extended \
+    -regex ".*/clas_[0-9]+\.evio\.0004[0-9]" \
+    | sort > "$evio_list"
 
 # --- Create the list of dec files
 while read -r file

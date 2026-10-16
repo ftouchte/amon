@@ -1,15 +1,15 @@
 #!/bin/bash
 #SBATCH --account=clas12
 #SBATCH --partition=production
-#SBATCH --job-name=rgl_ahdc_new_translation_table
+#SBATCH --job-name=rgl_elastics_off_helium4
 #SBATCH --output=/farm_out/%u/%x-%A-%a.out
 #SBATCH --error=/farm_out/%u/%x-%A-%a.err
-#SBATCH --time=08:00:00
-#SBATCH --ntasks=1
+#SBATCH --time=03:00:00
+#SBATCH --ntasks=2
 #SBATCH --mem=6000
 
 # Files location
-workDir="/lustre24/expphy/volatile/clas12/touchte/new-translation-table" # should match the one in submit_slurm_job.sbatch
+workDir="/lustre24/expphy/volatile/clas12/touchte/helium_elastics" # should match the one in submit_slurm_job.sbatch
 
 # The following files are created in submit_slurm_job.sbatch
 evio_list="$workDir/evio_list.txt"
@@ -25,13 +25,15 @@ recfile=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p"  "$rec_list")
 export TMPDIR="/scratch/touchte/tmpfs"
 
 # Set path to the CCDB
-export CCDB_CONNECTION="sqlite:////work/clas12/users/touchte/ccdb_2026-04-26.sqlite"
+#export CCDB_CONNECTION="sqlite:////work/clas12/users/touchte/ccdb_2026-04-26.sqlite"
+export CCDB_CONNECTION="mysql://clas12reader@clasdb-farm.jlab.org/clas12"
+
 
 # path to coatjava
-coatjava="/w/hallb-scshelf2102/clas12/users/touchte/coatjava"
+coatjava="/w/hallb-scshelf2102/clas12/users/touchte/sync-coatjava"
 
 # Path to the YAML file
-yamlfile="/volatile/clas12/touchte/new-translation-table/config.yaml"
+yamlfile="$workDir/config_all.yaml"
 
 
 # Summary
@@ -41,9 +43,9 @@ echo "yamlfile : $yamlfile"
 echo "dec command  : $coatjava/coatjava/bin/decoder    -i $eviofile  -o $decfile"
 echo "rec command  : $coatjava/coatjava/bin/recon-util -i $decfile   -o $recfile -y $yamlfile"
 
-# Check CCDB
-echo "> CCDB table check"
-ccdb -r 22712 dump /calibration/alert/ahdc/time_offsets | grep "192 *0\.00"
+# # Check CCDB
+# echo "> CCDB table check"
+# ccdb -r 22712 dump /calibration/alert/ahdc/time_offsets | grep "192 *0\.00"
 
 # Uncomment to run command
 $coatjava/coatjava/bin/decoder    -i "$eviofile"  -o "$decfile"
