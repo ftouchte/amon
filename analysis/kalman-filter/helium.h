@@ -114,9 +114,9 @@ struct Histograms
 
         h1_Q2_W2cut = new TH1D("Q2_W2cut", "Q2; Q2 (GeV^{2}); count", 100, 0, 0.2);
         h1_W2_W2cut = new TH1D("W2_W2cut", "W2; W2 (GeV^{2}); count", 100, 13.79, 14.05);
-        h1_xB_W2cut = new TH1D("xB_W2cut", "xB; xB; count", 100, 0.5, 1);
+        h1_xB_W2cut = new TH1D("xB_W2cut", "xB; xB; count", 100, 0, 1);
         h1_nu_W2cut = new TH1D("nu_W2cut", "#nu = E-E'; #nu (GeV); count", 100, 0, 0.04);
-        h1_y_W2cut =  new TH1D(" y_W2cut", "y = (E-E')/E; y; count", 100, 0, 0.01);
+        h1_y_W2cut =  new TH1D(" y_W2cut", "y = (E-E')/E; y; count", 100, 0, 0.05);
 
         h1_electron_p = new TH1D("electron_p", "electron p; p (GeV); count", 100, 2.19, 2.3);
         h1_electron_theta = new TH1D("electron_theta", "electron theta;  (deg); count", 100, 4, 14);
@@ -126,7 +126,7 @@ struct Histograms
         h1_ahdc_track_nhits_nocut = new TH1D("ahdc_track_nb_hits_nocut", "ahdc_track nb. hits; nb. hits; count", 12, 0, 12);
         h1_ahdc_track_chi2_nocut = new TH1D("ahdc_track_chi2_nocut", "ahdc_track chi2; chi2; count", 100, 0, 10);
 
-        h1_ahdc_track_nhits = new TH1D("ahdc_track_nb_hits", "ahdc_track nb. hits; nb. hits; count", 12, 0, 12);
+        h1_ahdc_track_nhits = new TH1D("ahdc_track_nb_hits", "ahdc_track nb. hits; nb. hits; count", 9, 6, 15);
         h1_ahdc_track_chi2 = new TH1D("ahdc_track_chi2", "ahdc_track chi2; chi2; count", 100, 0, 10);
         h1_ahdc_track_p = new TH1D("ahdc_track_p", "ahdc_track p; p (GeV); count", 100, 0, 1);
         h1_ahdc_track_theta = new TH1D("ahdc_track_theta", "ahdc_track theta;  (deg); count", 100, 0, 180);
@@ -148,7 +148,7 @@ struct Histograms
         h1_elastics_electron_vz = new TH1D("elastics_electron_vz", "electron vz; vz (cm); count", 100, -45, 30);
         h1_elastics_delta_vz = new TH1D("elastics_ahdc_track_delta_vz", "#Delta vz = vz^{electron} - vz^{AHDC}; #Delta vz (cm); count", 100, -11, 3);
         h1_elastics_expected_track_p = new TH1D("elastics_expected_track_p", "expected track p; p (GeV); count", 100, 0, 1);
-        h1_elastics_expected_track_theta = new TH1D("elastics_expected_track_theta", "expected track theta;  (deg); count", 100, 0, 180);
+        h1_elastics_expected_track_theta = new TH1D("elastics_expected_track_theta", "expected track theta;  (deg); count", 100, 77, 88);
         h1_elastics_expected_track_phi = new TH1D("elastics_expected_track_phi", "expected track phi; phi (deg); count", 100, 0, 360);
 
         h1_elastics_diff_p = new TH1D("elastics_diff_p", "elastics diff p; #Delta p (GeV); count", 100, -0.11, 0.11);

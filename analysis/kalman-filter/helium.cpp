@@ -18,7 +18,8 @@
 #include "fOptions.h"
 #include "Units.h"
 
-#include "reader.h"
+#include "../hipo4/reader.h"
+#include "../hipo4/writer.h"
 
 #include "TH1.h"
 #include "TH2.h"
@@ -80,7 +81,7 @@ int main(int argc, char const *argv[]) {
     auto start = std::chrono::high_resolution_clock::now();
     
     /// --- Load files from options
-    fOptions OPT({"-i", "-o"});
+    fOptions OPT({"-i", "-o", "-filtering"});
     OPT.LoadOptions(argc, argv);
     OPT.Show();
 
@@ -90,6 +91,10 @@ int main(int argc, char const *argv[]) {
     /// --- Histograms
     Histograms* histos = new Histograms();
 
+    bool filtering = OPT.GetValue("-filtering") == "true";
+
+    /// -- HIPO writer : filter events
+    hipo::writer writer;
 
     /// --- Loop over files
     int nfiles = 0;
@@ -100,6 +105,16 @@ int main(int argc, char const *argv[]) {
         hipo::reader  reader(filename.c_str());
         hipo::dictionary factory;
         reader.readDictionary(factory);
+
+        if (nfiles == 1 && filtering) {
+            writer.addDictionary(factory);
+            std::string hipo_output = output;
+            if (hipo_output.substr(hipo_output.size()-4, hipo_output.size()) == "root") {
+                hipo_output = hipo_output.substr(0, hipo_output.size()-4);
+            }
+            hipo_output += ".hipo";
+            writer.open(hipo_output.c_str());
+        }
         
         /// --- Bank definition
         hipo::bank  adcBank(factory.getSchema("AHDC::adc"));
@@ -292,6 +307,9 @@ int main(int argc, char const *argv[]) {
                         histos->h1_elastics_diff_theta->Fill(modPi(p_eX.Theta() - theta)/Units::deg);
                         histos->h1_elastics_diff_phi->Fill(modPi(p_eX.Phi() - phi)/Units::deg);
 
+                        // Filter these events and store them in a HIPO file
+                        writer.addEvent(event);
+
                     }
 
                 } // end cut track quality
@@ -308,15 +326,10 @@ int main(int argc, char const *argv[]) {
     } // end loop over files
 
 
-
-
-
-
-
-
-
-
-
+    if (filtering) {
+        writer.close();
+        writer.showSummary();
+    }
 
 
     // Output
