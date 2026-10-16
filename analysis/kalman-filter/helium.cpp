@@ -249,7 +249,20 @@ int main(int argc, char const *argv[]) {
 
                     histos->h1_ahdc_track_delta_phi->Fill(delta_phi/Units::deg);
 
-
+                    if (delta_phi > -5*Units::deg && delta_phi < 5*Units::deg) {
+                        histos->h1_elastics_ahdc_track_delta_phi->Fill(delta_phi/Units::deg);
+                        histos->h1_elastics_ahdc_track_nhits->Fill(nhits);
+                        histos->h1_elastics_ahdc_track_chi2->Fill(chi2);
+                        histos->h1_elastics_ahdc_track_p->Fill(p);
+                        histos->h1_elastics_ahdc_track_theta->Fill(theta/Units::deg);
+                        histos->h1_elastics_ahdc_track_phi->Fill(mod2Pi(phi)/Units::deg);
+                        histos->h1_elastics_ahdc_track_vz->Fill(vz);
+                        histos->h2_elastics_ahdc_track_p_vs_dEdx->Fill(p, dEdx);
+                        histos->h1_elastics_electron_p->Fill(v1.R());
+                        histos->h1_elastics_electron_theta->Fill(v1.Theta()/Units::deg);
+                        histos->h1_elastics_electron_phi->Fill(mod2Pi(v1.Phi())/Units::deg);
+                        histos->h1_elastics_electron_vz->Fill(recBank.getDouble("vz", outgoing_electron.row));
+                    }
 
                 } // end cut track quality
 

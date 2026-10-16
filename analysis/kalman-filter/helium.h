@@ -53,6 +53,8 @@ struct Histograms
     TH1D* h1_y;
     TH1D* h1_electron_vz_nocut;
 
+    // after W2 cut and vz cut
+
     TH1D* h1_Q2_W2cut;
     TH1D* h1_W2_W2cut;
     TH1D* h1_xB_W2cut;
@@ -64,6 +66,7 @@ struct Histograms
     TH1D* h1_electron_phi;
     TH1D* h1_electron_vz;
 
+    // After selecting one electron and requiring good tracks (chi2 and nb_hits cut)
     TH1D* h1_ahdc_track_nhits_nocut;
     TH1D* h1_ahdc_track_chi2_nocut;
     TH1D* h1_ahdc_track_nhits;
@@ -72,10 +75,22 @@ struct Histograms
     TH1D* h1_ahdc_track_theta;
     TH1D* h1_ahdc_track_phi;
     TH1D* h1_ahdc_track_vz;
-
     TH1D* h1_ahdc_track_delta_phi;
-    TH1D* h1_ahdc_track_delta_phi_cut;
 
+    // elastics
+    TH1D* h1_elastics_ahdc_track_delta_phi;
+    TH1D* h1_elastics_ahdc_track_nhits;
+    TH1D* h1_elastics_ahdc_track_chi2;
+    TH1D* h1_elastics_ahdc_track_p;
+    TH1D* h1_elastics_ahdc_track_theta;
+    TH1D* h1_elastics_ahdc_track_phi;
+    TH1D* h1_elastics_ahdc_track_vz;
+    TH2D* h2_elastics_ahdc_track_p_vs_dEdx;
+    TH1D* h1_elastics_electron_p;
+    TH1D* h1_elastics_electron_theta;
+    TH1D* h1_elastics_electron_phi;
+    TH1D* h1_elastics_electron_vz;
+    
 
     /**
      * @brief Construct a new Histograms object
@@ -103,15 +118,29 @@ struct Histograms
 
         h1_ahdc_track_nhits_nocut = new TH1D("ahdc_track_nb_hits_nocut", "ahdc_track nb. hits; nb. hits; count", 12, 0, 12);
         h1_ahdc_track_chi2_nocut = new TH1D("ahdc_track_chi2_nocut", "ahdc_track chi2; chi2; count", 100, 0, 10);
-        h1_ahdc_track_nhits = new TH1D("ahdc_track_nb_hits", "ahdc_track nb. hits; nb. hits; count", 12, 0, 2);
+
+        h1_ahdc_track_nhits = new TH1D("ahdc_track_nb_hits", "ahdc_track nb. hits; nb. hits; count", 12, 0, 12);
         h1_ahdc_track_chi2 = new TH1D("ahdc_track_chi2", "ahdc_track chi2; chi2; count", 100, 0, 10);
         h1_ahdc_track_p = new TH1D("ahdc_track_p", "ahdc_track p; p (GeV); count", 100, 0, 1);
         h1_ahdc_track_theta = new TH1D("ahdc_track_theta", "ahdc_track theta;  (deg); count", 100, 0, 180);
         h1_ahdc_track_phi = new TH1D("ahdc_track_phi", "ahdc_track phi; phi (deg); count", 100, 0, 360);
         h1_ahdc_track_vz = new TH1D("ahdc_track_vz", "ahdc_track vz; vz (cm); count", 100, -25, 20);
-
         h1_ahdc_track_delta_phi = new TH1D("ahdc_track_delta_phi", "ahdc_track #Delta #Phi; #Delta #Phi (deg); count", 100, -30, 30);
-        h1_ahdc_track_delta_phi_cut = new TH1D("ahdc_track_delta_phi_cut", "ahdc_track #Delta #Phi; #Delta #Phi (deg); count", 100, -30, 30);
+
+        h1_elastics_ahdc_track_delta_phi = new TH1D("elastics_ahdc_track_delta_phi", "ahdc_track #Delta #Phi; #Delta #Phi (deg); count", 100, -8, 8);
+        h1_elastics_ahdc_track_nhits = new TH1D("elastics_ahdc_track_nb_hits", "ahdc_track nb. hits; nb. hits; count", 9, 6, 15);
+        h1_elastics_ahdc_track_chi2 = new TH1D("elastics_ahdc_track_chi2", "ahdc_track chi2; chi2; count", 100, 0, 10);
+        h1_elastics_ahdc_track_p = new TH1D("elastics_ahdc_track_p", "ahdc_track p; p (GeV); count", 100, 0, 1);
+        h1_elastics_ahdc_track_theta = new TH1D("elastics_ahdc_track_theta", "ahdc_track theta;  (deg); count", 100, 0, 180);
+        h1_elastics_ahdc_track_phi = new TH1D("elastics_ahdc_track_phi", "ahdc_track phi; phi (deg); count", 100, 0, 360);
+        h1_elastics_ahdc_track_vz = new TH1D("elastics_ahdc_track_vz", "ahdc_track vz; vz (cm); count", 100, -25, 20);
+        h2_elastics_ahdc_track_p_vs_dEdx = new TH2D("elastics_ahdc_track_p_vs_dEdx", "ahdc track dEdx vs p", 50, 0, 1, 50, 0, 1500);
+        h1_elastics_electron_p = new TH1D("elastics_electron_p", "electron p; p (GeV); count", 100, 2.19, 2.25);
+        h1_elastics_electron_theta = new TH1D("elastics_electron_theta", "electron theta;  (deg); count", 100, 4, 14);
+        h1_elastics_electron_phi = new TH1D("elastics_electron_phi", "electron phi; phi (deg); count", 100, 0, 360);
+        h1_elastics_electron_vz = new TH1D("elastics_electron_vz", "electron vz; vz (cm); count", 100, -45, 30);
+        
+
 
     }
 
@@ -150,7 +179,19 @@ struct Histograms
         delete h1_ahdc_track_vz;
 
         delete h1_ahdc_track_delta_phi;
-        delete h1_ahdc_track_delta_phi_cut;
+        
+        delete h1_elastics_ahdc_track_delta_phi;
+        delete h1_elastics_ahdc_track_nhits;
+        delete h1_elastics_ahdc_track_chi2;
+        delete h1_elastics_ahdc_track_p;
+        delete h1_elastics_ahdc_track_theta;
+        delete h1_elastics_ahdc_track_phi;
+        delete h1_elastics_ahdc_track_vz;
+        delete h2_elastics_ahdc_track_p_vs_dEdx;
+        delete h1_elastics_electron_p;
+        delete h1_elastics_electron_theta;
+        delete h1_elastics_electron_phi;
+        delete h1_elastics_electron_vz;
 
     }
 
@@ -188,8 +229,19 @@ struct Histograms
         h1_ahdc_track_vz->Write(h1_ahdc_track_vz->GetName());
 
         h1_ahdc_track_delta_phi->Write(h1_ahdc_track_delta_phi->GetName());
-        h1_ahdc_track_delta_phi_cut->Write(h1_ahdc_track_delta_phi_cut->GetName());
 
+        h1_elastics_ahdc_track_delta_phi->Write(h1_elastics_ahdc_track_delta_phi->GetName());
+        h1_elastics_ahdc_track_nhits->Write(h1_elastics_ahdc_track_nhits->GetName());
+        h1_elastics_ahdc_track_chi2->Write(h1_elastics_ahdc_track_chi2->GetName());
+        h1_elastics_ahdc_track_p->Write(h1_elastics_ahdc_track_p->GetName());
+        h1_elastics_ahdc_track_theta->Write(h1_elastics_ahdc_track_theta->GetName());
+        h1_elastics_ahdc_track_phi->Write(h1_elastics_ahdc_track_phi->GetName());
+        h1_elastics_ahdc_track_vz->Write(h1_elastics_ahdc_track_vz->GetName());
+        h2_elastics_ahdc_track_p_vs_dEdx->Write(h2_elastics_ahdc_track_p_vs_dEdx->GetName());
+        h1_elastics_electron_p->Write(h1_elastics_electron_p->GetName());
+        h1_elastics_electron_theta->Write(h1_elastics_electron_theta->GetName());
+        h1_elastics_electron_phi->Write(h1_elastics_electron_phi->GetName());
+        h1_elastics_electron_vz->Write(h1_elastics_electron_vz->GetName());
 
     }
 
