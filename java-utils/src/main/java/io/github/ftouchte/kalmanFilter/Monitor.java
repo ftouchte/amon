@@ -150,9 +150,28 @@ public class Monitor {
             /// --- Read the electron vz
             DataBank recBank = event.getBank("REC::Particle");
             double vertex = 0;
+            double expected_p = 0;
+            double expected_theta = 0;
+            double expected_phi = 0;
             for (int row = 0; row < recBank.rows(); row++) {
                 if (recBank.getInt("pid", row) == 11) {
                     vertex = 10.0 * recBank.getFloat("vz", row); // convert from cm to mm
+                    double px = 1000*recBank.getFloat("px", row);
+                    double py = 1000*recBank.getFloat("py", row);
+                    double pz = 1000*recBank.getFloat("pz", row);
+                    double p = Math.sqrt(px*px + py*py + pz*pz);
+                    double theta = Math.acos(pz/p);
+                    double phi = Math.atan2(py, px);
+
+                    double beam_energy = 2239.49; // MeV
+                    double px1 = -p*Math.sin(theta)*Math.cos(phi);
+                    double py1 = -p*Math.sin(theta)*Math.sin(phi);
+                    double pz1 = beam_energy - p*Math.cos(theta);
+
+                    expected_p = Math.sqrt(px1*px1 + py1*py1 + pz1*pz1);
+                    expected_theta = Math.acos(pz1/expected_p);
+                    expected_phi = Math.atan2(py1, px1);
+
                     break;
                 }
             }
@@ -218,6 +237,15 @@ public class Monitor {
                 XYSeriesCollection prediction_dataset = new XYSeriesCollection();
                 XYSeriesCollection correction_dataset = new XYSeriesCollection();
                 XYSeriesCollection dataset = new XYSeriesCollection();
+                
+                XYSeriesCollection p_dataset = new XYSeriesCollection();
+                XYSeriesCollection theta_dataset = new XYSeriesCollection();
+                XYSeriesCollection phi_dataset = new XYSeriesCollection();
+
+                XYSeries p_series = new XYSeries(String.format("p_series_evt_%d_trackid_%d", nevents, track.get_trackId()), false, true);
+                XYSeries theta_series = new XYSeries(String.format("theta_series_evt_%d_trackid_%d", nevents, track.get_trackId()), false, true);
+                XYSeries phi_series = new XYSeries(String.format("phi_series_evt_%d_trackid_%d", nevents, track.get_trackId()), false, true);
+
                 for(int k = 0; k < Niter; ++k) {
                     
                     XYSeries predictions = new XYSeries(String.format("prediction_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k), false, true);
@@ -225,7 +253,7 @@ public class Monitor {
                     XYSeries combined = new XYSeries(String.format("combined_evt_%d_trackid_%d_iter_%d", nevents, track.get_trackId(), k), false, true);
 
                     // Starting point
-                    addPointToSeries(TrackFitter, combined);
+                    addZRPointToSeries(TrackFitter, combined);
 
                     //TrackFitter.ResetErrorCovariance(initialErrorCovariance.copy());
 
@@ -234,37 +262,42 @@ public class Monitor {
                     // Forward
                     for(Hit hit : AHDC_hits) {
                         TrackFitter.predict(hit, true);
-                        addPointToSeries(TrackFitter, predictions);
-                        addPointToSeries(TrackFitter, combined);
+                        addZRPointToSeries(TrackFitter, predictions);
+                        addZRPointToSeries(TrackFitter, combined);
                         TrackFitter.correct(hit);
-                        addPointToSeries(TrackFitter, corrections);
-                        addPointToSeries(TrackFitter, combined);
+                        addZRPointToSeries(TrackFitter, corrections);
+                        addZRPointToSeries(TrackFitter, combined);
                     }
 
                     // Backward
                     for(int i = AHDC_hits.size() - 2; i >= 0; i--) {
                         Hit hit = (Hit)AHDC_hits.get(i);
                         TrackFitter.predict(hit, false);
-                        addPointToSeries(TrackFitter, predictions);
-                        addPointToSeries(TrackFitter, combined);
+                        addZRPointToSeries(TrackFitter, predictions);
+                        addZRPointToSeries(TrackFitter, combined);
                         TrackFitter.correct(hit);
-                        addPointToSeries(TrackFitter, corrections);
-                        addPointToSeries(TrackFitter, combined);
+                        addZRPointToSeries(TrackFitter, corrections);
+                        addZRPointToSeries(TrackFitter, combined);
                     }
 
                     // Beamline
                     TrackFitter.predict(hit_beam, false);
-                    addPointToSeries(TrackFitter, predictions);
-                    addPointToSeries(TrackFitter, combined);
+                    addZRPointToSeries(TrackFitter, predictions);
+                    addZRPointToSeries(TrackFitter, combined);
                     TrackFitter.correct(hit_beam);
-                    addPointToSeries(TrackFitter, corrections);
-                    addPointToSeries(TrackFitter, combined);
+                    addZRPointToSeries(TrackFitter, corrections);
+                    addZRPointToSeries(TrackFitter, combined);
 
                     prediction_dataset.addSeries(predictions);
                     correction_dataset.addSeries(corrections);
                     dataset.addSeries(combined);
 
-                }
+                    addMomemtumToSeries(TrackFitter, k, p_series, theta_series, phi_series);
+
+                } // end loop over iter
+                p_dataset.addSeries(p_series);
+                theta_dataset.addSeries(theta_series);
+                phi_dataset.addSeries(phi_series);
 
                 // Do post fit propagation
                 RealVector x_out = TrackFitter.getStateEstimationVector();
@@ -282,8 +315,18 @@ public class Monitor {
                 // to be done...
 
                 String workDir = "/w/hallb-scshelf2102/clas12/users/touchte/amon/java-utils/src/main/java/io/github/ftouchte/kalmanFilter/output";
-                String outName = String.format("%s/evt_%d_trackid_%d.png", workDir, nevents, track.get_trackId());
-                create_chart(prediction_dataset, correction_dataset, dataset, outName);
+                String outName = String.format("%s/evt_%d_trackid_%d_ZR.png", workDir, nevents, track.get_trackId());
+                create_zr_chart(prediction_dataset, correction_dataset, dataset, outName);
+
+                // Momentum output
+                String p_outName = String.format("%s/evt_%d_trackid_%d_p.png", workDir, nevents, track.get_trackId());
+                create_niter_chart(p_dataset, "p (MeV)", expected_p, p_outName, Niter);
+
+                String theta_outName = String.format("%s/evt_%d_trackid_%d_theta.png", workDir, nevents, track.get_trackId());
+                create_niter_chart(theta_dataset, "theta (rad)", expected_theta, theta_outName, Niter);
+
+                String phi_outName = String.format("%s/evt_%d_trackid_%d_phi.png", workDir, nevents, track.get_trackId());
+                create_niter_chart(phi_dataset, "phi (rad)", expected_phi, phi_outName, Niter);
 
             } // end loop over tracks
 
@@ -293,7 +336,7 @@ public class Monitor {
 
     } // end main
 
-    public static void addPointToSeries (KFitter fitter, XYSeries series) {
+    public static void addZRPointToSeries (KFitter fitter, XYSeries series) {
         RealVector x_out = fitter.getStateEstimationVector();
         double x = x_out.getEntry(0);
         double y = x_out.getEntry(1);
@@ -302,7 +345,20 @@ public class Monitor {
         series.add(z,r);
     }
 
-    public static void create_chart(XYSeriesCollection prediction_dataset, XYSeriesCollection correction_dataset, XYSeriesCollection dataset, String outName) {
+    public static void addMomemtumToSeries (KFitter fitter, int Niter, XYSeries P, XYSeries Theta, XYSeries Phi) {
+        RealVector x_out = fitter.getStateEstimationVector();
+        double px = x_out.getEntry(3);
+        double py = x_out.getEntry(4);
+        double pz = x_out.getEntry(5);
+        double p = Math.sqrt(px*px + py*py + pz*pz);
+        double theta = Math.acos(pz/p);
+        double phi = Math.atan2(py, px);
+        P.add(Niter, p);
+        Theta.add(Niter, theta);
+        Phi.add(Niter, phi);
+    }
+
+    public static void create_zr_chart(XYSeriesCollection prediction_dataset, XYSeriesCollection correction_dataset, XYSeriesCollection dataset, String outName) {
         // Create the chart with the first dataset
         JFreeChart chart = ChartFactory.createXYLineChart(
                 "Track fit",       // title
@@ -370,5 +426,69 @@ public class Monitor {
             e.printStackTrace();
         }
 
-    }
+    } // end create zr chart
+
+    public static void create_niter_chart(XYSeriesCollection dataset, String valName, double expected_value, String outName, int max_Niter) {
+        // Create the chart with the first dataset
+        JFreeChart chart = ChartFactory.createXYLineChart(
+                "Track fit",       // title
+                "Niter",               // x-axis label
+                valName,               // y-axis label
+                dataset,           // dataset 0 (combined)
+                PlotOrientation.VERTICAL,
+                true, true, false);
+
+        XYPlot plot = chart.getXYPlot();
+
+        // The last serie is the last to be plotted
+        plot.setSeriesRenderingOrder(SeriesRenderingOrder.FORWARD);
+
+        //Axis limit
+        // NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        // NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
+
+        // xAxis.setRange(-200.0, 200.0);   // xlim
+        // yAxis.setRange(0.0, 80.0);   // ylim
+
+        XYSeriesCollection line = new XYSeriesCollection();
+        XYSeries line_Series = new XYSeries("expected");
+        line_Series.add(0, expected_value);
+        line_Series.add(max_Niter, expected_value);
+        line.addSeries(line_Series);
+
+        // Attach the other datasets
+        plot.setDataset(1, line);
+
+        XYLineAndShapeRenderer r0 = new XYLineAndShapeRenderer(true, true);
+        XYLineAndShapeRenderer r1 = new XYLineAndShapeRenderer(true, false);
+
+        for (int i = 0; i < dataset.getSeriesCount(); i++) {
+            int n = dataset.getSeriesCount();
+            float t = (n > 1) ? i / (float) (n - 1) : 1f;
+            Color c = Color.getHSBColor(0.6f, 0.2f + 0.8f * t, 0.5f + 0.5f * t);
+            r0.setSeriesPaint(i, c);   // (indice, couleur)
+            r0.setSeriesStroke(i, new BasicStroke(1.0f));
+            double s = 2.0;
+            r0.setSeriesShape(i, new Rectangle2D.Double(-s, -s, 2*s, 2*s));
+        }
+        for (int i = 0; i < line.getSeriesCount(); i++) {
+            r1.setSeriesPaint(i, java.awt.Color.RED);
+            r1.setSeriesStroke(i, new BasicStroke(1.0f));
+        }
+
+        // remove legend
+        for (int i = 1; i < dataset.getSeriesCount() - 1; i++) {
+            r0.setSeriesVisibleInLegend(i, false);
+            r1.setSeriesVisibleInLegend(i, false);
+        }
+
+        plot.setRenderer(0, r0);
+        plot.setRenderer(1, r1);
+        try {
+            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 800);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    } // end create chart
 }
