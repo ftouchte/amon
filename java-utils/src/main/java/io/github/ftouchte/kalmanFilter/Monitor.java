@@ -311,6 +311,26 @@ public class Monitor {
                     hit.setResidual_LR(PostFitPropagator.residual_LR(hit));
                 }
 
+                // // TMP : good scenario
+                // {
+                //     double px = x_out.getEntry(3);
+                //     double py = x_out.getEntry(4);
+                //     double pz = x_out.getEntry(5);
+                //     double p = Math.sqrt(px*px + py*py + pz*pz);
+                //     double theta = Math.acos(pz/p);
+                //     double phi = Math.atan2(py, px);
+                    
+                //     double delta_phi = expected_phi - phi;
+                //     delta_phi = Math.atan2(Math.sin(delta_phi), Math.cos(delta_phi));
+                //     double delta_p = p - expected_p;
+                //     double delta_theta = theta - expected_theta;
+                //     delta_theta = Math.atan2(Math.sin(delta_theta), Math.cos(delta_theta));
+                //     if (Math.abs(delta_phi) > 3.0*Math.PI/180 || Math.abs(delta_p) > 20 || Math.abs(delta_theta) > 10.0*Math.PI/180) {
+                //         continue;
+                //     }
+                //     nevents++;
+                // }
+
                 // Expected track
                 // to be done...
 
@@ -421,7 +441,7 @@ public class Monitor {
         plot.setRenderer(2, r2);
 
         try {
-            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 800);
+            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 900);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -485,7 +505,7 @@ public class Monitor {
         plot.setRenderer(0, r0);
         plot.setRenderer(1, r1);
         try {
-            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 800);
+            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 900);
         } catch (IOException e) {
             e.printStackTrace();
         }
