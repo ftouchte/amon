@@ -7,6 +7,8 @@
 #SBATCH --time=03:00:00
 #SBATCH --ntasks=2
 #SBATCH --mem=6000
+#SBATCH --gres=disk:1G
+#SBATCH --export=NONE
 
 # Files location
 workDir="/lustre24/expphy/volatile/clas12/touchte/helium_elastics" # should match the one in submit_slurm_job.sbatch
@@ -22,7 +24,7 @@ decfile=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p"  "$dec_list")
 recfile=$(sed -n "$((SLURM_ARRAY_TASK_ID+1))p"  "$rec_list")
 
 # Place to store temporary files
-export TMPDIR="/scratch/touchte/tmpfs"
+export TMPDIR="/scratch/slurm/$SLURM_JOB_ID"
 
 # Set path to the CCDB
 #export CCDB_CONNECTION="sqlite:////work/clas12/users/touchte/ccdb_2026-04-26.sqlite"
