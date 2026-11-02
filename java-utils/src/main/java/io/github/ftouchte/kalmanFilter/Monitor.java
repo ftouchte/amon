@@ -26,6 +26,10 @@ import org.jlab.rec.alert.Track.TrackCandidate;
 import org.jlab.service.ahdc.AHDCEngine;
 import org.jlab.service.alert.ALERTEngine;
 
+import com.itextpdf.text.DocumentException;
+
+import io.github.ftouchte.kalmanFilter.Renderer.RendererOutputType;
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 
@@ -36,10 +40,17 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.LegendItem;
+import org.jfree.chart.LegendItemCollection;
+import org.jfree.chart.annotations.XYTitleAnnotation;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.SeriesRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.title.LegendTitle;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.RectangleEdge;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.chart.util.ShapeUtils;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
@@ -48,8 +59,7 @@ import org.jlab.clas.pdg.PDGParticle;
 import org.jlab.clas.tracking.kalmanfilter.Material;
 import org.jfree.chart.plot.SeriesRenderingOrder;
 import org.jfree.chart.axis.NumberAxis;
-
-
+import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.ChartUtils;
@@ -63,6 +73,8 @@ import java.io.IOException;
 import javax.swing.*;
 import java.awt.Shape;
 import java.awt.geom.*;
+import java.awt.Font;
+import java.awt.Stroke;
 import org.jfree.chart.util.ShapeUtils;
 
 
@@ -82,7 +94,7 @@ public class Monitor {
 
 
     public static void main(String[] args) throws Exception {
-        String filename = "/work/clas12/users/touchte/data/kfmon/filtered_rec_clas_022712.evio.00040-00049.hipo";
+        String filename = "/work/clas12/users/touchte/analysis/kfmon/filtered_rec_clas_022712.evio.00040-00049.hipo";
 
         // Read hipo file
         HipoReader reader = new HipoReader();
@@ -312,6 +324,7 @@ public class Monitor {
                 }
 
                 // // TMP : good scenario
+                // // Filtering
                 // {
                 //     double px = x_out.getEntry(3);
                 //     double py = x_out.getEntry(4);
@@ -441,7 +454,7 @@ public class Monitor {
         plot.setRenderer(2, r2);
 
         try {
-            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 900);
+            ChartUtils.saveChartAsPNG(new File(outName), chart, 900, 600);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -451,24 +464,41 @@ public class Monitor {
     public static void create_niter_chart(XYSeriesCollection dataset, String valName, double expected_value, String outName, int max_Niter) {
         // Create the chart with the first dataset
         JFreeChart chart = ChartFactory.createXYLineChart(
-                "Track fit",       // title
-                "Niter",               // x-axis label
+                "",       // title
+                "Number of iterations",               // x-axis label
                 valName,               // y-axis label
                 dataset,           // dataset 0 (combined)
                 PlotOrientation.VERTICAL,
                 true, true, false);
 
         XYPlot plot = chart.getXYPlot();
+        
+        Renderer.setDimentions(1800, 1200);
+        chart = Renderer.apply_default_chart_rendering(chart);
+        chart.setPadding(new RectangleInsets(8, 8, 8, 8));
+        // chart = Renderer.apply_scalable_fontsize(chart);
+
+        // grille plus lisible
+        plot.setDomainGridlinePaint(Color.GRAY);
+        plot.setRangeGridlinePaint(Color.GRAY);
+        plot.setDomainGridlineStroke(new BasicStroke(0.7f, BasicStroke.CAP_BUTT,
+                BasicStroke.JOIN_MITER, 10f, new float[]{3f, 3f}, 0f));
+        plot.setRangeGridlineStroke(plot.getDomainGridlineStroke());
+
+        plot.setOutlineStroke(new BasicStroke(1.5f));
+        plot.setOutlinePaint(Color.BLACK);
 
         // The last serie is the last to be plotted
         plot.setSeriesRenderingOrder(SeriesRenderingOrder.FORWARD);
 
         //Axis limit
-        // NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
+        // //NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
         // NumberAxis yAxis = (NumberAxis) plot.getRangeAxis();
 
-        // xAxis.setRange(-200.0, 200.0);   // xlim
-        // yAxis.setRange(0.0, 80.0);   // ylim
+        // // //xAxis.setRange(-200.0, 200.0);   // xlim
+        // yAxis.setRange(200, 360);   // ylim
+        // yAxis.setAutoTickUnitSelection(false);
+        // yAxis.setTickUnit(new NumberTickUnit(20));
 
         XYSeriesCollection line = new XYSeriesCollection();
         XYSeries line_Series = new XYSeries("expected");
@@ -487,13 +517,13 @@ public class Monitor {
             float t = (n > 1) ? i / (float) (n - 1) : 1f;
             Color c = Color.getHSBColor(0.6f, 0.2f + 0.8f * t, 0.5f + 0.5f * t);
             r0.setSeriesPaint(i, c);   // (indice, couleur)
-            r0.setSeriesStroke(i, new BasicStroke(1.0f));
-            double s = 2.0;
+            r0.setSeriesStroke(i, new BasicStroke(3.0f));
+            double s = 3;
             r0.setSeriesShape(i, new Rectangle2D.Double(-s, -s, 2*s, 2*s));
         }
         for (int i = 0; i < line.getSeriesCount(); i++) {
             r1.setSeriesPaint(i, java.awt.Color.RED);
-            r1.setSeriesStroke(i, new BasicStroke(1.0f));
+            r1.setSeriesStroke(i, new BasicStroke(3.0f));
         }
 
         // remove legend
@@ -504,9 +534,48 @@ public class Monitor {
 
         plot.setRenderer(0, r0);
         plot.setRenderer(1, r1);
+
+        // Change legend location
+        LegendTitle legend = chart.getLegend();
+        chart.removeLegend();
+
+        XYTitleAnnotation ann = new XYTitleAnnotation(
+                0.98, 0.98,                 // coordonnées relatives (0 à 1)
+                legend,
+                RectangleAnchor.TOP_RIGHT);
+        ann.setMaxWidth(0.48);
+
+        ((XYPlot) chart.getPlot()).addAnnotation(ann);
+
+        // Personnalized legend
+        Shape square = new Rectangle2D.Double(-5, -5, 10, 10);
+        Shape lg_line   = new Line2D.Double(-20, 0, 20, 0);
+        Stroke lineStroke = new BasicStroke(3f);
+
+        LegendItemCollection items = new LegendItemCollection();
+
+        // Expected : ligne rouge seule
+        items.add(new LegendItem("Expected", null, null, null,
+                false, square, true, Color.RED,
+                false, Color.RED, lineStroke,
+                true, lg_line, lineStroke, Color.RED));
+
+        // Reconstructed : ligne bleue + carré
+        items.add(new LegendItem("Reconstructed", null, null, null,
+                true, square, true, Color.BLUE,
+                false, Color.BLUE, lineStroke,
+                true, lg_line, lineStroke, Color.BLUE));
+
+        plot.setFixedLegendItems(items);
+        legend.setItemFont(new Font("SansSerif", Font.PLAIN, (int) (1.2*Renderer.baseFontSize())));
+        legend.setPosition(RectangleEdge.RIGHT); // aligne verticalement
+        
+
         try {
-            ChartUtils.saveChartAsPNG(new File(outName), chart, 1200, 900);
+            Renderer.save_jfreechart(chart, outName, RendererOutputType.PDF);
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (DocumentException e) {
             e.printStackTrace();
         }
 
