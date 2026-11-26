@@ -257,6 +257,7 @@ int main(int argc, char const *argv[]) {
                     double py = 2*trackBank.getFloat("py", row) * Units::MeV;
                     double pz = 2*trackBank.getFloat("pz", row) * Units::MeV;
                     double dEdx = trackBank.getFloat("dEdx", row);
+                    double sum_adc = trackBank.getInt("sum_adc", row);
 
                     double p = sqrt(px*px + py*py + pz*pz);
                     double phi = mod2Pi(atan2(py, px));
@@ -291,6 +292,7 @@ int main(int argc, char const *argv[]) {
                         histos->h1_elastics_ahdc_track_phi->Fill(mod2Pi(phi)/Units::deg);
                         histos->h1_elastics_ahdc_track_vz->Fill(vz);
                         histos->h2_elastics_ahdc_track_p_vs_dEdx->Fill(p, dEdx);
+                        histos->h2_elastics_ahdc_track_p_vs_sum_adc->Fill(p, sum_adc);
                         histos->h1_elastics_electron_p->Fill(p1.R());
                         histos->h1_elastics_electron_theta->Fill(p1.Theta()/Units::deg);
                         histos->h1_elastics_electron_phi->Fill(mod2Pi(p1.Phi())/Units::deg);

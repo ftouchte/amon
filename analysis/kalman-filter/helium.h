@@ -86,6 +86,7 @@ struct Histograms
     TH1D* h1_elastics_ahdc_track_phi;
     TH1D* h1_elastics_ahdc_track_vz;
     TH2D* h2_elastics_ahdc_track_p_vs_dEdx;
+    TH2D* h2_elastics_ahdc_track_p_vs_sum_adc;
     TH1D* h1_elastics_electron_p;
     TH1D* h1_elastics_electron_theta;
     TH1D* h1_elastics_electron_phi;
@@ -142,6 +143,7 @@ struct Histograms
         h1_elastics_ahdc_track_phi = new TH1D("elastics_ahdc_track_phi", "ahdc_track phi; phi (deg); count", 100, 0, 360);
         h1_elastics_ahdc_track_vz = new TH1D("elastics_ahdc_track_vz", "ahdc_track vz; vz (cm); count", 100, -25, 20);
         h2_elastics_ahdc_track_p_vs_dEdx = new TH2D("elastics_ahdc_track_p_vs_dEdx", "ahdc track dEdx vs p", 50, 0, 1, 50, 0, 1500);
+        h2_elastics_ahdc_track_p_vs_sum_adc = new TH2D("elastics_ahdc_track_p_vs_sum_adc", "ahdc track Sum ADC vs p; p (GeV); Sum ADC", 50, 0, 1, 50, 0, 90000);
         h1_elastics_electron_p = new TH1D("elastics_electron_p", "electron p; p (GeV); count", 100, 2.19, 2.25);
         h1_elastics_electron_theta = new TH1D("elastics_electron_theta", "electron theta;  (deg); count", 100, 4, 14);
         h1_elastics_electron_phi = new TH1D("elastics_electron_phi", "electron phi; phi (deg); count", 100, 0, 360);
@@ -203,6 +205,7 @@ struct Histograms
         delete h1_elastics_ahdc_track_phi;
         delete h1_elastics_ahdc_track_vz;
         delete h2_elastics_ahdc_track_p_vs_dEdx;
+        delete h2_elastics_ahdc_track_p_vs_sum_adc;
         delete h1_elastics_electron_p;
         delete h1_elastics_electron_theta;
         delete h1_elastics_electron_phi;
@@ -262,6 +265,7 @@ struct Histograms
         h1_elastics_ahdc_track_phi->Write(h1_elastics_ahdc_track_phi->GetName());
         h1_elastics_ahdc_track_vz->Write(h1_elastics_ahdc_track_vz->GetName());
         h2_elastics_ahdc_track_p_vs_dEdx->Write(h2_elastics_ahdc_track_p_vs_dEdx->GetName());
+        h2_elastics_ahdc_track_p_vs_sum_adc->Write(h2_elastics_ahdc_track_p_vs_sum_adc->GetName());
         h1_elastics_electron_p->Write(h1_elastics_electron_p->GetName());
         h1_elastics_electron_theta->Write(h1_elastics_electron_theta->GetName());
         h1_elastics_electron_phi->Write(h1_elastics_electron_phi->GetName());
