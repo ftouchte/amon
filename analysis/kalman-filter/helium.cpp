@@ -109,7 +109,7 @@ int main(int argc, char const *argv[]) {
         if (nfiles == 1 && filtering) {
             writer.addDictionary(factory);
             std::string hipo_output = output;
-            if (hipo_output.substr(hipo_output.size()-4, hipo_output.size()) == "root") {
+            if (hipo_output.substr(hipo_output.size()-4, hipo_output.size()) == ".root") {
                 hipo_output = hipo_output.substr(0, hipo_output.size()-4);
             }
             hipo_output += ".hipo";
@@ -332,6 +332,10 @@ int main(int argc, char const *argv[]) {
         writer.close();
         writer.showSummary();
     }
+
+    // Display cuts
+    // ...
+
 
 
     // Output
