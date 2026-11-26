@@ -188,6 +188,28 @@ void process_waveform(const std::vector<double> & s, std::string name, TDirector
     f1b->SetParameter(1, b[1]);
     f1b->Draw("l same");
 
+    // smooth the signal
+    TGraph* gr2 = new TGraph();
+    for (int i = 0; i < N; i++) {
+        if (i > 0 && i < N-1) {
+            double adc = (s[i-1] + s[i] + s[i+1])/3;
+            gr2->AddPoint(i, adc);
+        }
+        if (i == 0) {
+            double adc = (s[i] + s[i] + s[i+1])/3;
+            gr2->AddPoint(i, adc);
+        }
+        if (i == N-1) {
+            double adc = (s[i-1] + s[i] + s[i])/3;
+            gr2->AddPoint(i, adc);
+        }
+    }
+    gr2->SetLineStyle(2);
+    gr2->SetLineColor(kBlue);
+    gr2->SetMarkerColor(kBlue);
+    gr2->SetMarkerStyle(8);
+    gr2->Draw("pl");
+
     c->Write(name.c_str());
 }
 
@@ -329,7 +351,7 @@ int main(int argc, char const *argv[]) {
                 }
 
                 // Positive slope
-                else if (b[1] > 20) {                     
+                else if (b[1] > 15) {                     
                     nb_positive_slope++;
                     if (nb_positive_slope <= 20) {
                         std::string name = "wf_";
@@ -338,8 +360,8 @@ int main(int argc, char const *argv[]) {
                     }
                 }
 
-                // Negative slope
-                else if (b[1] > -10 && b[1] < 10) {                     
+                // Normal slope
+                else if (b[1] > -5 && b[1] < 5) {                     
                     nb_normal_slope++;
                     if (nb_normal_slope <= 20) {
                         std::string name = "wf_";
