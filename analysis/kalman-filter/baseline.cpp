@@ -38,6 +38,8 @@
 #include "TMath.h"
 #include "TLine.h"
 
+int Npts = 4; // nb of points for the baseline
+
 
 /**
  * @brief Return an angle between 0 and 2*pi
@@ -158,8 +160,8 @@ void process_waveform(const std::vector<double> & s, std::string name, TDirector
         }
     }
 
-    std::vector<double> x(4), y(4);
-    for (int i = 0; i < 4; i++) {
+    std::vector<double> x(Npts), y(Npts);
+    for (int i = 0; i < Npts; i++) {
         x[i] = i;
         y[i] = s[i];
     }
@@ -303,9 +305,9 @@ int main(int argc, char const *argv[]) {
 
             for (int row = 0; row < wfBank.getRows(); row++) {
 
-                std::vector<double> x(4), y(4);
-                for (int i = 0; i < 4; i++) {
-                    char* entry = new char[5];
+                std::vector<double> x(Npts), y(Npts);
+                for (int i = 0; i < Npts; i++) {
+                    char* entry = new char[9];
                     sprintf(entry, "s%d", i+1);
                     int adc = wfBank.getShort(entry, row);
                     x[i] = i;
@@ -331,17 +333,29 @@ int main(int argc, char const *argv[]) {
                 h2_baseline_corr->Fill(b[0], b[1]);
                 h2_baseline_vs_time->Fill(leadingEdgeTime, b[1]);
 
+                //////////////////////////////
+                // Look at the same waveforms
+                //////////////////////////////
+
                 // Fill pulse
                 std::vector<double> s(20);
+                std::vector<double> xb(4), yb(4);
                 for (int i = 0; i < 20; i++) {
                     char* entry = new char[9];
                     sprintf(entry, "s%d", i+1);
                     int adc = wfBank.getShort(entry, row);
                     s[i] = adc;
+                    if (i < 4) {
+                        xb[i] = i;
+                        yb[i] = adc;
+                    }
                 }
 
+                std::vector<double> bb = linear_regression(xb, yb); // use the same slope at 4 bins for comparison
+                double slope = bb[1];
+
                 // Negative slope
-                if (b[1] < -20) {                     
+                if (slope < -20) {                     
                     nb_negative_slope++;
                     if (nb_negative_slope <= 20) {
                         std::string name = "wf_";
@@ -351,7 +365,7 @@ int main(int argc, char const *argv[]) {
                 }
 
                 // Positive slope
-                else if (b[1] > 15) {                     
+                else if (slope > 15) {                     
                     nb_positive_slope++;
                     if (nb_positive_slope <= 20) {
                         std::string name = "wf_";
@@ -361,7 +375,7 @@ int main(int argc, char const *argv[]) {
                 }
 
                 // Normal slope
-                else if (b[1] > -5 && b[1] < 5) {                     
+                else if (slope > -5 && slope < 5) {                     
                     nb_normal_slope++;
                     if (nb_normal_slope <= 20) {
                         std::string name = "wf_";
